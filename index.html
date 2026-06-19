@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>ゴリラ副社長のバナナ大作戦</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;}
+  html,body{height:100%;overflow:hidden;background:#000;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;}
+  #game{position:fixed;inset:0;display:flex;flex-direction:column;}
+  canvas{display:block;flex:1 1 0;min-height:0;width:100%;background:#8ecbff;touch-action:none;}
+
+  /* 画面（タイトル/結果/カットシーン） */
+  .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;color:#fff;padding:24px;gap:14px;z-index:30;}
+  .hidden{display:none!important;}
+
+  #title{background:linear-gradient(160deg,#1d4e89,#0b1d33);}
+  #title h1{font-size:clamp(24px,8vw,40px);line-height:1.25;text-shadow:0 3px 0 #0007;}
+  .sub{color:#ffd24a;}
+  .ico{font-size:70px;animation:bob 1.5s ease-in-out infinite;filter:drop-shadow(0 6px 6px #0006);}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  .story{font-size:13.5px;line-height:1.7;color:#dce8f7;background:#ffffff14;border:1px solid #ffffff26;
+    border-radius:12px;padding:13px 15px;max-width:360px;}
+  .story b{color:#ffd24a;}
+  .btn{cursor:pointer;border:none;border-radius:999px;padding:15px 40px;font-size:19px;font-weight:800;color:#3a2a00;
+    background:linear-gradient(#ffe27a,#ffc62e);box-shadow:0 5px 0 #c8920a,0 9px 18px #0006;}
+  .btn:active{transform:translateY(4px);box-shadow:0 1px 0 #c8920a;}
+  .hint{font-size:12px;color:#a9bcd6;}
+
+  /* 結果 */
+  #result{background:linear-gradient(160deg,#2a1d4e,#10081d);}
+  .card{background:#ffffff12;border:1px solid #ffffff26;border-radius:16px;padding:18px 22px;min-width:260px;}
+  .row{display:flex;justify-content:space-between;gap:24px;font-size:16px;padding:7px 0;color:#dfe6f2;}
+  .row b{color:#fff;font-size:20px;}
+  .total{font-size:30px;color:#ffd24a;margin-top:6px;font-weight:900;}
+
+  /* カットシーン */
+  #cut{background:#000;z-index:40;gap:22px;}
+  #cut.show{display:flex;}
+  .cutFace{font-size:96px;animation:shake .12s linear infinite;}
+  @keyframes shake{0%{transform:translate(0,0)rotate(-3deg)}50%{transform:translate(4px,-3px)rotate(3deg)}100%{transform:translate(-3px,2px)rotate(-2deg)}}
+  .scream{font-size:clamp(32px,10vw,74px);font-weight:900;color:#ffe34a;text-shadow:0 0 18px #ff8a00,0 4px 0 #b33;letter-spacing:1px;white-space:nowrap;animation:zoom .5s ease-out;}
+  @keyframes zoom{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+  .voice{font-size:clamp(20px,6vw,30px);line-height:1.6;max-width:90%;text-align:center;}
+  .voiceHeaven{color:#bfe9ff;text-shadow:0 0 16px #4aa8ff;}
+  .voiceHero{color:#ffd24a;}
+  .label{font-size:14px;color:#9fb4cf;letter-spacing:3px;}
+  .fadein{animation:fi .4s ease both;}
+  @keyframes fi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+  /* タッチ操作ボタン */
+  #pad{position:relative;width:100%;height:160px;flex:0 0 160px;z-index:20;pointer-events:none;
+    background:#0e2236;border-top:2px solid #ffffff2e;}
+  .pad-hidden{display:none;}
+  .ctrl{position:absolute;bottom:22px;width:84px;height:84px;border-radius:50%;
+    background:#ffffff2e;border:2px solid #ffffff66;color:#fff;font-size:34px;font-weight:900;
+    display:flex;align-items:center;justify-content:center;pointer-events:auto;backdrop-filter:blur(2px);}
+  .ctrl:active{background:#ffffff55;}
+  #bLeft{left:22px;} #bRight{left:120px;} #bJump{right:26px;width:104px;height:104px;font-size:20px;bottom:18px;background:#ffd24a44;border-color:#ffd24a;}
+  #timer{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:15;
+    font-size:30px;font-weight:900;color:#fff;text-shadow:0 2px 0 #0007,0 0 10px #0008;}
+  #timer.warn{color:#ff5a4a;animation:pulse .5s infinite;}
+  @keyframes pulse{0%,100%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-50%) scale(1.18)}}
+  #mute{position:absolute;top:7px;right:9px;z-index:25;width:40px;height:40px;border-radius:50%;
+    border:2px solid #ffffff66;background:#00000038;color:#fff;font-size:19px;cursor:pointer;padding:0;}
+  #mute:active{background:#00000060;}
+</style>
+</head>
+<body>
+<div id="game">
+  <canvas id="cv"></canvas>
+  <div id="timer" class="hidden">45</div>
+  <button id="mute" class="hidden">🔊</button>
+
+  <div id="pad" class="pad-hidden">
+    <div id="bLeft" class="ctrl">‹</div>
+    <div id="bRight" class="ctrl">›</div>
+    <div id="bJump" class="ctrl">JUMP</div>
+  </div>
+
+  <!-- タイトル -->
+  <div id="title" class="overlay">
+    <div class="ico">🦍</div>
+    <h1>ゴリラ副社長の<br><span class="sub">バナナ大作戦</span></h1>
+    <div class="story">
+      補聴器メーカー「<b>ゴリラ・タクミ・ゴリラ社</b>」の副社長ゴリラ。<br>
+      <b>45秒</b>でステージのバナナを集めろ！🍌＝1点。<br>
+      <b>🦻補聴器</b>を拾うと…？　1個目は<b>「ゲーーーン！！」</b>でバナナ大量出現、<br>
+      2個目は<b>天の声</b>とともに<b>得点2倍＆無敵オーラ</b>発動！<br>
+      <b>👵クレーマーおばあさん</b>に当たると−5点。でも無敵中は触れば撃破！<br>
+      <b>⚠️落とし穴</b>に落ちると−8点。2段ジャンプで飛び越えろ！<br>
+      <b>🔑車のカギ</b>を拾うと<b>ベンツ</b>に乗って移動速度2倍！<br>
+      進むと時々<b>デカい金のバナナ（20点）</b>がボーナスで出現！
+    </div>
+    <button class="btn" id="startBtn">作戦開始！</button>
+    <div class="hint">PC: ←→ で移動 / ↑ or スペースでジャンプ（2回ジャンプOK）　｜　スマホ: 画面下のボタン</div>
+  </div>
+
+  <!-- カットシーン -->
+  <div id="cut" class="overlay hidden"></div>
+
+  <!-- 結果 -->
+  <div id="result" class="overlay hidden">
+    <div class="ico">🍌</div>
+    <h1 style="font-size:30px">作戦終了！</h1>
+    <div class="card">
+      <div class="row"><span>🍌 バナナ得点</span><b id="rBanana">0</b></div>
+      <div class="row"><span>👵 クレーマー撃破</span><b id="rKill">0</b></div>
+      <div class="row total"><span>合計スコア</span><span id="rTotal">0</span></div>
+    </div>
+    <div id="rMsg" class="story"></div>
+    <div class="row" style="color:#cfd9ea;font-size:14px">ハイスコア: <b id="rHi" style="font-size:16px">0</b></div>
+    <button class="btn" id="retryBtn">もう一度！</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+  const titleEl=document.getElementById('title'), resultEl=document.getElementById('result'), cutEl=document.getElementById('cut');
+  const padEl=document.getElementById('pad'), timerEl=document.getElementById('timer');
+
+  // ゴリラの顔パーツ（1個目・2個目で共通・viewBox 0 0 200 210）
+  const FACE_PARTS = ''
+    + '<circle cx="38" cy="92" r="24" fill="#2f2a28"/><circle cx="162" cy="92" r="24" fill="#2f2a28"/>'
+    + '<circle cx="38" cy="92" r="12" fill="#5a4a40"/><circle cx="162" cy="92" r="12" fill="#5a4a40"/>'
+    + '<ellipse cx="100" cy="100" rx="72" ry="76" fill="#3a3330"/>'
+    + '<ellipse cx="100" cy="122" rx="50" ry="50" fill="#7a6253"/>'
+    + '<path d="M46 86 Q100 62 154 86 Q150 102 100 98 Q50 102 46 86 Z" fill="#2f2a28"/>'
+    + '<path d="M60 78 Q76 64 94 76" stroke="#1c1714" stroke-width="6" fill="none" stroke-linecap="round"/>'
+    + '<path d="M106 76 Q124 64 140 78" stroke="#1c1714" stroke-width="6" fill="none" stroke-linecap="round"/>'
+    + '<ellipse cx="80" cy="93" rx="13" ry="16" fill="#fff"/><ellipse cx="120" cy="93" rx="13" ry="16" fill="#fff"/>'
+    + '<circle cx="81" cy="97" r="6" fill="#1a1410"/><circle cx="119" cy="97" r="6" fill="#1a1410"/>'
+    + '<ellipse cx="90" cy="118" rx="4" ry="6" fill="#3a2c24"/><ellipse cx="110" cy="118" rx="4" ry="6" fill="#3a2c24"/>'
+    + '<ellipse cx="100" cy="150" rx="32" ry="28" fill="#2a1210"/>'
+    + '<path d="M72 136 H128 V146 Q100 139 72 146 Z" fill="#fff"/>'
+    + '<ellipse cx="100" cy="168" rx="15" ry="10" fill="#d8556a"/>'
+    + '<path d="M152 66 q7 11 0 18 q-7 -7 0 -18 Z" fill="#7fd4ff"/>'
+    + '<path d="M44 70 q-7 11 0 18 q7 -7 0 -18 Z" fill="#7fd4ff"/>';
+
+  // ① 絶叫するゴリラの顔（1個目の暗転用）
+  const SCREAM_GORILLA = '<svg viewBox="0 0 200 210" width="190" height="200" xmlns="http://www.w3.org/2000/svg">'
+    + FACE_PARTS + '</svg>';
+
+  // ② ①と同じ顔のゴリラが炎の中でドラミング（2個目の暗転用）
+  const DRUM_GORILLA = '<svg viewBox="0 0 260 300" width="220" height="254" xmlns="http://www.w3.org/2000/svg">'
+    // 炎（赤→橙→黄）
+    + '<path d="M14 300 Q0 215 46 172 Q38 222 66 208 Q52 150 100 112 Q96 190 130 168 Q118 110 130 56 Q146 110 132 168 Q166 190 162 112 Q210 150 196 208 Q224 222 216 172 Q262 215 248 300 Z" fill="#e8401b"/>'
+    + '<path d="M44 300 Q34 224 72 190 Q68 230 92 218 Q80 162 116 128 Q112 198 134 178 Q126 120 134 80 Q160 120 148 178 Q172 198 160 128 Q200 162 188 218 Q212 230 204 190 Q238 224 218 300 Z" fill="#ff8a14"/>'
+    + '<path d="M78 300 Q70 236 98 206 Q94 240 116 230 Q108 188 134 162 Q162 188 152 230 Q176 240 170 206 Q200 236 192 300 Z" fill="#ffd02e"/>'
+    // 脚
+    + '<path d="M104 246 q-12 26 4 36 h24 q-8 -20 2 -36 Z" fill="#3a3330"/>'
+    + '<path d="M156 246 q12 26 -4 36 h-24 q8 -20 -2 -36 Z" fill="#3a3330"/>'
+    // 胴・胸
+    + '<path d="M84 168 Q130 134 176 168 L168 250 Q130 270 92 250 Z" fill="#3a3330"/>'
+    + '<ellipse cx="130" cy="200" rx="40" ry="42" fill="#5a4a40"/>'
+    // 腕
+    + '<path d="M90 168 C54 186 62 226 108 210" stroke="#3a3330" stroke-width="27" fill="none" stroke-linecap="round"/>'
+    + '<path d="M170 168 C206 186 198 226 152 210" stroke="#3a3330" stroke-width="27" fill="none" stroke-linecap="round"/>'
+    // 衝撃線（点滅）
+    + '<g><path d="M92 196 l-13 -4 M92 208 l-14 3" stroke="#fff" stroke-width="3" stroke-linecap="round"/><animate attributeName="opacity" values="0;1;0" dur="0.34s" repeatCount="indefinite"/></g>'
+    + '<g><path d="M168 196 l13 -4 M168 208 l14 3" stroke="#fff" stroke-width="3" stroke-linecap="round"/><animate attributeName="opacity" values="1;0;1" dur="0.34s" repeatCount="indefinite"/></g>'
+    // ドラミングの拳（左右交互に上下）
+    + '<g><circle cx="110" cy="200" r="17" fill="#5a4a40" stroke="#3a3330" stroke-width="3"/><animateTransform attributeName="transform" type="translate" values="0 -7;0 8;0 -7" dur="0.34s" repeatCount="indefinite"/></g>'
+    + '<g><circle cx="150" cy="200" r="17" fill="#5a4a40" stroke="#3a3330" stroke-width="3"/><animateTransform attributeName="transform" type="translate" values="0 8;0 -7;0 8" dur="0.34s" repeatCount="indefinite"/></g>'
+    // ①と同じ顔を頭に配置
+    + '<g transform="translate(60,13) scale(0.7)">' + FACE_PARTS + '</g>'
+    // 手前の炎
+    + '<path d="M108 300 Q102 268 124 252 Q120 280 134 272 Q150 280 144 252 Q166 268 160 300 Z" fill="#ffd02e"/>'
+    + '</svg>';
+
+  const TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints>0);
+  let CW=0, CH=0, dpr=1, groundY=0;
+  function resize(){
+    dpr=Math.min(window.devicePixelRatio||1,2);
+    CW=cv.clientWidth; CH=cv.clientHeight;
+    cv.width=CW*dpr; cv.height=CH*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    groundY = CH - 95;   // ボタンは別エリアなので重ならない
+  }
+  window.addEventListener('resize',resize);
+
+  // ---- 状態 ----
+  let state='title';            // title | play | cutscene | result
+  let paused=false;
+  let timeLeft, lastTs;
+  let bananaScore, kills, hearCount;
+  let invincTimer;              // >0で無敵&2倍
+  let hurtTimer;                // 被弾無敵(ミス連続防止)
+  let bananas, grandmas, platforms, hearts, parts, floats, pits, carKeys;
+  let camX, generatedX, nextHeartX, lastPitGenX, nextKeyX, benzTimer, nextGoldX;
+  const HI_KEY='gorilla_banana2_hi';
+  let hiScore=+(localStorage.getItem(HI_KEY)||0);
+
+  const player={x:0,y:0,w:46,h:58,vx:0,vy:0,onGround:false,face:1,jumps:0,jumpHeld:false};
+  const GRAV=0.8, JUMP=-15.5, SPEED=4.6, MAXFALL=16;
+
+  // ---- 入力 ----
+  const keys={};
+  const btn={left:false,right:false,jump:false};
+  window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=true;
+    if(['arrowleft','arrowright','arrowup',' '].includes(k))e.preventDefault();});
+  window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+  function bindBtn(id,name){
+    const el=document.getElementById(id);
+    const on=e=>{btn[name]=true;e.preventDefault();};
+    const off=e=>{btn[name]=false;e.preventDefault();};
+    el.addEventListener('touchstart',on,{passive:false});
+    el.addEventListener('touchend',off,{passive:false});
+    el.addEventListener('touchcancel',off,{passive:false});
+    el.addEventListener('mousedown',on); el.addEventListener('mouseup',off); el.addEventListener('mouseleave',off);
+  }
+  bindBtn('bLeft','left'); bindBtn('bRight','right'); bindBtn('bJump','jump');
+
+  function wantLeft(){return keys['arrowleft']||keys['a']||btn.left;}
+  function wantRight(){return keys['arrowright']||keys['d']||btn.right;}
+  function wantJump(){return keys['arrowup']||keys['w']||keys[' ']||btn.jump;}
+
+  // ---- BGM / 効果音（Web Audioで生成）----
+  const AUD = (()=>{
+    let ac=null, master=null, timer=null, step=0, nextT=0, playing=false, muted=false, noiseBuf=null;
+    const BPM=138, stepDur=60/BPM/2;   // 8分音符
+    const F={C3:130.81,D3:146.83,E3:164.81,F3:174.61,G3:196.00,A3:220.00,B3:246.94,
+      C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392.00,A4:440.00,B4:493.88,
+      C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99,A5:880.00,'-':0};
+    const lead=['E5','-','G5','E5','C5','E5','D5','-','C5','D5','E5','G5','A5','-','G5','-',
+                'F5','A5','G5','E5','C5','E5','D5','-','C5','E5','G5','C5','D5','-','G4','-'];
+    const bass=['C3','C3','G3','G3','A3','A3','F3','F3','C3','C3','G3','G3','F3','F3','G3','G3',
+                'F3','F3','C3','C3','A3','A3','F3','F3','C3','C3','G3','G3','C3','C3','G3','G3'];
+    function tone(time,freq,type,dur,vol){
+      if(!freq) return;
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.type=type; o.frequency.value=freq; o.connect(g); g.connect(master);
+      g.gain.setValueAtTime(0,time); g.gain.linearRampToValueAtTime(vol,time+0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001,time+dur);
+      o.start(time); o.stop(time+dur+0.03);
+    }
+    function kick(time){
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.type='sine'; o.frequency.setValueAtTime(150,time); o.frequency.exponentialRampToValueAtTime(48,time+0.12);
+      g.gain.setValueAtTime(0.32,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.15);
+      o.connect(g); g.connect(master); o.start(time); o.stop(time+0.17);
+    }
+    function hat(time,vol){
+      const s=ac.createBufferSource(); s.buffer=noiseBuf;
+      const hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7500;
+      const g=ac.createGain(); g.gain.setValueAtTime(vol,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.05);
+      s.connect(hp); hp.connect(g); g.connect(master); s.start(time); s.stop(time+0.06);
+    }
+    function tick(){
+      if(!playing) return;
+      while(nextT < ac.currentTime+0.13){
+        const i=step%lead.length;
+        tone(nextT, F[lead[i]], 'square', stepDur*0.9, 0.13);
+        tone(nextT, F[bass[i]], 'triangle', stepDur*0.95, 0.20);
+        if(i%4===0) kick(nextT);
+        hat(nextT, i%2 ? 0.05 : 0.09);
+        step++; nextT+=stepDur;
+      }
+    }
+    function ensure(){
+      if(!ac){
+        ac=new (window.AudioContext||window.webkitAudioContext)();
+        master=ac.createGain(); master.gain.value=muted?0:0.45; master.connect(ac.destination);
+        const len=ac.sampleRate*0.2; noiseBuf=ac.createBuffer(1,len,ac.sampleRate);
+        const d=noiseBuf.getChannelData(0); for(let k=0;k<len;k++) d[k]=Math.random()*2-1;
+      }
+      if(ac.state==='suspended') ac.resume();
+    }
+    function start(){ ensure(); if(playing) return; playing=true; step=0; nextT=ac.currentTime+0.1; timer=setInterval(tick,25); }
+    function toggleMute(){ muted=!muted; if(master) master.gain.value=muted?0:0.45; return muted; }
+    function sfx(name){
+      if(!ac || muted) return;
+      const now=ac.currentTime;
+      if(name==='coin'){ tone(now,988,'square',0.07,0.18); tone(now+0.06,1319,'square',0.1,0.18); }
+      else if(name==='gold'){ [784,988,1319,1568].forEach((f,j)=>tone(now+j*0.06,f,'square',0.13,0.17)); }
+      else if(name==='power'){ [523,659,784,1047,1319].forEach((f,j)=>tone(now+j*0.05,f,'triangle',0.13,0.2)); }
+      else if(name==='jump'){ tone(now,440,'square',0.08,0.13); tone(now+0.05,680,'square',0.08,0.12); }
+      else if(name==='hit'){ tone(now,180,'sawtooth',0.2,0.22); tone(now,90,'square',0.2,0.18); }
+    }
+    return { start, toggleMute, sfx, ensure };
+  })();
+
+  // ---- ワールド生成 ----
+  function reset(){
+    timeLeft=45; bananaScore=0; kills=0; hearCount=0; invincTimer=0; hurtTimer=0;
+    bananas=[]; grandmas=[]; platforms=[]; hearts=[]; parts=[]; floats=[]; pits=[]; carKeys=[];
+    camX=0; generatedX=0; nextHeartX=900; lastPitGenX=0; nextKeyX=1400; benzTimer=0; nextGoldX=2200;
+    player.x=120; player.y=groundY-player.h; player.vx=0; player.vy=0; player.onGround=true; player.face=1; player.jumps=0; player.jumpHeld=false;
+    generateAhead();
+  }
+  function addBanana(x,y){bananas.push({x,y,w:28,h:28,t:Math.random()*6,val:1,big:false});}
+  function addGoldBanana(x,y){bananas.push({x,y,w:48,h:48,t:Math.random()*6,val:20,big:true});}
+  function generateAhead(){
+    const target=camX+CW+800;
+    while(generatedX<target){
+      let x=generatedX;
+      // 落とし穴（序盤を避け、間隔をあけて出現）
+      if(x>700 && x>lastPitGenX+560 && Math.random()<0.5){
+        const pw=72+Math.random()*54;
+        pits.push({x:x+40, w:pw});
+        lastPitGenX=x;
+        // 飛び越え用のバナナアーチ
+        const n=3;
+        for(let k=0;k<n;k++){ addBanana(x+40+k*(pw/2), groundY-74-Math.sin(k/(n-1)*Math.PI)*42); }
+        generatedX += pw+150;
+        continue;
+      }
+      const r=Math.random();
+      if(r<0.30){ // 浮島＋バナナ
+        const py=groundY-(120+Math.random()*120);
+        const pw=120+Math.random()*70;
+        platforms.push({x:x+30,y:py,w:pw,h:18});
+        const n=3+(Math.random()*2|0);
+        for(let i=0;i<n;i++) addBanana(x+50+i*34, py-34);
+      } else if(r<0.45){ // バナナの山(地上アーチ)
+        const n=4+(Math.random()*3|0);
+        for(let i=0;i<n;i++){
+          const arc=Math.sin(i/(n-1)*Math.PI);
+          addBanana(x+40+i*36, groundY-30-arc*90);
+        }
+      } else if(r<0.62){ // 地上バナナ列
+        const n=3+(Math.random()*3|0);
+        for(let i=0;i<n;i++) addBanana(x+40+i*40, groundY-34);
+      } else if(r<0.80){ // クレーマーおばあさん
+        if(!overPit(x+120)) addGrandma(x+120);
+      }
+      // 補聴器の配置
+      if(x>=nextHeartX){
+        hearts.push({x:nextHeartX,y:groundY-150,w:40,h:40,t:0});
+        nextHeartX+=1600+Math.random()*500;
+      }
+      // 車のカギの配置
+      if(x>=nextKeyX){
+        carKeys.push({x:nextKeyX,y:groundY-130,w:34,h:34,t:0});
+        nextKeyX+=2200+Math.random()*800;
+      }
+      // ボーナス：デカい金のバナナ（20点）
+      if(x>=nextGoldX){
+        let gx=nextGoldX; let guard=0;
+        while(overPit(gx+24) && guard++<40) gx+=40;   // 穴の上は避ける
+        addGoldBanana(gx, groundY-160);
+        nextGoldX+=2600+Math.random()*700;
+      }
+      generatedX += 230+Math.random()*120;
+    }
+  }
+  function addGrandma(x){
+    grandmas.push({x,y:groundY-52,w:46,h:52,vx:(Math.random()<.5?-1:1)*1.4,range:60+Math.random()*90,home:x,t:Math.random()*6});
+  }
+  function overPit(x){ for(const p of pits) if(x>p.x && x<p.x+p.w) return true; return false; }
+  function fellInPit(){
+    bananaScore=Math.max(0,bananaScore-8);
+    addFloat(player.x, groundY-60, '落とし穴！ -8', '#ff5a4a');
+    AUD.sfx('hit');
+    // 落ちた穴の手前へ復帰
+    let rx=player.x;
+    for(const p of pits){ if(player.x>p.x && player.x<p.x+p.w){ rx=p.x-40; break; } }
+    rx=Math.max(camX+24, rx);
+    let guard=0; while(overPit(rx+player.w/2) && guard++<80) rx+=8;
+    player.x=rx; player.y=groundY-player.h-90; player.vx=0; player.vy=0; player.jumps=0; hurtTimer=1.0;
+  }
+
+  // ---- 衝突 ----
+  function aabb(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
+
+  function update(dt){
+    // タイマー
+    timeLeft-=dt;
+    if(timeLeft<=0){timeLeft=0; endGame(); return;}
+    timerEl.textContent=Math.ceil(timeLeft);
+    timerEl.classList.toggle('warn',timeLeft<=10);
+
+    // 移動入力（ベンツ搭乗中は速度2倍）
+    const spd = SPEED*(benzTimer>0?2:1);
+    if(wantLeft()){player.vx=-spd; player.face=-1;}
+    else if(wantRight()){player.vx=spd; player.face=1;}
+    else player.vx=0;
+    // ジャンプ（2段ジャンプ対応・押した瞬間だけ反応）
+    const jp=wantJump();
+    if(jp && !player.jumpHeld){
+      if(player.onGround){ player.vy=JUMP; player.onGround=false; player.jumps=1; AUD.sfx('jump'); }
+      else if(player.jumps<2){ player.vy=JUMP*0.9; player.jumps=2; AUD.sfx('jump');
+        addParts(player.x+player.w/2, player.y+player.h, '#ffffff', 8); }
+    }
+    player.jumpHeld=jp;
+
+    // 物理
+    player.vy=Math.min(player.vy+GRAV,MAXFALL);
+    player.x+=player.vx; player.y+=player.vy;
+    if(player.x<20)player.x=20;
+
+    // 地面（落とし穴の上では着地しない）
+    player.onGround=false;
+    if(player.y+player.h>=groundY && !overPit(player.x+player.w/2)){
+      player.y=groundY-player.h; player.vy=0; player.onGround=true;
+    }
+    // 穴に落ちた
+    if(player.y>CH+60){ fellInPit(); }
+
+    // プラットフォーム(上から着地)
+    for(const p of platforms){
+      if(player.vy>=0 && player.x+player.w>p.x+6 && player.x<p.x+p.w-6){
+        const prevBottom=player.y+player.h-player.vy;
+        if(prevBottom<=p.y+8 && player.y+player.h>=p.y && player.y+player.h<=p.y+p.h+16){
+          player.y=p.y-player.h; player.vy=0; player.onGround=true;
+        }
+      }
+    }
+
+    if(player.onGround) player.jumps=0;   // 着地でジャンプ回数リセット
+
+    // カメラ
+    camX=Math.max(0, player.x-CW*0.34);
+    generateAhead();
+
+    // タイマー類
+    if(invincTimer>0) invincTimer-=dt;
+    if(hurtTimer>0) hurtTimer-=dt;
+    if(benzTimer>0) benzTimer-=dt;
+    const dbl = invincTimer>0;
+
+    // バナナ取得
+    for(let i=bananas.length-1;i>=0;i--){
+      const b=bananas[i]; b.t+=0.15;
+      if(aabb(player,b)){
+        const pts=(b.val||1)*(dbl?2:1); bananaScore+=pts;
+        addFloat(b.x,b.y,'+'+pts, b.big?'#ffdf5a':(dbl?'#ff9a3c':'#ffe27a'));
+        addParts(b.x,b.y,'#ffd24a', b.big?22:8);
+        AUD.sfx(b.big?'gold':'coin');
+        bananas.splice(i,1);
+      }
+    }
+    // 補聴器取得
+    for(let i=hearts.length-1;i>=0;i--){
+      const h=hearts[i]; h.t+=0.1;
+      if(aabb(player,h)){
+        hearts.splice(i,1);
+        hearCount++;
+        playHearing(hearCount);
+        return; // カットシーンへ
+      }
+    }
+    // 車のカギ取得 → ベンツ搭乗（速度2倍）
+    for(let i=carKeys.length-1;i>=0;i--){
+      const k=carKeys[i]; k.t+=0.1;
+      if(aabb(player,k)){
+        carKeys.splice(i,1);
+        benzTimer=9.0;
+        addFloat(player.x,player.y-20,'ベンツ召喚！🚗','#bfe9ff');
+        addParts(k.x,k.y,'#cfd6dd',18);
+        AUD.sfx('power');
+      }
+    }
+    // おばあさん
+    for(let i=grandmas.length-1;i>=0;i--){
+      const g=grandmas[i]; g.t+=0.1;
+      g.x+=g.vx;
+      if(g.x<g.home-g.range){g.x=g.home-g.range; g.vx*=-1;}
+      if(g.x>g.home+g.range){g.x=g.home+g.range; g.vx*=-1;}
+      if(aabb(player,g)){
+        if(invincTimer>0){
+          grandmas.splice(i,1); kills++;
+          addFloat(g.x,g.y-10,'撃破!','#ff5a8a'); addParts(g.x,g.y,'#ff7ab0',16);
+          AUD.sfx('coin');
+        } else if(hurtTimer<=0){
+          bananaScore=Math.max(0,bananaScore-5); hurtTimer=1.0;
+          addFloat(player.x,player.y-10,'-5','#ff5a4a'); addParts(player.x,player.y,'#ff7a5a',14);
+          AUD.sfx('hit');
+          player.vy=-8; player.x-=player.face*30;
+        }
+      }
+    }
+
+    // 後方の掃除
+    if(bananas.length>400) bananas=bananas.filter(b=>b.x>camX-300);
+    grandmas=grandmas.filter(g=>g.home>camX-400);
+    platforms=platforms.filter(p=>p.x+p.w>camX-300);
+    pits=pits.filter(p=>p.x+p.w>camX-300);
+    carKeys=carKeys.filter(k=>k.x>camX-300);
+
+    // エフェクト
+    for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=0.3;p.life-=0.03;if(p.life<=0)parts.splice(i,1);}
+    for(let i=floats.length-1;i>=0;i--){const f=floats[i];f.y-=0.8;f.life-=0.02;if(f.life<=0)floats.splice(i,1);}
+  }
+
+  function addParts(x,y,c,n){for(let i=0;i<n;i++){const a=Math.random()*6.28,s=2+Math.random()*4;parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-2,life:1,c});}}
+  function addFloat(x,y,text,c){floats.push({x,y,text,c,life:1});}
+
+  // ---- 描画 ----
+  function drawBG(){
+    // 空
+    const g=ctx.createLinearGradient(0,0,0,CH);
+    g.addColorStop(0,'#5db0ff'); g.addColorStop(.4,'#9fd6ff'); g.addColorStop(.72,'#dcf2ff'); g.addColorStop(1,'#eef9da');
+    ctx.fillStyle=g; ctx.fillRect(0,0,CW,CH);
+
+    // 太陽
+    const sx=CW*0.78, sy=CH*0.15;
+    let sg=ctx.createRadialGradient(sx,sy,6,sx,sy,95);
+    sg.addColorStop(0,'#fff7c8'); sg.addColorStop(.38,'rgba(255,233,140,.55)'); sg.addColorStop(1,'rgba(255,233,140,0)');
+    ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(sx,sy,95,0,7); ctx.fill();
+    ctx.fillStyle='#fff3b0'; ctx.beginPath(); ctx.arc(sx,sy,24,0,7); ctx.fill();
+
+    // 雲（奥・ゆっくり流れる）
+    for(let i=0;i<5;i++){
+      let cx=((i*230 - camX*0.18)%(CW+340)); if(cx<-170)cx+=CW+340;
+      cloud(cx, 55+(i*53%70), 22+(i*7%16));
+    }
+
+    // 丘 3層（淡い色で目に優しく）
+    drawHills(0.30, 16, 210, '#d4f0bd');
+    drawHills(0.48, 24, 150, '#bfe39a');
+    drawHills(0.64, 34, 112, '#9fd57e');
+
+    // ヤシの木（中景）
+    drawPalms(0.64);
+
+    // 近景の茂み
+    drawBushes(0.85, '#57ad38');
+
+    // 落とし穴（画面上の区間）と地面の実体（穴以外）を計算
+    let gaps=[];
+    for(const p of pits){ const sx=p.x-camX, ex=sx+p.w; if(ex>0&&sx<CW) gaps.push([Math.max(0,sx),Math.min(CW,ex)]); }
+    gaps.sort((a,b)=>a[0]-b[0]);
+    let segs=[], cur=0;
+    for(const gp of gaps){ if(gp[0]>cur) segs.push([cur,gp[0]]); cur=Math.max(cur,gp[1]); }
+    if(cur<CW) segs.push([cur,CW]);
+
+    // 穴の中（暗いシャフト）
+    for(const gp of gaps){
+      let hg=ctx.createLinearGradient(0,groundY,0,CH);
+      hg.addColorStop(0,'#2a1c10'); hg.addColorStop(1,'#0c0805');
+      ctx.fillStyle=hg; ctx.fillRect(gp[0],groundY,gp[1]-gp[0],CH-groundY);
+    }
+
+    // 地面（穴以外にクリップして描画）
+    ctx.save();
+    ctx.beginPath();
+    for(const s of segs) ctx.rect(s[0],groundY,s[1]-s[0],CH-groundY);
+    ctx.clip();
+    let gg=ctx.createLinearGradient(0,groundY,0,CH);
+    gg.addColorStop(0,'#7cc24a'); gg.addColorStop(1,'#9a7942');
+    ctx.fillStyle=gg; ctx.fillRect(0,groundY,CW,CH-groundY);
+    ctx.fillStyle='#6bbf3a'; ctx.fillRect(0,groundY,CW,12);
+    ctx.fillStyle='#5fa033'; ctx.fillRect(0,groundY+12,CW,4);
+    ctx.strokeStyle='#7fd24a'; ctx.lineWidth=2; ctx.lineCap='round';
+    let off=camX%24;
+    for(let x=-off;x<CW;x+=24){
+      ctx.beginPath();
+      ctx.moveTo(x,groundY+12);   ctx.lineTo(x+3,groundY+3);
+      ctx.moveTo(x+8,groundY+12); ctx.lineTo(x+8,groundY+2);
+      ctx.moveTo(x+13,groundY+12);ctx.lineTo(x+16,groundY+4);
+      ctx.stroke();
+    }
+    ctx.fillStyle='#00000012';
+    let o2=camX%44;
+    for(let x=-o2;x<CW;x+=44){ for(let y=groundY+28, r=0; y<CH; y+=26, r++){ ctx.fillRect(x+(r%2?22:0), y, 5,5); } }
+    ctx.restore();
+
+    // 穴の縁（土の断面）
+    ctx.fillStyle='#7a5a32';
+    for(const gp of gaps){ ctx.fillRect(gp[0]-4,groundY,4,CH-groundY); ctx.fillRect(gp[1],groundY,4,CH-groundY); }
+  }
+  function cloud(x,y,r){
+    ctx.save(); ctx.globalAlpha=0.95; ctx.fillStyle='#ffffff';
+    ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.arc(x+r,y+5,r*0.8,0,7); ctx.arc(x-r,y+7,r*0.7,0,7); ctx.arc(x+r*0.4,y-r*0.5,r*0.7,0,7); ctx.fill();
+    ctx.restore();
+  }
+  function drawHills(factor, amp, wl, col){
+    const o=camX*factor;
+    ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(-12,CH);
+    for(let x=-12;x<=CW+12;x+=12){ ctx.lineTo(x, groundY-(Math.sin((x+o)/wl)+1)*amp); }
+    ctx.lineTo(CW+12,CH); ctx.closePath(); ctx.fill();
+  }
+  function drawBushes(factor, col){
+    const period=150, off=(camX*factor)%period;
+    let i=Math.floor(camX*factor/period);
+    ctx.fillStyle=col;
+    for(let x=-off-period; x<CW+period; x+=period, i++){
+      const bx=x+(i*53%50), r=20+(i*29%16);
+      ctx.beginPath();
+      ctx.arc(bx,groundY,r,Math.PI,0); ctx.arc(bx+r*0.8,groundY,r*0.72,Math.PI,0); ctx.arc(bx-r*0.8,groundY,r*0.72,Math.PI,0);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  function drawPalms(factor){
+    const period=300, off=(camX*factor)%period;
+    let i=Math.floor(camX*factor/period);
+    for(let x=-off-period; x<CW+period; x+=period, i++){
+      drawPalm(x+(i*61%130), 72+(i*37%44));
+    }
+  }
+  function drawPalm(x,h){
+    const tx=x+4, ty=groundY-h;
+    ctx.strokeStyle='#a9743f'; ctx.lineWidth=7; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(x,groundY); ctx.quadraticCurveTo(x+9, groundY-h*0.6, tx, ty); ctx.stroke();
+    ctx.fillStyle='#3f9e4d';
+    const dirs=[[-1,-0.5],[1,-0.5],[-1,0.15],[1,0.15],[0,-1]];
+    for(const d of dirs){
+      ctx.beginPath(); ctx.moveTo(tx,ty);
+      ctx.quadraticCurveTo(tx+d[0]*30, ty+d[1]*28-6, tx+d[0]*48, ty+d[1]*28+12);
+      ctx.quadraticCurveTo(tx+d[0]*28, ty+d[1]*28+2, tx, ty);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle='#6b4a2a'; ctx.beginPath(); ctx.arc(tx-3,ty+5,3,0,7); ctx.arc(tx+4,ty+6,3,0,7); ctx.fill();
+  }
+
+  function emoji(ch,x,y,size){ctx.font=size+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(ch,x,y);}
+
+  // デカい金のバナナ（ボーナス20点・ふっくらした房）
+  function drawGoldBanana(cx,cy,t){
+    // 光
+    const r=36+Math.sin(t*2)*5;
+    const g=ctx.createRadialGradient(cx,cy,5,cx,cy,r);
+    g.addColorStop(0,'rgba(255,243,160,.95)'); g.addColorStop(.5,'rgba(255,210,60,.5)'); g.addColorStop(1,'rgba(255,200,0,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,r,0,7); ctx.fill();
+
+    const stemX=cx, stemY=cy-14;
+    const angles=[-0.62,-0.2,0.24,0.64];   // 4本の房
+    for(const ang of angles){
+      ctx.save();
+      ctx.translate(stemX,stemY); ctx.rotate(ang); ctx.scale(1.18,1.22);
+      const bg=ctx.createLinearGradient(-9,-4,9,26);
+      bg.addColorStop(0,'#fff3b0'); bg.addColorStop(.5,'#ffd23a'); bg.addColorStop(1,'#c98a08');
+      ctx.fillStyle=bg; ctx.strokeStyle='#9a6a04'; ctx.lineWidth=1.6;
+      // ふっくらしたバナナ（下向き）
+      ctx.beginPath();
+      ctx.moveTo(-6,0);
+      ctx.quadraticCurveTo(-13,14, -5,26);
+      ctx.quadraticCurveTo(0,30, 5,26);
+      ctx.quadraticCurveTo(12,14, 6,0);
+      ctx.quadraticCurveTo(0,-4, -6,0);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      // 先っぽ
+      ctx.fillStyle='#7c5404'; ctx.beginPath(); ctx.arc(0,28,1.8,0,7); ctx.fill();
+      // ハイライト
+      ctx.strokeStyle='rgba(255,255,255,.55)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(-2,5); ctx.quadraticCurveTo(-6,14,-1,23); ctx.stroke();
+      ctx.restore();
+    }
+    // ヘタ（房の付け根）
+    ctx.fillStyle='#8a5e04'; ctx.beginPath(); ctx.arc(stemX,stemY-1,4.5,0,7); ctx.fill();
+    ctx.fillStyle='#6b4804'; ctx.fillRect(stemX-1.6,stemY-9,3.2,7);
+    // キラキラ
+    ctx.fillStyle='#fff';
+    for(let i=0;i<3;i++){ const a=t*1.5+i*2.1; const sx=cx+Math.cos(a)*26, sy=cy+Math.sin(a)*20; ctx.beginPath(); ctx.arc(sx,sy,1.9,0,7); ctx.fill(); }
+  }
+
+  function render(){
+    drawBG();
+    ctx.save();
+    ctx.translate(-camX,0);
+
+    // プラットフォーム
+    for(const p of platforms){
+      if(p.x+p.w<camX||p.x>camX+CW)continue;
+      ctx.fillStyle='#b5651d'; ctx.fillRect(p.x,p.y,p.w,p.h);
+      ctx.fillStyle='#6bbf3a'; ctx.fillRect(p.x,p.y-5,p.w,7);
+    }
+    // バナナ
+    for(const b of bananas){
+      if(b.x+50<camX||b.x>camX+CW)continue;
+      if(b.big) drawGoldBanana(b.x+b.w/2, b.y+b.h/2+Math.sin(b.t)*3, b.t);
+      else emoji('🍌', b.x+b.w/2, b.y+b.h/2+Math.sin(b.t)*3, 30);
+    }
+    // 補聴器（光る）
+    for(const h of hearts){
+      if(h.x+50<camX||h.x>camX+CW)continue;
+      ctx.save(); ctx.globalAlpha=0.4;
+      ctx.beginPath();ctx.arc(h.x+h.w/2,h.y+h.h/2,26+Math.sin(h.t*2)*4,0,7);ctx.fillStyle='#fff';ctx.fill();
+      ctx.restore();
+      emoji('🦻', h.x+h.w/2, h.y+h.h/2+Math.sin(h.t)*4, 34);
+    }
+    // 車のカギ（光る）
+    for(const k of carKeys){
+      if(k.x+50<camX||k.x>camX+CW)continue;
+      ctx.save(); ctx.globalAlpha=0.4;
+      ctx.beginPath();ctx.arc(k.x+k.w/2,k.y+k.h/2,24+Math.sin(k.t*2)*4,0,7);ctx.fillStyle='#fff';ctx.fill();
+      ctx.restore();
+      emoji('🔑', k.x+k.w/2, k.y+k.h/2+Math.sin(k.t)*4, 30);
+    }
+    // クレーマーおばあさん
+    for(const g of grandmas){
+      if(g.x+50<camX||g.x>camX+CW)continue;
+      drawGrandma(g.x+g.w/2, g.y+g.h/2+Math.sin(g.t)*2);
+    }
+    // プレイヤー
+    drawPlayer();
+
+    // パーティクル/フロート
+    for(const p of parts){ctx.globalAlpha=Math.max(0,p.life);ctx.fillStyle=p.c;ctx.fillRect(p.x,p.y,5,5);}
+    ctx.globalAlpha=1;
+    for(const f of floats){ctx.globalAlpha=Math.max(0,f.life);ctx.fillStyle=f.c;ctx.font='bold 22px sans-serif';ctx.textAlign='center';ctx.fillText(f.text,f.x,f.y);}
+    ctx.globalAlpha=1;
+
+    ctx.restore();
+    drawHUD();
+  }
+
+  function drawPlayer(){
+    const cx=player.x+player.w/2, cy=player.y+player.h/2;
+    // 無敵オーラ
+    if(invincTimer>0){
+      ctx.save();
+      const pul=42+Math.sin(performance.now()*0.02)*6;
+      const grd=ctx.createRadialGradient(cx,cy,10,cx,cy,pul);
+      grd.addColorStop(0,'rgba(255,210,74,.0)');
+      grd.addColorStop(.6,'rgba(255,180,40,.55)');
+      grd.addColorStop(1,'rgba(255,120,0,0)');
+      ctx.fillStyle=grd; ctx.beginPath();ctx.arc(cx,cy,pul,0,7);ctx.fill();
+      ctx.restore();
+    }
+    // 影
+    ctx.fillStyle='#00000022'; ctx.beginPath();ctx.ellipse(cx,player.y+player.h+4,26,7,0,0,7);ctx.fill();
+    // 被弾点滅
+    if(hurtTimer>0 && (performance.now()/80|0)%2===0) return;
+    ctx.save();
+    if(player.face<0){ctx.translate(cx*2,0);ctx.scale(-1,1);}
+    if(benzTimer>0) drawBenz(cx, cy);
+    else drawGorilla(cx, cy);
+    ctx.restore();
+  }
+
+  // ベンツに乗ったゴリラ（右向き基準）
+  function drawBenz(cx,cy){
+    const wy=cy+18, wr=9;       // タイヤ
+    // スピード線
+    ctx.strokeStyle='rgba(255,255,255,.65)'; ctx.lineWidth=2; ctx.lineCap='round';
+    for(let i=0;i<3;i++){ const yy=cy-6+i*9; ctx.beginPath(); ctx.moveTo(cx-40-i*5,yy); ctx.lineTo(cx-24,yy); ctx.stroke(); }
+    // 車体（シルバーのセダン・前は右）
+    ctx.fillStyle='#d9dde2';
+    ctx.beginPath();
+    ctx.moveTo(cx-32,cy+16); ctx.lineTo(cx-30,cy+1); ctx.lineTo(cx-16,cy-3);
+    ctx.lineTo(cx-10,cy-16); ctx.lineTo(cx+6,cy-16); ctx.lineTo(cx+12,cy-2);
+    ctx.lineTo(cx+30,cy+2); ctx.lineTo(cx+32,cy+16);
+    ctx.closePath(); ctx.fill();
+    // 下部の影
+    ctx.fillStyle='#9aa0a6'; ctx.fillRect(cx-32,cy+12,64,4);
+    // 窓
+    ctx.fillStyle='#9fd0e8';
+    ctx.beginPath(); ctx.moveTo(cx-8,cy-14); ctx.lineTo(cx+4,cy-14); ctx.lineTo(cx+9,cy-3); ctx.lineTo(cx-9,cy-3); ctx.closePath(); ctx.fill();
+    // 運転するゴリラ（顔）
+    ctx.fillStyle='#3a3330'; ctx.beginPath(); ctx.arc(cx-1,cy-9,6,0,7); ctx.fill();
+    ctx.fillStyle='#8a7058'; ctx.beginPath(); ctx.arc(cx+2,cy-8,3.4,0,7); ctx.fill();
+    ctx.fillStyle='#1a1410'; ctx.beginPath(); ctx.arc(cx+1,cy-10,1.1,0,7); ctx.fill();
+    // ヘッドライト
+    ctx.fillStyle='#fff2a0'; ctx.beginPath(); ctx.ellipse(cx+29,cy+0,3,2.2,0,0,7); ctx.fill();
+    // グリル
+    ctx.fillStyle='#222'; ctx.fillRect(cx+27,cy+3,4,6);
+    // スリーポインテッド・スター
+    const stx=cx+22, sty=cy-7;
+    ctx.strokeStyle='#cfd6dd'; ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.arc(stx,sty,3.4,0,7); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(stx,sty); ctx.lineTo(stx,sty-3.4);
+    ctx.moveTo(stx,sty); ctx.lineTo(stx-3,sty+1.7);
+    ctx.moveTo(stx,sty); ctx.lineTo(stx+3,sty+1.7);
+    ctx.stroke();
+    // タイヤ（回転）
+    const sp=performance.now()*0.04;
+    for(const wx of [cx-18, cx+18]){
+      ctx.fillStyle='#1a1a1a'; ctx.beginPath(); ctx.arc(wx,wy,wr,0,7); ctx.fill();
+      ctx.fillStyle='#c4c9ce'; ctx.beginPath(); ctx.arc(wx,wy,3.6,0,7); ctx.fill();
+      ctx.strokeStyle='#8a9098'; ctx.lineWidth=1.3;
+      for(let k=0;k<4;k++){ const a=sp+k*Math.PI/2; ctx.beginPath(); ctx.moveTo(wx,wy); ctx.lineTo(wx+Math.cos(a)*6.5, wy+Math.sin(a)*6.5); ctx.stroke(); }
+    }
+  }
+
+  // プレイヤーのゴリラ（横向き・マリオのように走る／右向き基準。左向きはdrawPlayerで反転）
+  function drawGorilla(cx,cy){
+    const moving = player.onGround && Math.abs(player.vx)>0.3;
+    const air = !player.onGround;
+    const phase = performance.now()*0.022;
+    const s  = moving ? Math.sin(phase) : 0;            // 前側の手足
+    const sb = moving ? Math.sin(phase+Math.PI) : 0;    // 後ろ側の手足
+
+    const hipX=cx-1, hipY=cy+8, footY=cy+27;
+    const shX=cx-4, shY=cy-5;
+
+    ctx.lineCap='round';
+    // 後ろ脚
+    ctx.strokeStyle='#2b2624'; ctx.lineWidth=8;
+    ctx.beginPath(); ctx.moveTo(hipX,hipY);
+    ctx.lineTo(hipX+(air?-7:sb*11), air?cy+22:footY); ctx.stroke();
+    // 後ろ腕
+    ctx.lineWidth=7;
+    ctx.beginPath(); ctx.moveTo(shX,shY);
+    ctx.lineTo(shX+(air?-7:s*10), air?cy+2:cy+9); ctx.stroke();
+
+    // 胴（前傾）
+    ctx.fillStyle='#3a3330';
+    ctx.beginPath(); ctx.ellipse(cx-2,cy+2,15,16,-0.12,0,7); ctx.fill();
+
+    // 頭
+    ctx.beginPath(); ctx.ellipse(cx+8,cy-12,13,12,0,0,7); ctx.fill();
+    // 耳（後頭部）
+    ctx.beginPath(); ctx.arc(cx,cy-14,4,0,7); ctx.fill();
+    ctx.fillStyle='#5a4a40'; ctx.beginPath(); ctx.arc(cx,cy-14,2,0,7); ctx.fill();
+    // マズル（横顔・前に突き出す）
+    ctx.fillStyle='#8a7058';
+    ctx.beginPath(); ctx.ellipse(cx+16,cy-8,8,7,0,0,7); ctx.fill();
+    // 眉（張り出し）
+    ctx.fillStyle='#2f2a28';
+    ctx.beginPath(); ctx.ellipse(cx+11,cy-17,8,3.5,0,0,7); ctx.fill();
+    // 目
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(cx+12,cy-13,3,0,7); ctx.fill();
+    ctx.fillStyle='#1a1410'; ctx.beginPath(); ctx.arc(cx+13.5,cy-13,1.5,0,7); ctx.fill();
+    // 鼻孔
+    ctx.fillStyle='#3a2c24'; ctx.beginPath(); ctx.arc(cx+21,cy-8,1.2,0,7); ctx.fill();
+    // 口
+    ctx.strokeStyle='#3a2c24'; ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.moveTo(cx+12,cy-3); ctx.lineTo(cx+21,cy-4); ctx.stroke();
+
+    // 前脚
+    ctx.strokeStyle='#3a3330'; ctx.lineWidth=8; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(hipX,hipY);
+    ctx.lineTo(hipX+(air?10:s*11), air?cy+15:footY); ctx.stroke();
+    // 前腕
+    ctx.lineWidth=7;
+    ctx.beginPath(); ctx.moveTo(shX+5,shY+1);
+    ctx.lineTo(shX+5+(air?9:sb*10), air?cy:cy+9); ctx.stroke();
+    // こぶし
+    ctx.fillStyle='#332e2b';
+    ctx.beginPath(); ctx.arc(shX+5+(air?9:sb*10), air?cy:cy+9, 4,0,7); ctx.fill();
+
+    // 蝶ネクタイ（副社長）
+    ctx.fillStyle='#d23b3b';
+    ctx.beginPath();
+    ctx.moveTo(cx+4,cy-1); ctx.lineTo(cx+9,cy+2); ctx.lineTo(cx+4,cy+5); ctx.closePath();
+    ctx.moveTo(cx+13,cy-1); ctx.lineTo(cx+9,cy+2); ctx.lineTo(cx+13,cy+5); ctx.closePath();
+    ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+9,cy+2,1.6,0,7); ctx.fill();
+  }
+
+  // クレーマーおばあさん（敵）
+  function drawGrandma(cx,cy){
+    const now=performance.now();
+    const fy=Math.sin(now*0.02)*2;   // 振り上げた拳の揺れ
+    // 影
+    ctx.fillStyle='#00000022'; ctx.beginPath(); ctx.ellipse(cx,cy+25,15,5,0,0,7); ctx.fill();
+    // ハンドバッグを持つ腕
+    ctx.strokeStyle='#9c5b86'; ctx.lineWidth=5; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(cx-11,cy+6); ctx.lineTo(cx-16,cy+14); ctx.stroke();
+    ctx.fillStyle='#7a4a2a'; ctx.fillRect(cx-21,cy+13,10,8);
+    ctx.strokeStyle='#7a4a2a'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.arc(cx-16,cy+13,3.4,Math.PI,0); ctx.stroke();
+    // 振り上げた拳（怒り）
+    ctx.strokeStyle='#9c5b86'; ctx.lineWidth=5;
+    ctx.beginPath(); ctx.moveTo(cx+11,cy+5); ctx.lineTo(cx+18,cy-9+fy); ctx.stroke();
+    ctx.fillStyle='#f0c9a8'; ctx.beginPath(); ctx.arc(cx+19,cy-11+fy,3.6,0,7); ctx.fill();
+    // 体（カーディガン）
+    ctx.fillStyle='#9c5b86';
+    ctx.beginPath();
+    ctx.moveTo(cx-15,cy+26); ctx.lineTo(cx-11,cy+4);
+    ctx.quadraticCurveTo(cx,cy-2,cx+11,cy+4);
+    ctx.lineTo(cx+15,cy+26); ctx.closePath(); ctx.fill();
+    // ボタン
+    ctx.fillStyle='#e7c7da'; for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(cx,cy+9+i*5,1.2,0,7);ctx.fill();}
+    // 襟
+    ctx.fillStyle='#cf9bbb';
+    ctx.beginPath(); ctx.moveTo(cx-7,cy+3); ctx.lineTo(cx,cy+9); ctx.lineTo(cx+7,cy+3); ctx.lineTo(cx,cy+1); ctx.closePath(); ctx.fill();
+    // 頭（肌）
+    ctx.fillStyle='#f0c9a8';
+    ctx.beginPath(); ctx.arc(cx,cy-6,10,0,7); ctx.fill();
+    // 白髪
+    ctx.fillStyle='#d8d8d8';
+    ctx.beginPath(); ctx.arc(cx,cy-8,11,Math.PI,2*Math.PI); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx-9,cy-6,3.6,0,7); ctx.arc(cx+9,cy-6,3.6,0,7); ctx.fill();
+    // お団子
+    ctx.beginPath(); ctx.arc(cx,cy-19,5,0,7); ctx.fill();
+    ctx.strokeStyle='#bdbdbd'; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(cx,cy-19,5,0,7); ctx.stroke();
+    // 怒り眉
+    ctx.strokeStyle='#9a9a9a'; ctx.lineWidth=2; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(cx-8,cy-11); ctx.lineTo(cx-2,cy-9); ctx.moveTo(cx+8,cy-11); ctx.lineTo(cx+2,cy-9); ctx.stroke();
+    // メガネ
+    ctx.strokeStyle='#444'; ctx.lineWidth=1.6;
+    ctx.beginPath(); ctx.arc(cx-4,cy-6,3.4,0,7); ctx.arc(cx+4,cy-6,3.4,0,7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx-0.6,cy-6); ctx.lineTo(cx+0.6,cy-6); ctx.stroke();
+    // 目（吊り上がり）
+    ctx.fillStyle='#222'; ctx.beginPath(); ctx.arc(cx-4,cy-6,1.4,0,7); ctx.arc(cx+4,cy-6,1.4,0,7); ctx.fill();
+    // 鼻
+    ctx.strokeStyle='#d3a987'; ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(cx,cy-4); ctx.lineTo(cx-1.6,cy-1); ctx.stroke();
+    // 怒鳴る口
+    ctx.fillStyle='#7a2230'; ctx.beginPath(); ctx.ellipse(cx,cy+2,3.4,2.6,0,0,7); ctx.fill();
+    // ほうれい線・シワ
+    ctx.strokeStyle='#d3a987'; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.moveTo(cx-8,cy-1); ctx.lineTo(cx-6,cy-1); ctx.moveTo(cx+6,cy-1); ctx.lineTo(cx+8,cy-1);
+    ctx.moveTo(cx-3,cy); ctx.lineTo(cx-4,cy+3); ctx.moveTo(cx+3,cy); ctx.lineTo(cx+4,cy+3); ctx.stroke();
+    // 怒りマーク
+    emoji('💢', cx+14, cy-16, 13);
+  }
+
+  function drawHUD(){
+    ctx.textAlign='left';ctx.textBaseline='top';
+    ctx.font='bold 24px sans-serif';ctx.fillStyle='#3a2a00';
+    ctx.fillText('🍌 '+bananaScore, 14, 10);
+    ctx.textAlign='right';
+    ctx.fillText('👵 '+kills, CW-58, 10);
+    if(invincTimer>0){
+      ctx.textAlign='center';ctx.font='bold 18px sans-serif';ctx.fillStyle='#ff7a00';
+      ctx.fillText('★ 無敵×2 '+invincTimer.toFixed(1), CW/2, 48);
+    }
+    if(benzTimer>0){
+      ctx.textAlign='center';ctx.font='bold 18px sans-serif';ctx.fillStyle='#1f7ac4';
+      ctx.fillText('🚗 ベンツ 速度×2 '+benzTimer.toFixed(1), CW/2, invincTimer>0?72:48);
+    }
+  }
+
+  // ---- メインループ ----
+  function frame(ts){
+    const dt=lastTs?Math.min((ts-lastTs)/1000,0.05):0; lastTs=ts;
+    if(state==='play'&&!paused){update(dt);}
+    if(state==='play'||state==='cutscene') render();
+    requestAnimationFrame(frame);
+  }
+
+  // ---- 補聴器カットシーン ----
+  function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+  async function playHearing(count){
+    state='cutscene'; paused=true; padEl.classList.add('pad-hidden');
+    if(count%2===1){
+      // 奇数：絶叫 → バナナ大量出現
+      cutEl.innerHTML='<div class="cutFace">'+SCREAM_GORILLA+'</div><div class="scream">ゲーーーン！！</div>';
+      cutEl.classList.remove('hidden'); flashScreen();
+      await sleep(1500);
+      // バナナ大量
+      for(let i=0;i<32;i++){
+        const x=player.x+150+Math.random()*1100;
+        const y=groundY-20-Math.random()*230;
+        addBanana(x,y);
+      }
+      addFloat(player.x,player.y-30,'バナナ大量出現！','#ffe27a');
+    } else {
+      // 偶数：天の声 → 無敵×2
+      cutEl.innerHTML='<div class="label">― 天の声 ―</div><div class="voice voiceHeaven fadein">「たくみ…<br>任天堂の株を<br>買うんだ…。」</div>';
+      cutEl.classList.remove('hidden');
+      await sleep(2100);
+      cutEl.innerHTML='<div class="label">― ゴリラ副社長 ―</div><div class="voice voiceHero fadein">「聞こえているよ<br>信用二階建て<br>フルレバだね。」</div><div class="cutFace" style="filter:drop-shadow(0 0 18px #ff8a00)">'+DRUM_GORILLA+'</div>';
+      await sleep(2100);
+      invincTimer=8.0;
+      addFloat(player.x,player.y-30,'得点2倍＆無敵！','#ff9a3c');
+      AUD.sfx('power');
+    }
+    cutEl.classList.add('hidden');
+    paused=false; state='play';
+    if(TOUCH) padEl.classList.remove('pad-hidden');
+    lastTs=performance.now();
+  }
+  function flashScreen(){
+    cutEl.animate([{background:'#fff'},{background:'#000'}],{duration:300});
+  }
+
+  // ---- 開始/終了 ----
+  function startGame(){
+    // 先にボタンバーの表示を確定 → そのあとキャンバスを採寸
+    if(TOUCH) padEl.classList.remove('pad-hidden'); else padEl.classList.add('pad-hidden');
+    resize(); reset();
+    titleEl.classList.add('hidden'); resultEl.classList.add('hidden'); cutEl.classList.add('hidden');
+    timerEl.classList.remove('hidden');
+    document.getElementById('mute').classList.remove('hidden');
+    AUD.start();
+    state='play'; paused=false; lastTs=performance.now();
+  }
+  function endGame(){
+    state='result';
+    timerEl.classList.add('hidden'); padEl.classList.add('pad-hidden');
+    const total=bananaScore+kills*5;
+    if(total>hiScore){hiScore=total; localStorage.setItem(HI_KEY,hiScore);}
+    document.getElementById('rBanana').textContent=bananaScore;
+    document.getElementById('rKill').textContent=kills+' 体';
+    document.getElementById('rTotal').textContent=total+' 点';
+    document.getElementById('rHi').textContent=hiScore+' 点';
+    let msg;
+    if(total>=200) msg='🎉 圧巻の大作戦！ゴリラ・タクミ・ゴリラ社は世界一、副社長は<b>社長へ昇進</b>だ！';
+    else if(total>=100) msg='👏 大成功！研究費も任天堂株もガッポリ。さすが副社長！';
+    else if(total>=40) msg='💪 まずまず。ライバル社に負けるな、次こそフルレバだ！';
+    else msg='😢 バナナ不足で発表会は延期…。だが諦めるな、副社長！';
+    document.getElementById('rMsg').innerHTML=msg;
+    resultEl.classList.remove('hidden');
+  }
+
+  document.getElementById('startBtn').addEventListener('click',startGame);
+  document.getElementById('retryBtn').addEventListener('click',startGame);
+  document.getElementById('mute').addEventListener('click',()=>{
+    const m=AUD.toggleMute(); document.getElementById('mute').textContent=m?'🔇':'🔊';
+  });
+
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

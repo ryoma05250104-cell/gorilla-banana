@@ -917,6 +917,23 @@
   // ---- 補聴器カットシーン ----
   function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
   async function playHearing(count){
+    // 3個目以降は暗転（カットシーン）なしで効果だけ発動
+    if(count>=3){
+      if(count%2===1){
+        for(let i=0;i<32;i++){
+          const x=player.x+150+Math.random()*1100;
+          const y=groundY-20-Math.random()*230;
+          addBanana(x,y);
+        }
+        addFloat(player.x,player.y-30,'バナナ大量出現！','#ffe27a');
+        AUD.sfx('gold');
+      } else {
+        invincTimer=8.0;
+        addFloat(player.x,player.y-30,'得点2倍＆無敵！','#ff9a3c');
+        AUD.sfx('power');
+      }
+      return;
+    }
     state='cutscene'; paused=true; padEl.classList.add('pad-hidden');
     if(count%2===1){
       // 奇数：絶叫 → バナナ大量出現

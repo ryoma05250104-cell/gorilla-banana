@@ -64,7 +64,6 @@ body { background:#87CEEB; overflow:hidden; touch-action:none; }
 <body>
 <canvas id="c"></canvas>
 
-<!-- 顔画像プリロード -->
 <img id="img_normal" src="face_normal.png" crossorigin="anonymous" style="display:none" alt="">
 <img id="img_scared" src="face_scared.png" crossorigin="anonymous" style="display:none" alt="">
 <img id="img_panic"  src="face_panic.png"  crossorigin="anonymous" style="display:none" alt="">
@@ -216,30 +215,28 @@ function updateCamera() {
   camera.lookAt(P.x, 1.2, P.z);
 }
 
-// ── 顔テクスチャ生成 ─────────────────────────────────────────────────────────
+// ── テクスチャ生成 ───────────────────────────────────────────────────────────
 const IMG = {
   normal: document.getElementById('img_normal'),
   scared: document.getElementById('img_scared'),
   panic:  document.getElementById('img_panic'),
   caught: document.getElementById('img_caught'),
 };
-
 const texCache = {};
 
-// 画像ロード完了時にキャッシュをリセット
 Object.values(IMG).forEach(img => {
   img.addEventListener('load', () => {
-    Object.keys(texCache).forEach(k => { texCache[k].dispose(); delete texCache[k]; });
+    // 顔テクスチャのみ再生成（アイコンはそのまま）
+    ['mf_wander','mf_sleep','mf_alert','mf_flee','mf_caught'].forEach(k => {
+      if (texCache[k]) { texCache[k].dispose(); delete texCache[k]; }
+    });
     if (typeof monkeys !== 'undefined') monkeys.forEach(m => { m._prevState = null; });
   });
 });
 
-// FW/FH: 顔元画像サイズ, ICON_H: 吹き出しアイコン分の余白
-const FACE_W = 190, FACE_H = 215, ICON_H = 54;
-const CANVAS_W = FACE_W, CANVAS_H = FACE_H + ICON_H;
-
-function makeMonkeyTex(type, state) {
-  const key = `${type}_${state}`;
+// 顔テクスチャ：白背景除去してアルファ付きに変換
+function makeMonkeyFaceTex(state) {
+  const key = `mf_${state}`;
   if (texCache[key]) return texCache[key];
 
   const faceImg = state === 'flee'   ? IMG.panic
@@ -247,43 +244,24 @@ function makeMonkeyTex(type, state) {
     :             state === 'caught' ? IMG.caught
     :                                  IMG.normal;
 
-  const icon = state === 'sleep'  ? '💤'
-    :          state === 'alert'  ? '❗'
-    :          state === 'flee'   ? '💨'
-    :          state === 'caught' ? '✨'
-    : null;
-
+  const W = 190, H = 215;
   const cv = document.createElement('canvas');
-  cv.width = CANVAS_W; cv.height = CANVAS_H;
+  cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
 
-  if (icon) {
-    ctx.font = '44px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(icon, CANVAS_W / 2, ICON_H / 2);
-  }
-
   if (faceImg.complete && faceImg.naturalWidth > 0) {
-    ctx.drawImage(faceImg, 0, ICON_H, FACE_W, FACE_H);
-
-    // タイプ別色オーバーレイ（赤=速い、青紫=眠り）
-    if (type === 'fast') {
-      ctx.globalCompositeOperation = 'source-atop';
-      ctx.fillStyle = 'rgba(255,50,50,0.28)';
-      ctx.fillRect(0, ICON_H, FACE_W, FACE_H);
-      ctx.globalCompositeOperation = 'source-over';
-    } else if (type === 'sleep') {
-      ctx.globalCompositeOperation = 'source-atop';
-      ctx.fillStyle = 'rgba(80,60,220,0.22)';
-      ctx.fillRect(0, ICON_H, FACE_W, FACE_H);
-      ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(faceImg, 0, 0, W, H);
+    // 白・明るい背景を透明化
+    const id = ctx.getImageData(0, 0, W, H);
+    const d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i] > 218 && d[i+1] > 218 && d[i+2] > 218) d[i+3] = 0;
     }
+    ctx.putImageData(id, 0, 0);
   } else {
-    // 画像ロード前フォールバック
-    ctx.font = `${FACE_H * 0.72}px serif`;
+    ctx.font = '160px serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('🐒', CANVAS_W/2, ICON_H + FACE_H/2);
+    ctx.fillText('🐒', W/2, H/2);
   }
 
   const tex = new THREE.CanvasTexture(cv);
@@ -291,16 +269,33 @@ function makeMonkeyTex(type, state) {
   return tex;
 }
 
-// ── サルクラス（スプライト版）───────────────────────────────────────────────
+// アイコン（💤 ❗ 💨 ✨）用スプライトテクスチャ
+function makeIconTex(icon) {
+  const key = `icon_${icon}`;
+  if (texCache[key]) return texCache[key];
+  const cv = document.createElement('canvas');
+  cv.width = 64; cv.height = 64;
+  const ctx = cv.getContext('2d');
+  ctx.font = '52px serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(icon, 32, 32);
+  const tex = new THREE.CanvasTexture(cv);
+  texCache[key] = tex;
+  return tex;
+}
+
+// ── サルクラス（3Dボディ + 顔テクスチャパネル）──────────────────────────────
 const MCFG = {
   normal: { ws:2.5, fs:6.0,  dr:7.0  },
   fast:   { ws:3.5, fs:11.5, dr:10.0 },
   sleep:  { ws:2.0, fs:6.5,  dr:2.5  },
 };
 
-// スプライトサイズ（190x269のアスペクト比）
-const SPR_H = 2.8;
-const SPR_W = SPR_H * (CANVAS_W / CANVAS_H);
+const TYPE_COLORS = {
+  normal: { body:0x8B4513, head:0xCD853F },
+  fast:   { body:0xAA2211, head:0xDD4422 },
+  sleep:  { body:0x443388, head:0x7766CC },
+};
 
 class Monkey {
   constructor(x, z, type) {
@@ -314,16 +309,84 @@ class Monkey {
     this.bobT     = Math.random() * Math.PI * 2;
     this.mx = 0; this.mz = 0;
     this._prevState = null;
+    this._fadeMats  = null;
 
-    this.mat  = new THREE.SpriteMaterial({ map: makeMonkeyTex(type, this.state), transparent: true });
-    this.mesh = new THREE.Sprite(this.mat);
-    this.mesh.scale.set(SPR_W, SPR_H, 1);
-    this.mesh.position.set(x, SPR_H / 2, z);
-    scene.add(this.mesh);
+    const cols    = TYPE_COLORS[type];
+    const bodyMat = new THREE.MeshLambertMaterial({ color: cols.body });
+    const headMat = new THREE.MeshLambertMaterial({ color: cols.head });
+    const eyeMat  = new THREE.MeshLambertMaterial({ color: 0x111111 });
 
-    // 地面の影（円）
+    this.group = new THREE.Group();
+    this.group.position.set(x, 0, z);
+
+    // ── 胴体 ─────────────────────────────────────────
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.9, 0.5), bodyMat);
+    body.position.y = 0.55; this.group.add(body);
+
+    // ── お腹（明るめ）──────────────────────────────
+    const bellyMat = new THREE.MeshLambertMaterial({ color: cols.head });
+    const belly = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.55, 0.26), bellyMat);
+    belly.position.set(0, 0.58, 0.14); this.group.add(belly);
+
+    // ── 頭 ─────────────────────────────────────────
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 10), headMat);
+    head.position.y = 1.32; this.group.add(head);
+
+    // ── 目（顔パネルで隠れるが側面/背面から見える）─
+    [-1,1].forEach(s => {
+      const e = new THREE.Mesh(new THREE.SphereGeometry(0.058, 6, 6), eyeMat);
+      e.position.set(s*0.14, 1.38, 0.37); this.group.add(e);
+    });
+
+    // ── 顔パネル（タカハシの顔を正面に貼る）──────────
+    // 190x215 のアスペクト比に合わせる
+    this.faceMat = new THREE.MeshBasicMaterial({
+      map: makeMonkeyFaceTex(this.state),
+      transparent: true,
+      alphaTest: 0.05,
+      depthWrite: false,
+    });
+    // 頭の正面：head center y=1.32, head radius=0.42 → 表面z≈0.42 → 少し前0.44
+    const facePanel = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.88), this.faceMat);
+    facePanel.position.set(0, 1.32, 0.445);
+    this.group.add(facePanel);
+
+    // ── 腕 ─────────────────────────────────────────
+    this.armL = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.74, 0.21), bodyMat);
+    this.armL.position.set(-0.52, 0.55, 0); this.armL.rotation.z = -0.28;
+    this.group.add(this.armL);
+    this.armR = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.74, 0.21), bodyMat);
+    this.armR.position.set( 0.52, 0.55, 0); this.armR.rotation.z =  0.28;
+    this.group.add(this.armR);
+
+    // ── 足 ─────────────────────────────────────────
+    this.legL = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.52, 0.24), bodyMat);
+    this.legL.position.set(-0.2, 0.06, 0); this.group.add(this.legL);
+    this.legR = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.52, 0.24), bodyMat);
+    this.legR.position.set( 0.2, 0.06, 0); this.group.add(this.legR);
+
+    // ── しっぽ ──────────────────────────────────────
+    const tailCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0,    0.35, -0.26),
+      new THREE.Vector3(-0.2, 0.58, -0.42),
+      new THREE.Vector3(-0.38, 0.82, -0.32),
+      new THREE.Vector3(-0.28, 1.05, -0.12),
+    ]);
+    const tailGeo = new THREE.TubeGeometry(tailCurve, 8, 0.055, 6, false);
+    this.group.add(new THREE.Mesh(tailGeo, bodyMat));
+
+    // ── アイコンスプライト（頭上に浮かぶ）──────────
+    this.iconMat = new THREE.SpriteMaterial({ transparent: true, opacity: 0 });
+    this.iconSprite = new THREE.Sprite(this.iconMat);
+    this.iconSprite.scale.set(0.68, 0.68, 1);
+    this.iconSprite.position.set(0, 2.08, 0);
+    this.group.add(this.iconSprite);
+
+    scene.add(this.group);
+
+    // ── 影（地面の円）────────────────────────────────
     this.shadow = new THREE.Mesh(
-      new THREE.CircleGeometry(0.55, 12),
+      new THREE.CircleGeometry(0.52, 12),
       new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22 })
     );
     this.shadow.rotation.x = -Math.PI / 2;
@@ -334,46 +397,70 @@ class Monkey {
   _updateTex() {
     if (this.state === this._prevState) return;
     this._prevState = this.state;
-    this.mat.map = makeMonkeyTex(this.type, this.state);
-    this.mat.needsUpdate = true;
+
+    this.faceMat.map = makeMonkeyFaceTex(this.state);
+    this.faceMat.needsUpdate = true;
+
+    const iconMap = { sleep:'💤', alert:'❗', flee:'💨', caught:'✨' };
+    const icon = iconMap[this.state];
+    if (icon) {
+      this.iconMat.map     = makeIconTex(icon);
+      this.iconMat.opacity = 1;
+      this.iconMat.needsUpdate = true;
+    } else {
+      this.iconMat.opacity = 0;
+    }
   }
 
   update(dt) {
     this.bobT += dt * 4;
 
-    // つかまった演出（拡大→フェードアウト）
+    // つかまった演出
     if (this.caught) {
-      this.ca += dt * 2.8;
-      const sc = 1 + this.ca * 0.65;
-      this.mesh.scale.set(SPR_W * sc, SPR_H * sc, 1);
-      this.mat.opacity = Math.max(0, 1 - this.ca * 1.3);
-      this.shadow.visible = false;
-      if (this.ca > 1) this.mesh.visible = false;
+      this._updateTex(); // くやしい表情 + ✨
+      this.ca += dt * 2.5;
+      this.group.scale.setScalar(1 + this.ca * 0.4);
+      if (!this._fadeMats) {
+        this._fadeMats = [];
+        this.group.traverse(obj => {
+          if (obj.isMesh && obj.material) {
+            obj.material = obj.material.clone();
+            obj.material.transparent = true;
+            this._fadeMats.push(obj.material);
+          }
+        });
+      }
+      const alpha = Math.max(0, 1 - this.ca * 1.4);
+      this._fadeMats.forEach(m => { m.opacity = alpha; m.needsUpdate = true; });
+      this.iconMat.opacity = alpha;
+      this.shadow.visible  = false;
+      if (this.ca > 0.9) this.group.visible = false;
       return;
     }
 
     const dx = this.x - P.x, dz = this.z - P.z;
     const dist = Math.hypot(dx, dz);
 
+    // 眠り状態
     if (this.state === 'sleep') {
       if (dist < this.dr) { this.state = 'alert'; this.at = 0.5; }
-      // 眠っているときはほぼ静止（小さく浮遊）
-      this.mesh.position.set(this.x, SPR_H/2 + Math.sin(this.bobT*0.4)*0.04, this.z);
+      this.group.position.set(this.x, Math.sin(this.bobT * 0.5) * 0.04, this.z);
       this.shadow.position.set(this.x, 0.01, this.z);
       this._updateTex(); return;
     }
+
+    // 気づいた（震える）
     if (this.state === 'alert') {
       this.at -= dt;
-      // 気づいた瞬間：小刻みに震える
-      const sh = Math.sin(this.bobT * 18) * 0.07;
-      this.mesh.position.set(this.x + sh, SPR_H/2, this.z);
+      const sh = Math.sin(this.bobT * 18) * 0.065;
+      this.group.position.set(this.x + sh, 0, this.z);
       this.shadow.position.set(this.x, 0.01, this.z);
       if (this.at <= 0) this.state = 'flee';
       this._updateTex(); return;
     }
 
     if (this.state === 'wander' && dist < this.dr) this.state = 'flee';
-    if (this.state === 'flee' && dist > this.dr*2.1) { this.state = 'wander'; this.wt = 1; }
+    if (this.state === 'flee' && dist > this.dr * 2.1) { this.state = 'wander'; this.wt = 1; }
 
     if (this.state === 'flee') {
       const l = Math.max(dist, 0.01);
@@ -386,22 +473,29 @@ class Monkey {
       this.mx = Math.sin(this.dir); this.mz = Math.cos(this.dir);
       const nx = clamp(this.x + this.mx*this.ws*dt, -BOUND+1, BOUND-1);
       const nz = clamp(this.z + this.mz*this.ws*dt, -BOUND+1, BOUND-1);
-      if (nx === this.x) { this.dir = Math.PI - this.dir; this.mx *= -1; }
-      if (nz === this.z) { this.dir = -this.dir;          this.mz *= -1; }
+      if (nx === this.x) { this.dir = Math.PI-this.dir; this.mx *= -1; }
+      if (nz === this.z) { this.dir = -this.dir;        this.mz *= -1; }
       this.x = nx; this.z = nz;
     }
 
-    // 逃走中は激しく上下バウンド
     const bob = this.state === 'flee'
       ? Math.abs(Math.sin(this.bobT)) * 0.3
-      : Math.sin(this.bobT) * 0.09;
-    this.mesh.position.set(this.x, SPR_H/2 + bob, this.z);
+      : Math.sin(this.bobT) * 0.08;
+
+    this.group.position.set(this.x, bob, this.z);
     this.shadow.position.set(this.x, 0.01, this.z);
 
-    // 移動方向に応じて左右反転（スプライト）
-    const aw = Math.abs(this.mesh.scale.x);
-    if      (this.mx >  0.1) this.mesh.scale.x =  aw;
-    else if (this.mx < -0.1) this.mesh.scale.x = -aw;
+    // 移動方向を向く
+    if (Math.hypot(this.mx, this.mz) > 0.05) {
+      this.group.rotation.y = Math.atan2(this.mx, this.mz);
+    }
+
+    // 手足の歩行アニメーション
+    const swing = Math.sin(this.bobT * 1.5) * (this.state === 'flee' ? 0.62 : 0.38);
+    this.armL.rotation.x =  swing;
+    this.armR.rotation.x = -swing;
+    this.legL.rotation.x = -swing * 0.75;
+    this.legR.rotation.x =  swing * 0.75;
 
     this._updateTex();
   }

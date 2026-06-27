@@ -54,6 +54,12 @@ body { background:#87CEEB; overflow:hidden; touch-action:none; }
   background:#4CAF50; color:#fff; border:none; border-radius:50px; cursor:pointer;
 }
 .btn:active { transform:scale(0.95); }
+#viewCounter {
+  position:fixed; top:12px; right:12px; z-index:10;
+  background:rgba(0,0,0,0.55); color:#fff;
+  font:bold 13px Arial; padding:6px 12px; border-radius:10px;
+  pointer-events:none; display:flex; align-items:center; gap:6px;
+}
 #catchLabel {
   position:fixed; top:43%; left:50%; z-index:15; transform:translate(-50%,-50%);
   font:bold 52px Arial; color:#FFD700;
@@ -70,6 +76,7 @@ body { background:#87CEEB; overflow:hidden; touch-action:none; }
 <img id="img_caught" src="face_caught.png"  crossorigin="anonymous" style="display:none" alt="">
 
 <div id="hud">🐒 <span id="scoreEl">0</span> / 12</div>
+<div id="viewCounter">👁 <span id="viewEl">…</span></div>
 <div id="joystickZone"><div id="joystickThumb"></div></div>
 <div id="netBtn"><span style="font-size:28px">🥅</span><span>ネット</span></div>
 <div id="catchLabel">GET! 🎉</div>
@@ -653,6 +660,16 @@ function loop(ts) {
 }
 
 requestAnimationFrame(loop);
+
+// ── 閲覧数カウンター ────────────────────────────────────────────────────────
+(function() {
+  const el = document.getElementById('viewEl');
+  // CountAPI: 無料・匿名・静的サイト向け
+  fetch('https://api.counterapi.dev/v1/gorilla-banana-takahashi/monkey/up')
+    .then(r => r.json())
+    .then(d => { el.textContent = (d.count || d.value || '?').toLocaleString() + '回'; })
+    .catch(() => { el.textContent = '-'; });
+})();
 </script>
 </body>
 </html>

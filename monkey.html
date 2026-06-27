@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>サル大作戦 3D</title>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#87CEEB; overflow:hidden; touch-action:none; }
+
+#c {
+  position:fixed; top:0; left:0; width:100%; height:100%;
+  display:block; pointer-events:none;
+}
+
+#hud {
+  position:fixed; top:12px; left:12px; z-index:10;
+  background:rgba(0,0,0,0.55); color:#fff;
+  font:bold 20px Arial; padding:8px 16px; border-radius:12px;
+  pointer-events:none;
+}
+
+#joystickZone {
+  position:fixed; bottom:24px; left:24px; z-index:10;
+  width:148px; height:148px; border-radius:50%;
+  background:rgba(255,255,255,0.15);
+  border:3px solid rgba(255,255,255,0.45);
+  touch-action:none;
+}
+#joystickThumb {
+  position:absolute; width:62px; height:62px; border-radius:50%;
+  top:43px; left:43px; pointer-events:none;
+  background:rgba(255,255,255,0.6);
+  border:3px solid rgba(255,255,255,0.95);
+  box-shadow:0 2px 10px rgba(0,0,0,0.3);
+}
+
+#netBtn {
+  position:fixed; bottom:30px; right:30px; z-index:10;
+  width:100px; height:100px; border-radius:50%;
+  background:rgba(40,170,40,0.82);
+  border:4px solid rgba(255,255,255,0.92);
+  color:#fff; font:bold 14px Arial;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:3px;
+  box-shadow:0 4px 18px rgba(0,0,0,0.4);
+  cursor:pointer; user-select:none; -webkit-user-select:none;
+  touch-action:none;
+}
+#netBtn.pressed { transform:scale(0.88); background:rgba(200,40,40,0.88); }
+
+.screen {
+  position:fixed; top:0; left:0; width:100%; height:100%; z-index:20;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  color:#fff; font-family:Arial; padding:20px; text-align:center;
+}
+#titleScreen { background:rgba(8,35,8,0.95); }
+#winScreen   { background:rgba(8,8,50,0.92); display:none; }
+.screen h1   { font-size:clamp(26px,7vw,52px); margin-bottom:8px; }
+.infoBox {
+  background:rgba(255,255,255,0.13); border-radius:14px;
+  padding:14px 22px; margin:12px 0;
+  font-size:clamp(13px,3vw,16px); line-height:2.1;
+  max-width:420px; width:100%;
+}
+.btn {
+  margin-top:16px; padding:16px 44px;
+  font-size:22px; font-weight:bold;
+  background:#4CAF50; color:#fff;
+  border:none; border-radius:50px; cursor:pointer;
+}
+.btn:active { transform:scale(0.95); }
+
+#catchLabel {
+  position:fixed; top:43%; left:50%; z-index:15;
+  transform:translate(-50%,-50%);
+  font:bold 52px Arial; color:#FFD700;
+  text-shadow:3px 3px 12px rgba(0,0,0,0.9);
+  pointer-events:none; display:none;
+}
+</style>
+</head>
+<body>
+
+<!-- canvas MUST be in HTML so UI sits on top -->
+<canvas id="c"></canvas>
+
+<div id="hud">🐒 <span id="scoreEl">0</span> / 12</div>
+<div id="joystickZone"><div id="joystickThumb"></div></div>
+<div id="netBtn"><span style="font-size:28px">🥅</span><span>ネット</span></div>
+<div id="catchLabel">GET! 🎉</div>
+
+<div id="titleScreen" class="screen">
+  <h1>🐒 サル大作戦 3D!</h1>
+  <p style="font-size:clamp(14px,3vw,18px)">逃げるサルを 12匹 全員つかまえよう！</p>
+  <div class="infoBox">
+    <div>🕹️ 左の丸 → 移動</div>
+    <div>🥅 右のボタン → ネットを振る</div>
+    <div>🐒 茶色 — 普通のサル（6匹）</div>
+    <div>🔴 赤 — 速いサル（4匹）</div>
+    <div>🟣 紫 — 眠ってるサル（2匹）</div>
+    <div style="opacity:0.7;font-size:0.85em">PC: WASD ＋ Space でも動くよ</div>
+  </div>
+  <button class="btn" id="startBtn">▶ スタート！</button>
+</div>
+<div id="winScreen" class="screen">
+  <h1>🎉 クリア！</h1>
+  <p style="font-size:clamp(18px,4vw,28px);margin:16px 0">🐒 12匹 全員捕獲！</p>
+  <p style="opacity:0.8">お疲れ様でした！</p>
+  <button class="btn" id="restartBtn" style="margin-top:24px">もう一度</button>
+</div>
+
+<script>
+'use strict';
+
+// ── Renderer (既存のcanvasを使う) ────────────────────────────────────────────
+const renderer = new THREE.WebGLRenderer({
+  canvas: document.getElementById('c'),
+  antialias: true,
+});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x87CEEB);
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+// ── Scene / Camera / Lights ─────────────────────────────────────────────────
+const scene  = new THREE.Scene();
+scene.fog    = new THREE.Fog(0x87CEEB, 45, 90);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+camera.position.set(0, 8, 11);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const sun = new THREE.DirectionalLight(0xfff5e0, 1.0);
+sun.position.set(15, 30, 10);
+scene.add(sun);
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+const BOUND = 38;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rnd   = (a, b)    => a + Math.random() * (b - a);
+
+// ── Ground ──────────────────────────────────────────────────────────────────
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(BOUND * 2, BOUND * 2),
+  new THREE.MeshLambertMaterial({ color: 0x4a9040 })
+);
+ground.rotation.x = -Math.PI / 2;  // 水平に倒す
+scene.add(ground);
+scene.add(new THREE.GridHelper(BOUND * 2, 24, 0x3a7030, 0x3a7030));
+
+// 柵
+const fenceMat = new THREE.MeshLambertMaterial({ color: 0x7a5010 });
+[[-1,0,true],[1,0,true],[0,-1,false],[0,1,false]].forEach(([nx,nz,horiz]) => {
+  const fence = new THREE.Mesh(
+    new THREE.BoxGeometry(horiz ? 0.5 : BOUND*2, 1.2, horiz ? BOUND*2 : 0.5),
+    fenceMat
+  );
+  fence.position.set(nx * BOUND, 0.6, nz * BOUND);
+  scene.add(fence);
+});
+
+// ── 木 ─────────────────────────────────────────────────────────────────────
+const trunkMat = new THREE.MeshLambertMaterial({ color: 0x7a4a1a });
+const leafMat1 = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+const leafMat2 = new THREE.MeshLambertMaterial({ color: 0x1a7a18 });
+
+for (let i = 0; i < 40; i++) {
+  const angle = Math.random() * Math.PI * 2;
+  const dist  = 5 + Math.random() * (BOUND - 7);
+  const tree  = new THREE.Group();
+  tree.position.set(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
+
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 2.2, 7), trunkMat);
+  trunk.position.y = 1.1;
+  tree.add(trunk);
+
+  [[3.7, 2.1, leafMat1], [2.9, 1.8, leafMat2], [2.1, 1.5, leafMat1]].forEach(([y, r, mat]) => {
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(r, 1.8, 8), mat);
+    cone.position.y = y;
+    tree.add(cone);
+  });
+  scene.add(tree);
+}
+
+// ── キャラクタービルダー ─────────────────────────────────────────────────────
+function buildChar(bodyCol, headCol, sc) {
+  const g    = new THREE.Group();
+  const bMat = new THREE.MeshLambertMaterial({ color: bodyCol });
+  const hMat = new THREE.MeshLambertMaterial({ color: headCol });
+  const eMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(sc*.8, sc*1.1, sc*.5), bMat);
+  body.position.y = sc * .55;
+  g.add(body);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(sc*.4, 10, 10), hMat);
+  head.position.y = sc * 1.35;
+  g.add(head);
+
+  [-1, 1].forEach(s => {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(sc*.065, 6, 6), eMat);
+    eye.position.set(s * sc*.13, sc*1.4, sc*.37);
+    g.add(eye);
+  });
+
+  [-1, 1].forEach(s => {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(sc*.2, sc*.7, sc*.2), bMat);
+    arm.position.set(s * sc*.55, sc*.6, 0);
+    arm.rotation.z = s * .22;
+    g.add(arm);
+  });
+
+  return g;
+}
+
+// ── プレイヤー ───────────────────────────────────────────────────────────────
+const playerMesh = buildChar(0x2266CC, 0xFFCC88, 1.0);
+scene.add(playerMesh);
+
+// ネット
+const netGroup = new THREE.Group();
+netGroup.position.set(0, 0.8, 0);
+netGroup.visible = false;
+playerMesh.add(netGroup);
+
+const handleMesh = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.07, 0.07, 2.0),
+  new THREE.MeshLambertMaterial({ color: 0x8B5A2B })
+);
+handleMesh.rotation.z = Math.PI / 2;
+handleMesh.position.set(1.0, 0, 0);
+netGroup.add(handleMesh);
+
+const ringMesh = new THREE.Mesh(
+  new THREE.TorusGeometry(0.75, 0.07, 8, 18),
+  new THREE.MeshLambertMaterial({ color: 0x88FF88, transparent: true, opacity: 0.9 })
+);
+ringMesh.rotation.y = Math.PI / 2;
+ringMesh.position.set(2.0, 0, 0);
+netGroup.add(ringMesh);
+
+const fillMesh = new THREE.Mesh(
+  new THREE.CircleGeometry(0.73, 14),
+  new THREE.MeshLambertMaterial({ color: 0xAAFFAA, transparent: true, opacity: 0.3, side: THREE.DoubleSide })
+);
+fillMesh.rotation.y = Math.PI / 2;
+fillMesh.position.set(2.0, 0, 0);
+netGroup.add(fillMesh);
+
+// プレイヤー状態
+const P = {
+  x: 0, z: 0,
+  dirX: 0, dirZ: -1,   // 向き (単位ベクトル)
+  speed: 9,
+  netSwing: 0, netCooldown: 0,
+  NET_DUR: 0.32, NET_CD: 0.58, NET_R: 3.8,
+  caught: 0,
+};
+
+// ── カメラ追従 ───────────────────────────────────────────────────────────────
+// camDX/camDZ = カメラからプレイヤーへの方向 (単位ベクトル、プレイヤー向きに追従)
+let camDX = 0, camDZ = -1;
+const CAM_DIST = 11, CAM_H = 8;
+
+function updateCamera() {
+  // プレイヤーの向きに向かってゆっくり追従
+  camDX += (P.dirX - camDX) * 0.055;
+  camDZ += (P.dirZ - camDZ) * 0.055;
+  const l = Math.hypot(camDX, camDZ);
+  if (l > 0.001) { camDX /= l; camDZ /= l; }
+
+  // プレイヤーの後ろに配置
+  const tx = P.x - camDX * CAM_DIST;
+  const tz = P.z - camDZ * CAM_DIST;
+  camera.position.x += (tx    - camera.position.x) * 0.1;
+  camera.position.y += (CAM_H - camera.position.y) * 0.1;
+  camera.position.z += (tz    - camera.position.z) * 0.1;
+  camera.lookAt(P.x, 1.2, P.z);
+}
+
+// ── サルクラス ───────────────────────────────────────────────────────────────
+const MCFG = {
+  normal: { ws:2.5, fs:6.0,  dr:7.0,  body:0x8B4513, head:0xD2691E },
+  fast:   { ws:3.5, fs:11.5, dr:10.0, body:0xCC2200, head:0xFF6644 },
+  sleep:  { ws:2.0, fs:6.5,  dr:2.5,  body:0x6644AA, head:0xAA88CC },
+};
+
+class Monkey {
+  constructor(x, z, type) {
+    const c = MCFG[type];
+    this.x = x; this.z = z; this.type = type;
+    this.ws = c.ws; this.fs = c.fs; this.dr = c.dr;
+    this.state  = type === 'sleep' ? 'sleep' : 'wander';
+    this.dir    = Math.random() * Math.PI * 2;
+    this.wt     = rnd(0.5, 2);
+    this.at     = 0;
+    this.caught = false; this.ca = 0;
+    this.bobT   = Math.random() * Math.PI * 2;
+    this.mx = 0; this.mz = 0;
+
+    this.mesh = buildChar(c.body, c.head, 0.78);
+
+    // 耳
+    const earMat = new THREE.MeshLambertMaterial({ color: c.head });
+    [-1, 1].forEach(s => {
+      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 6), earMat);
+      ear.position.set(s * 0.30, 1.05, 0.12);
+      this.mesh.add(ear);
+    });
+
+    // しっぽ
+    const tailMat = new THREE.MeshLambertMaterial({ color: c.body });
+    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.8), tailMat);
+    tail.position.set(0, 0.35, -0.26);
+    tail.rotation.x = -0.9;
+    this.mesh.add(tail);
+
+    this.mesh.position.set(x, 0, z);
+    scene.add(this.mesh);
+  }
+
+  update(dt) {
+    this.bobT += dt * 4;
+    if (this.caught) {
+      this.ca += dt * 3;
+      this.mesh.scale.setScalar(1 + this.ca * 0.7);
+      if (this.ca > 1.2) this.mesh.visible = false;
+      return;
+    }
+
+    const dx   = this.x - P.x;
+    const dz   = this.z - P.z;
+    const dist = Math.hypot(dx, dz);
+
+    if (this.state === 'sleep') {
+      if (dist < this.dr) { this.state = 'alert'; this.at = 0.45; }
+      this.mesh.position.y = Math.sin(this.bobT * 0.5) * 0.05;
+      return;
+    }
+    if (this.state === 'alert') {
+      this.at -= dt;
+      this.mesh.position.y = Math.abs(Math.sin(this.bobT * 8)) * 0.15;
+      if (this.at <= 0) this.state = 'flee';
+      return;
+    }
+    if (this.state === 'wander' && dist < this.dr)     this.state = 'flee';
+    if (this.state === 'flee'   && dist > this.dr*2.1) { this.state = 'wander'; this.wt = 1; }
+
+    if (this.state === 'flee') {
+      const l = Math.max(dist, 0.01);
+      this.mx = dx / l; this.mz = dz / l;
+      this.x  = clamp(this.x + this.mx * this.fs * dt, -BOUND+1, BOUND-1);
+      this.z  = clamp(this.z + this.mz * this.fs * dt, -BOUND+1, BOUND-1);
+    } else {
+      this.wt -= dt;
+      if (this.wt <= 0) { this.dir += rnd(-1,1) * Math.PI; this.wt = rnd(1,3); }
+      this.mx = Math.sin(this.dir); this.mz = Math.cos(this.dir);
+      const nx = clamp(this.x + this.mx * this.ws * dt, -BOUND+1, BOUND-1);
+      const nz = clamp(this.z + this.mz * this.ws * dt, -BOUND+1, BOUND-1);
+      if (nx === this.x) { this.dir = Math.PI - this.dir; this.mx *= -1; }
+      if (nz === this.z) { this.dir = -this.dir;           this.mz *= -1; }
+      this.x = nx; this.z = nz;
+    }
+
+    const bob = this.state === 'flee'
+      ? Math.abs(Math.sin(this.bobT)) * 0.22
+      : Math.sin(this.bobT) * 0.08;
+    this.mesh.position.set(this.x, bob, this.z);
+
+    // 移動方向を向く: atan2(x, -z) が Three.js の rotation.y
+    if (Math.hypot(this.mx, this.mz) > 0.01)
+      this.mesh.rotation.y = Math.atan2(this.mx, -this.mz);
+  }
+}
+
+// サル生成
+const TYPES = [...Array(6).fill('normal'), ...Array(4).fill('fast'), ...Array(2).fill('sleep')];
+const monkeys = TYPES.map(type => {
+  let x, z, tries = 0;
+  do {
+    const a = Math.random() * Math.PI * 2;
+    const d = 8 + Math.random() * (BOUND - 10);
+    x = Math.cos(a) * d; z = Math.sin(a) * d;
+    tries++;
+  } while (tries < 60 && Math.hypot(x, z) < 12);
+  return new Monkey(x, z, type);
+});
+
+// ── ジョイスティック ─────────────────────────────────────────────────────────
+const joy   = { x:0, y:0, id:null, cx:0, cy:0 };
+const jZone = document.getElementById('joystickZone');
+const jThumb= document.getElementById('joystickThumb');
+const JR = 74, TR = 31;
+
+jZone.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.changedTouches[0];
+  joy.id = t.identifier;
+  const r = jZone.getBoundingClientRect();
+  joy.cx = r.left + r.width  / 2;
+  joy.cy = r.top  + r.height / 2;
+}, { passive: false });
+
+document.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier !== joy.id) continue;
+    const dx = t.clientX - joy.cx;
+    const dy = t.clientY - joy.cy;
+    const d  = Math.hypot(dx, dy);
+    const a  = Math.atan2(dy, dx);
+    joy.x = Math.cos(a) * Math.min(d, JR) / JR;
+    joy.y = Math.sin(a) * Math.min(d, JR) / JR;
+    const vx = Math.cos(a) * Math.min(d, JR - TR);
+    const vy = Math.sin(a) * Math.min(d, JR - TR);
+    jThumb.style.left = (JR - TR + vx) + 'px';
+    jThumb.style.top  = (JR - TR + vy) + 'px';
+  }
+}, { passive: false });
+
+const resetJoy = e => {
+  for (const t of e.changedTouches) {
+    if (t.identifier !== joy.id) continue;
+    joy.x = 0; joy.y = 0; joy.id = null;
+    jThumb.style.left = (JR - TR) + 'px';
+    jThumb.style.top  = (JR - TR) + 'px';
+  }
+};
+document.addEventListener('touchend',    resetJoy);
+document.addEventListener('touchcancel', resetJoy);
+
+// ── ネットボタン ─────────────────────────────────────────────────────────────
+const netBtn = document.getElementById('netBtn');
+let netQ = false;
+netBtn.addEventListener('touchstart', e => {
+  e.preventDefault(); netQ = true; netBtn.classList.add('pressed');
+}, { passive: false });
+netBtn.addEventListener('touchend',   () => netBtn.classList.remove('pressed'));
+
+// ── キーボード ───────────────────────────────────────────────────────────────
+const keys = {}, jp = new Set();
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (!e.repeat) jp.add(e.code);
+  if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))
+    e.preventDefault();
+});
+document.addEventListener('keyup',     e => { keys[e.code] = false; });
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// ── ネット振り ───────────────────────────────────────────────────────────────
+const scoreEl    = document.getElementById('scoreEl');
+const catchLabel = document.getElementById('catchLabel');
+let catchTimer = 0;
+
+function doSwing() {
+  if (P.netCooldown > 0) return;
+  P.netSwing    = P.NET_DUR;
+  P.netCooldown = P.NET_CD;
+  netGroup.visible = true;
+
+  for (const m of monkeys) {
+    if (m.caught) continue;
+    const dx   = m.x - P.x;
+    const dz   = m.z - P.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist > P.NET_R) continue;
+
+    // サルがプレイヤーの正面にいるか (内積でチェック)
+    const dot = (dx / dist) * P.dirX + (dz / dist) * P.dirZ;
+    if (dot > Math.cos(Math.PI * 0.6)) {
+      m.caught = true;
+      P.caught++;
+      scoreEl.textContent = P.caught;
+      catchLabel.style.display = 'block';
+      catchTimer = 1.0;
+      if (P.caught >= 12) {
+        setTimeout(() => { document.getElementById('winScreen').style.display = 'flex'; }, 900);
+      }
+    }
+  }
+}
+
+// ── ゲームループ ─────────────────────────────────────────────────────────────
+let running = false;
+let last    = performance.now();
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  document.getElementById('titleScreen').style.display = 'none';
+  running = true;
+});
+document.getElementById('restartBtn').addEventListener('click', () => location.reload());
+
+function loop(ts) {
+  requestAnimationFrame(loop);
+  const dt = Math.min((ts - last) / 1000, 0.05);
+  last = ts;
+
+  if (!running) { renderer.render(scene, camera); return; }
+
+  // ─ 移動 ─────────────────────────────────────────────────────────────────
+  // カメラ右方向 = カメラ前方を90°時計回りに回転: right = (-camDZ, camDX)
+  const crX = -camDZ;
+  const crZ =  camDX;
+
+  let mx = 0, mz = 0;
+
+  // ジョイスティック (カメラ基準)
+  if (Math.hypot(joy.x, joy.y) > 0.08) {
+    mx = crX * joy.x + camDX * (-joy.y);
+    mz = crZ * joy.x + camDZ * (-joy.y);
+  }
+
+  // キーボード (カメラ基準)
+  if (keys['ArrowUp']    || keys['KeyW']) { mx += camDX; mz += camDZ; }
+  if (keys['ArrowDown']  || keys['KeyS']) { mx -= camDX; mz -= camDZ; }
+  if (keys['ArrowRight'] || keys['KeyD']) { mx += crX;   mz += crZ;   }
+  if (keys['ArrowLeft']  || keys['KeyA']) { mx -= crX;   mz -= crZ;   }
+
+  const ml = Math.hypot(mx, mz);
+  if (ml > 0.01) {
+    P.dirX = mx / ml; P.dirZ = mz / ml;
+    P.x    = clamp(P.x + P.dirX * P.speed * dt, -BOUND+0.5, BOUND-0.5);
+    P.z    = clamp(P.z + P.dirZ * P.speed * dt, -BOUND+0.5, BOUND-0.5);
+    // atan2(x, -z) で Three.js の rotation.y に変換
+    playerMesh.rotation.y = Math.atan2(P.dirX, -P.dirZ);
+  }
+  playerMesh.position.set(P.x, 0, P.z);
+
+  // ─ ネット ────────────────────────────────────────────────────────────────
+  if (netQ || jp.has('Space') || jp.has('KeyZ')) { doSwing(); netQ = false; }
+
+  if (P.netSwing > 0) {
+    P.netSwing -= dt;
+    const prog = 1 - P.netSwing / P.NET_DUR;
+    netGroup.rotation.y = (prog - 0.5) * Math.PI * 1.4;
+    netGroup.visible = true;
+  } else {
+    netGroup.visible = false;
+  }
+  P.netCooldown = Math.max(0, P.netCooldown - dt);
+
+  // ─ サル更新 ──────────────────────────────────────────────────────────────
+  for (const m of monkeys) m.update(dt);
+
+  // ─ つかまえた表示 ────────────────────────────────────────────────────────
+  if (catchTimer > 0) {
+    catchTimer -= dt;
+    catchLabel.style.opacity = Math.min(1, catchTimer * 2);
+    if (catchTimer <= 0) catchLabel.style.display = 'none';
+  }
+
+  // ─ カメラ ────────────────────────────────────────────────────────────────
+  updateCamera();
+  jp.clear();
+  renderer.render(scene, camera);
+}
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

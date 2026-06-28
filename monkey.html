@@ -707,11 +707,22 @@ function playCatchSE() {
 }
 
 // ボイス「ゴリゲッチュ！」
+function unlockSpeech() {
+  if (!window.speechSynthesis) return;
+  // iOS: ユーザー操作内でダミー発話してAPI解放
+  const u = new SpeechSynthesisUtterance(' ');
+  u.volume = 0; u.lang = 'ja-JP';
+  speechSynthesis.speak(u);
+}
+
 function speakCatch() {
   if (!window.speechSynthesis) return;
-  speechSynthesis.cancel();
+  if (speechSynthesis.paused) speechSynthesis.resume();
   const u = new SpeechSynthesisUtterance('ゴリゲッチュ！');
   u.lang = 'ja-JP'; u.pitch = 1.35; u.rate = 1.05; u.volume = 1.0;
+  // 日本語音声を明示的に選択
+  const ja = speechSynthesis.getVoices().find(v => v.lang.startsWith('ja'));
+  if (ja) u.voice = ja;
   speechSynthesis.speak(u);
 }
 
@@ -756,6 +767,7 @@ document.getElementById('startBtn').addEventListener('click', () => {
   document.getElementById('titleScreen').style.display = 'none';
   running = true;
   startBGM();
+  unlockSpeech();
 });
 document.getElementById('restartBtn').addEventListener('click', () => location.reload());
 

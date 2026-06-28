@@ -640,6 +640,81 @@ const scoreEl    = document.getElementById('scoreEl');
 const catchLabel = document.getElementById('catchLabel');
 let catchTimer = 0;
 
+// ── BGM / SE / ボイス ────────────────────────────────────────────────────────
+let AC = null;
+function getAC() {
+  if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
+
+function playNote(freq, t, dur, vol, type = 'square') {
+  const ac = getAC();
+  const osc = ac.createOscillator();
+  const g   = ac.createGain();
+  osc.connect(g); g.connect(ac.destination);
+  osc.type = type;
+  osc.frequency.value = freq;
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.88);
+  osc.start(t); osc.stop(t + dur);
+}
+
+const BPM  = 152;
+const BEAT = 60 / BPM;
+
+// メロディ（サルゲッチュ風・明るいCメジャー）
+const MEL = [
+  [784.0,0.5],[880.0,0.5],[784.0,0.5],[659.3,0.5],
+  [523.3,0.5],[587.3,0.5],[659.3,1.0],
+  [698.5,0.5],[784.0,0.5],[698.5,0.5],[587.3,0.5],
+  [493.9,0.5],[523.3,0.5],[587.3,1.0],
+  [659.3,0.5],[784.0,0.5],[880.0,0.5],[784.0,0.5],
+  [659.3,0.5],[523.3,0.5],[587.3,1.0],
+  [784.0,0.5],[698.5,0.5],[659.3,0.5],[587.3,0.5],
+  [523.3,2.0],
+];
+// ベースライン
+const BAS = [
+  [261.6,1],[261.6,1],[392.0,1],[392.0,1],
+  [349.2,1],[349.2,1],[392.0,1],[392.0,1],
+  [261.6,1],[261.6,1],[440.0,1],[440.0,1],
+  [349.2,1],[392.0,1],[261.6,2],
+];
+
+let bgmNext = 0, bgmOn = false;
+function bgmTick() {
+  if (!bgmOn) return;
+  const ac = getAC(), now = ac.currentTime;
+  if (bgmNext < now + 0.35) {
+    const st = Math.max(bgmNext, now + 0.05);
+    let t = st;
+    MEL.forEach(([f,b]) => { playNote(f, t, b*BEAT, 0.09, 'square'); t += b*BEAT; });
+    t = st;
+    BAS.forEach(([f,b]) => { playNote(f, t, b*BEAT, 0.06, 'triangle'); t += b*BEAT; });
+    bgmNext = st + MEL.reduce((s,[,b]) => s + b*BEAT, 0);
+  }
+  requestAnimationFrame(bgmTick);
+}
+function startBGM() { bgmOn = true; bgmNext = 0; bgmTick(); }
+
+// 捕獲SE（上昇ファンファーレ）
+function playCatchSE() {
+  const t = getAC().currentTime;
+  [[523.3,0],[659.3,0.09],[784.0,0.18],[1046.5,0.27]].forEach(([f,dt]) => {
+    playNote(f, t+dt, 0.22, 0.18, 'sine');
+  });
+}
+
+// ボイス「ゴリゲッチュ！」
+function speakCatch() {
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance('ゴリゲッチュ！');
+  u.lang = 'ja-JP'; u.pitch = 1.35; u.rate = 1.05; u.volume = 1.0;
+  speechSynthesis.speak(u);
+}
+
 // カットインを2回フラッシュさせる
 function triggerCutIn() {
   const el = document.getElementById('cutIn');
@@ -665,6 +740,8 @@ function doSwing() {
       scoreEl.textContent = P.caught;
       catchLabel.style.display = 'block';
       catchTimer = 1.1;
+      playCatchSE();
+      speakCatch();
       triggerCutIn();
       if (P.caught >= 12)
         setTimeout(() => { document.getElementById('winScreen').style.display='flex'; }, 900);
@@ -678,6 +755,7 @@ let running = false, last = performance.now();
 document.getElementById('startBtn').addEventListener('click', () => {
   document.getElementById('titleScreen').style.display = 'none';
   running = true;
+  startBGM();
 });
 document.getElementById('restartBtn').addEventListener('click', () => location.reload());
 

@@ -720,14 +720,14 @@ function speakCatch() {
   if (speechSynthesis.paused) speechSynthesis.resume();
   const u = new SpeechSynthesisUtterance('ゴリゲッチュ！');
   u.lang = 'ja-JP';
-  u.pitch = 0.65;   // 低め＝男性的
-  u.rate  = 0.88;   // ゆっくり力強く
+  u.pitch = 1.7;   // 高め＝子供っぽく明るく
+  u.rate  = 1.15;  // 少し速めで元気よく
   u.volume = 1.0;
   const voices = speechSynthesis.getVoices();
-  // 男性日本語音声を優先（Otoya = iOS男性ボイス）
-  const maleJa = voices.find(v => v.lang.startsWith('ja') &&
-    /male|otoya|daichi/i.test(v.name));
-  const ja = maleJa || voices.find(v => v.lang.startsWith('ja'));
+  // 女性・明るい日本語音声を優先（Kyoko/Hana = iOS、Haruka = Android）
+  const brightJa = voices.find(v => v.lang.startsWith('ja') &&
+    /kyoko|hana|haruka|hikari|female/i.test(v.name));
+  const ja = brightJa || voices.find(v => v.lang.startsWith('ja'));
   if (ja) u.voice = ja;
   speechSynthesis.speak(u);
 }

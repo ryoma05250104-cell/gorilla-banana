@@ -719,9 +719,15 @@ function speakCatch() {
   if (!window.speechSynthesis) return;
   if (speechSynthesis.paused) speechSynthesis.resume();
   const u = new SpeechSynthesisUtterance('ゴリゲッチュ！');
-  u.lang = 'ja-JP'; u.pitch = 1.35; u.rate = 1.05; u.volume = 1.0;
-  // 日本語音声を明示的に選択
-  const ja = speechSynthesis.getVoices().find(v => v.lang.startsWith('ja'));
+  u.lang = 'ja-JP';
+  u.pitch = 0.65;   // 低め＝男性的
+  u.rate  = 0.88;   // ゆっくり力強く
+  u.volume = 1.0;
+  const voices = speechSynthesis.getVoices();
+  // 男性日本語音声を優先（Otoya = iOS男性ボイス）
+  const maleJa = voices.find(v => v.lang.startsWith('ja') &&
+    /male|otoya|daichi/i.test(v.name));
+  const ja = maleJa || voices.find(v => v.lang.startsWith('ja'));
   if (ja) u.voice = ja;
   speechSynthesis.speak(u);
 }
@@ -751,7 +757,6 @@ function doSwing() {
       scoreEl.textContent = P.caught;
       catchLabel.style.display = 'block';
       catchTimer = 1.1;
-      playCatchSE();
       speakCatch();
       triggerCutIn();
       if (P.caught >= 12)

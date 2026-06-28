@@ -799,7 +799,7 @@ function loop(ts) {
     P.dirX = mx/ml; P.dirZ = mz/ml;
     P.x = clamp(P.x + P.dirX*P.speed*dt, -BOUND+0.5, BOUND-0.5);
     P.z = clamp(P.z + P.dirZ*P.speed*dt, -BOUND+0.5, BOUND-0.5);
-    playerMesh.rotation.y = Math.atan2(P.dirX, -P.dirZ);
+    playerMesh.rotation.y = Math.atan2(P.dirX, P.dirZ);
   }
   playerMesh.position.set(P.x, 0, P.z);
 

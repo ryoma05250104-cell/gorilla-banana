@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>サル大作戦 3D</title>
+<title>ゴリゲッチュ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -54,6 +56,20 @@ body { background:#87CEEB; overflow:hidden; touch-action:none; }
   background:#4CAF50; color:#fff; border:none; border-radius:50px; cursor:pointer;
 }
 .btn:active { transform:scale(0.95); }
+.game-title {
+  font-family: 'Dela Gothic One', sans-serif;
+  font-size: clamp(58px, 16vw, 108px);
+  line-height: 1.1;
+  background: linear-gradient(180deg, #FFFF44 0%, #FFD700 28%, #FF8C00 62%, #FF3300 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  -webkit-text-stroke: 6px #1a0a00;
+  paint-order: stroke fill;
+  filter: drop-shadow(5px 6px 0 rgba(0,0,0,0.7));
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
 #viewCounter {
   position:fixed; top:12px; right:12px; z-index:10;
   background:rgba(0,0,0,0.55); color:#fff;
@@ -82,7 +98,7 @@ body { background:#87CEEB; overflow:hidden; touch-action:none; }
 <div id="catchLabel">GET! 🎉</div>
 
 <div id="titleScreen" class="screen">
-  <h1>🐒 サル大作戦 3D!</h1>
+  <h1 class="game-title">🦍 ゴリゲッチュ</h1>
   <p style="font-size:clamp(14px,3vw,18px)">逃げるタカハシを 12匹 全員つかまえよう！</p>
   <div class="infoBox">
     <div>🕹️ 左の丸 → 移動</div>

@@ -82,6 +82,37 @@ body { background:#87CEEB; overflow:hidden; touch-action:none; }
   font:bold 52px Arial; color:#FFD700;
   text-shadow:3px 3px 12px rgba(0,0,0,0.9); pointer-events:none; display:none;
 }
+/* カットイン */
+#cutIn {
+  position:fixed; bottom:80px; right:0; z-index:25; pointer-events:none;
+  width:min(58vw, 300px);
+  transform:translateX(112%);
+  transition:transform 0.13s cubic-bezier(0.05,0.9,0.25,1.0);
+}
+#cutIn.show { transform:translateX(0); }
+#cutInInner {
+  position:relative; overflow:hidden;
+  border-left:5px solid #FFE800;
+  border-top:5px solid #FFE800;
+  border-bottom:5px solid #FFE800;
+  box-shadow:-6px 0 20px rgba(0,0,0,0.7);
+  background:#111;
+}
+#cutIn img { width:100%; display:block; }
+#cutInLabel {
+  position:absolute; bottom:0; left:0; right:0;
+  padding:6px 10px;
+  background:linear-gradient(transparent, rgba(0,0,0,0.78));
+  font-family:'Dela Gothic One',sans-serif;
+  font-size:clamp(20px,6vw,34px);
+  color:#FFE800;
+  text-shadow:
+    -3px -3px 0 #000, 3px -3px 0 #000,
+    -3px  3px 0 #000, 3px  3px 0 #000,
+     5px  5px 0 #CC5500;
+  text-align:center;
+  letter-spacing:0.08em;
+}
 </style>
 </head>
 <body>
@@ -97,6 +128,14 @@ body { background:#87CEEB; overflow:hidden; touch-action:none; }
 <div id="joystickZone"><div id="joystickThumb"></div></div>
 <div id="netBtn"><span style="font-size:28px">🥅</span><span>ネット</span></div>
 <div id="catchLabel">GET! 🎉</div>
+
+<!-- カットイン -->
+<div id="cutIn">
+  <div id="cutInInner">
+    <img src="cutin.jpg" alt="">
+    <div id="cutInLabel">🦍 ゴリゲッチュ</div>
+  </div>
+</div>
 
 <div id="titleScreen" class="screen">
   <h1 class="game-title">🦍 ゴリゲッチュ</h1>
@@ -595,6 +634,21 @@ const scoreEl    = document.getElementById('scoreEl');
 const catchLabel = document.getElementById('catchLabel');
 let catchTimer = 0;
 
+// カットインを2回フラッシュさせる
+function triggerCutIn() {
+  const el = document.getElementById('cutIn');
+  let n = 0;
+  function flash() {
+    el.classList.add('show');
+    setTimeout(() => {
+      el.classList.remove('show');
+      n++;
+      if (n < 2) setTimeout(flash, 140);
+    }, 420);
+  }
+  flash();
+}
+
 function doSwing() {
   if (P.netCooldown > 0) return;
   P.netSwing = P.NET_DUR; P.netCooldown = P.NET_CD;
@@ -613,6 +667,7 @@ function doSwing() {
       scoreEl.textContent = P.caught;
       catchLabel.style.display = 'block';
       catchTimer = 1.1;
+      triggerCutIn();
       if (P.caught >= 12)
         setTimeout(() => { document.getElementById('winScreen').style.display='flex'; }, 900);
     }

@@ -129,7 +129,7 @@ body { background:#87CEEB; overflow:hidden; touch-action:none; }
 <img id="img_panic"  src="face_panic.png"  crossorigin="anonymous" style="display:none" alt="">
 <img id="img_caught" src="face_caught.png"  crossorigin="anonymous" style="display:none" alt="">
 
-<div id="hud">🐒 <span id="scoreEl">0</span> / 12</div>
+<div id="hud">🐒 <span id="scoreEl">0</span> / 12 &nbsp;⏱ <span id="timerEl">60</span></div>
 <div id="viewCounter">👁 <span id="viewEl">…</span></div>
 <div id="joystickZone"><div id="joystickThumb"></div></div>
 <div id="netBtn"><span style="font-size:28px">🥅</span><span>ネット</span></div>
@@ -161,6 +161,11 @@ body { background:#87CEEB; overflow:hidden; touch-action:none; }
   <p style="font-size:clamp(18px,4vw,28px);margin:16px 0">タカハシ 12匹 全員捕獲！</p>
   <p style="opacity:0.8">お疲れ様でした！</p>
   <button class="btn" id="restartBtn" style="margin-top:24px">もう一度</button>
+</div>
+<div id="timeupScreen" class="screen" style="background:rgba(60,0,0,0.93);display:none">
+  <h1 style="font-family:'Dela Gothic One',sans-serif;color:#FF4444;text-shadow:-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000,3px 3px 0 #000">⏱ 時間切れ！</h1>
+  <p style="font-size:clamp(18px,4vw,26px);margin:16px 0">捕まえた数：<span id="finalScore">0</span> / 12匹</p>
+  <button class="btn" id="restartBtn2" style="margin-top:24px;background:#c0392b">もう一度</button>
 </div>
 
 <script>
@@ -767,6 +772,8 @@ function doSwing() {
 
 // ── ゲームループ ─────────────────────────────────────────────────────────────
 let running = false, last = performance.now();
+let timeLeft = 60;
+const timerEl = document.getElementById('timerEl');
 
 document.getElementById('startBtn').addEventListener('click', () => {
   document.getElementById('titleScreen').style.display = 'none';
@@ -774,13 +781,26 @@ document.getElementById('startBtn').addEventListener('click', () => {
   startBGM();
   unlockSpeech();
 });
-document.getElementById('restartBtn').addEventListener('click', () => location.reload());
+document.getElementById('restartBtn').addEventListener('click',  () => location.reload());
+document.getElementById('restartBtn2').addEventListener('click', () => location.reload());
 
 function loop(ts) {
   requestAnimationFrame(loop);
   const dt = Math.min((ts - last) / 1000, 0.05);
   last = ts;
   if (!running) { renderer.render(scene, camera); return; }
+
+  // タイマー
+  timeLeft -= dt;
+  const sec = Math.max(0, Math.ceil(timeLeft));
+  timerEl.textContent = sec;
+  timerEl.style.color = sec <= 10 ? '#FF4444' : '#fff';
+  if (timeLeft <= 0) {
+    running = false;
+    document.getElementById('finalScore').textContent = P.caught;
+    document.getElementById('timeupScreen').style.display = 'flex';
+    renderer.render(scene, camera); return;
+  }
 
   const crX = -camDZ, crZ = camDX;
 

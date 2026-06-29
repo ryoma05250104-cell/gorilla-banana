@@ -158,9 +158,11 @@ body { background:#87CEEB; overflow:hidden; touch-action:none; }
 </div>
 <div id="winScreen" class="screen">
   <h1>🎉 クリア！</h1>
-  <p style="font-size:clamp(18px,4vw,28px);margin:16px 0">タカハシ 12匹 全員捕獲！</p>
-  <p style="opacity:0.8">お疲れ様でした！</p>
-  <button class="btn" id="restartBtn" style="margin-top:24px">もう一度</button>
+  <p style="font-size:clamp(18px,4vw,26px);margin:8px 0">タカハシ 12匹 全員捕獲！</p>
+  <p style="font-size:clamp(14px,3vw,18px);opacity:0.85">クリアタイム：<span id="clearTime">-</span>秒</p>
+  <div id="rankDisplay" style="margin:14px 0;font-family:'Dela Gothic One',sans-serif;font-size:clamp(64px,18vw,120px);line-height:1"></div>
+  <p id="rankLabel" style="font-size:clamp(14px,3vw,18px);margin-bottom:4px;opacity:0.9"></p>
+  <button class="btn" id="restartBtn" style="margin-top:16px">もう一度</button>
 </div>
 <div id="timeupScreen" class="screen" style="background:rgba(60,0,0,0.93);display:none">
   <h1 style="font-family:'Dela Gothic One',sans-serif;color:#FF4444;text-shadow:-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000,3px 3px 0 #000">⏱ 時間切れ！</h1>
@@ -764,8 +766,23 @@ function doSwing() {
       catchTimer = 1.1;
       speakCatch();
       triggerCutIn();
-      if (P.caught >= 12)
-        setTimeout(() => { document.getElementById('winScreen').style.display='flex'; }, 900);
+      if (P.caught >= 12) {
+        const elapsed = Math.floor(60 - timeLeft);
+        const [rank, label, color] =
+          elapsed <= 20 ? ['S', '神速！伝説のゴリゲッチュ！', '#FFD700'] :
+          elapsed <= 35 ? ['A', 'すごい！かなり速い！',       '#C0C0C0'] :
+          elapsed <= 50 ? ['B', 'なかなかやるね！',           '#CD7F32'] :
+                          ['C', 'ギリギリクリア！',           '#88CCFF'];
+        setTimeout(() => {
+          document.getElementById('clearTime').textContent   = elapsed;
+          document.getElementById('rankDisplay').textContent = rank;
+          document.getElementById('rankDisplay').style.color = color;
+          document.getElementById('rankDisplay').style.textShadow =
+            `-4px -4px 0 #000,4px -4px 0 #000,-4px 4px 0 #000,4px 4px 0 #000,6px 6px 0 rgba(0,0,0,0.5)`;
+          document.getElementById('rankLabel').textContent   = label;
+          document.getElementById('winScreen').style.display = 'flex';
+        }, 900);
+      }
     }
   }
 }

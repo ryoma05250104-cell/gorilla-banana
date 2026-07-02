@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#87CEEB; overflow:hidden; touch-action:none; }
@@ -234,33 +235,74 @@ for (let i = 0; i < 40; i++) {
   scene.add(tree);
 }
 
-// ── プレイヤー ───────────────────────────────────────────────────────────────
-function buildPlayerChar() {
-  const g = new THREE.Group();
-  const bM = new THREE.MeshLambertMaterial({ color: 0x2266CC });
-  const hM = new THREE.MeshLambertMaterial({ color: 0xFFCC88 });
-  const eM = new THREE.MeshLambertMaterial({ color: 0x111111 });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.1, 0.5), bM);
-  body.position.y = 0.55; g.add(body);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 10), hM);
-  head.position.y = 1.35; g.add(head);
-  [-1,1].forEach(s => {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.065, 6, 6), eM);
-    eye.position.set(s*0.13, 1.4, 0.37); g.add(eye);
-  });
-  [-1,1].forEach(s => {
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.7, 0.2), bM);
-    arm.position.set(s*0.55, 0.6, 0); arm.rotation.z = s*.22; g.add(arm);
-  });
-  return g;
-}
-
-const playerMesh = buildPlayerChar();
+// ── プレイヤー（GLBモデル）──────────────────────────────────────────────────
+const playerMesh = new THREE.Group();
 scene.add(playerMesh);
+
+let playerModel  = null;
+let playerMixer  = null;
+let playerAnims  = {};
+let currentAnim  = null;
+let playerReady  = false;
+let isCapturing  = false;
+
+const gltfLoader = new THREE.GLTFLoader();
+gltfLoader.load(
+  'player.glb',
+  function(gltf) {
+    playerModel = gltf.scene;
+
+    // ── スケール・位置・向き調整 ────────────────────────────────────────────
+    // GLBが大きすぎる場合は scaleVal を小さく（例: 0.7）、小さすぎる場合は大きく（例: 1.3）
+    const scaleVal = 1.0;
+    playerModel.scale.set(scaleVal, scaleVal, scaleVal);
+    // 足が地面に浮く場合は Y をマイナスに（例: -0.1）、埋まる場合はプラスに
+    playerModel.position.set(0, 0, 0);
+    // GLBが後ろ向きに出る場合は Math.PI のまま、正面向きなら 0 に変更
+    playerModel.rotation.y = Math.PI;
+
+    playerMesh.add(playerModel);
+
+    // ── AnimationMixer ──────────────────────────────────────────────────────
+    playerMixer = new THREE.AnimationMixer(playerModel);
+
+    playerMixer.addEventListener('finished', function(e) {
+      if (playerAnims['Capture'] && e.action === playerAnims['Capture']) {
+        isCapturing = false;
+      }
+    });
+
+    gltf.animations.forEach(clip => {
+      playerAnims[clip.name] = playerMixer.clipAction(clip);
+    });
+
+    if (playerAnims['Capture']) {
+      playerAnims['Capture'].setLoop(THREE.LoopOnce, 1);
+      playerAnims['Capture'].clampWhenFinished = true;
+    }
+
+    console.log('player.glb 読み込み完了 / アニメーション:', Object.keys(playerAnims));
+    playerReady = true;
+    playAnim('Idle', 0);
+  },
+  null,
+  function(err) {
+    console.warn('player.glb 読み込み失敗。フォールバック使用:', err);
+    const g = new THREE.Group();
+    const bM = new THREE.MeshLambertMaterial({ color: 0x2266CC });
+    const hM = new THREE.MeshLambertMaterial({ color: 0xFFCC88 });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.1, 0.5), bM);
+    body.position.y = 0.55; g.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 10), hM);
+    head.position.y = 1.35; g.add(head);
+    playerMesh.add(g);
+    playerReady = true;
+  }
+);
 
 // ネット
 const netGroup = new THREE.Group();
-netGroup.position.set(0, 0.8, 0); netGroup.visible = false;
+netGroup.position.set(0, 1.1, 0); netGroup.visible = false;
 playerMesh.add(netGroup);
 const hnd = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,2.0),
   new THREE.MeshLambertMaterial({ color: 0x8B5A2B }));
@@ -288,7 +330,7 @@ function updateCamera() {
   camera.position.x += (P.x - camDX*CAM_DIST - camera.position.x) * 0.1;
   camera.position.y += (CAM_H - camera.position.y) * 0.1;
   camera.position.z += (P.z - camDZ*CAM_DIST - camera.position.z) * 0.1;
-  camera.lookAt(P.x, 1.2, P.z);
+  camera.lookAt(P.x, 1.5, P.z);
 }
 
 // ── テクスチャ生成 ───────────────────────────────────────────────────────────
@@ -302,7 +344,6 @@ const texCache = {};
 
 Object.values(IMG).forEach(img => {
   img.addEventListener('load', () => {
-    // 顔テクスチャのみ再生成（アイコンはそのまま）
     ['mf_wander','mf_sleep','mf_alert','mf_flee','mf_caught'].forEach(k => {
       if (texCache[k]) { texCache[k].dispose(); delete texCache[k]; }
     });
@@ -310,7 +351,6 @@ Object.values(IMG).forEach(img => {
   });
 });
 
-// 顔テクスチャ：白背景除去してアルファ付きに変換
 function makeMonkeyFaceTex(state) {
   const key = `mf_${state}`;
   if (texCache[key]) return texCache[key];
@@ -327,7 +367,6 @@ function makeMonkeyFaceTex(state) {
 
   if (faceImg.complete && faceImg.naturalWidth > 0) {
     ctx.drawImage(faceImg, 0, 0, W, H);
-    // 白・明るい背景を透明化
     const id = ctx.getImageData(0, 0, W, H);
     const d = id.data;
     for (let i = 0; i < d.length; i += 4) {
@@ -345,7 +384,6 @@ function makeMonkeyFaceTex(state) {
   return tex;
 }
 
-// アイコン（💤 ❗ 💨 ✨）用スプライトテクスチャ
 function makeIconTex(icon) {
   const key = `icon_${icon}`;
   if (texCache[key]) return texCache[key];
@@ -395,39 +433,31 @@ class Monkey {
     this.group = new THREE.Group();
     this.group.position.set(x, 0, z);
 
-    // ── 胴体 ─────────────────────────────────────────
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.9, 0.5), bodyMat);
     body.position.y = 0.55; this.group.add(body);
 
-    // ── お腹（明るめ）──────────────────────────────
     const bellyMat = new THREE.MeshLambertMaterial({ color: cols.head });
     const belly = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.55, 0.26), bellyMat);
     belly.position.set(0, 0.58, 0.14); this.group.add(belly);
 
-    // ── 頭 ─────────────────────────────────────────
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 10), headMat);
     head.position.y = 1.32; this.group.add(head);
 
-    // ── 目（顔パネルで隠れるが側面/背面から見える）─
     [-1,1].forEach(s => {
       const e = new THREE.Mesh(new THREE.SphereGeometry(0.058, 6, 6), eyeMat);
       e.position.set(s*0.14, 1.38, 0.37); this.group.add(e);
     });
 
-    // ── 顔パネル（タカハシの顔を正面に貼る）──────────
-    // 190x215 のアスペクト比に合わせる
     this.faceMat = new THREE.MeshBasicMaterial({
       map: makeMonkeyFaceTex(this.state),
       transparent: true,
       alphaTest: 0.05,
       depthWrite: false,
     });
-    // 頭の正面：head center y=1.32, head radius=0.42 → 表面z≈0.42 → 少し前0.44
     const facePanel = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.88), this.faceMat);
     facePanel.position.set(0, 1.32, 0.445);
     this.group.add(facePanel);
 
-    // ── 腕 ─────────────────────────────────────────
     this.armL = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.74, 0.21), bodyMat);
     this.armL.position.set(-0.52, 0.55, 0); this.armL.rotation.z = -0.28;
     this.group.add(this.armL);
@@ -435,13 +465,11 @@ class Monkey {
     this.armR.position.set( 0.52, 0.55, 0); this.armR.rotation.z =  0.28;
     this.group.add(this.armR);
 
-    // ── 足 ─────────────────────────────────────────
     this.legL = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.52, 0.24), bodyMat);
     this.legL.position.set(-0.2, 0.06, 0); this.group.add(this.legL);
     this.legR = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.52, 0.24), bodyMat);
     this.legR.position.set( 0.2, 0.06, 0); this.group.add(this.legR);
 
-    // ── しっぽ ──────────────────────────────────────
     const tailCurve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0,    0.35, -0.26),
       new THREE.Vector3(-0.2, 0.58, -0.42),
@@ -451,7 +479,6 @@ class Monkey {
     const tailGeo = new THREE.TubeGeometry(tailCurve, 8, 0.055, 6, false);
     this.group.add(new THREE.Mesh(tailGeo, bodyMat));
 
-    // ── アイコンスプライト（頭上に浮かぶ）──────────
     this.iconMat = new THREE.SpriteMaterial({ transparent: true, opacity: 0 });
     this.iconSprite = new THREE.Sprite(this.iconMat);
     this.iconSprite.scale.set(0.68, 0.68, 1);
@@ -460,7 +487,6 @@ class Monkey {
 
     scene.add(this.group);
 
-    // ── 影（地面の円）────────────────────────────────
     this.shadow = new THREE.Mesh(
       new THREE.CircleGeometry(0.52, 12),
       new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22 })
@@ -491,9 +517,8 @@ class Monkey {
   update(dt) {
     this.bobT += dt * 4;
 
-    // つかまった演出
     if (this.caught) {
-      this._updateTex(); // くやしい表情 + ✨
+      this._updateTex();
       this.ca += dt * 2.5;
       this.group.scale.setScalar(1 + this.ca * 0.4);
       if (!this._fadeMats) {
@@ -517,7 +542,6 @@ class Monkey {
     const dx = this.x - P.x, dz = this.z - P.z;
     const dist = Math.hypot(dx, dz);
 
-    // 眠り状態
     if (this.state === 'sleep') {
       if (dist < this.dr) { this.state = 'alert'; this.at = 0.5; }
       this.group.position.set(this.x, Math.sin(this.bobT * 0.5) * 0.04, this.z);
@@ -525,7 +549,6 @@ class Monkey {
       this._updateTex(); return;
     }
 
-    // 気づいた（震える）
     if (this.state === 'alert') {
       this.at -= dt;
       const sh = Math.sin(this.bobT * 18) * 0.065;
@@ -561,12 +584,10 @@ class Monkey {
     this.group.position.set(this.x, bob, this.z);
     this.shadow.position.set(this.x, 0.01, this.z);
 
-    // 移動方向を向く
     if (Math.hypot(this.mx, this.mz) > 0.05) {
       this.group.rotation.y = Math.atan2(this.mx, this.mz);
     }
 
-    // 手足の歩行アニメーション
     const swing = Math.sin(this.bobT * 1.5) * (this.state === 'flee' ? 0.62 : 0.38);
     this.armL.rotation.x =  swing;
     this.armR.rotation.x = -swing;
@@ -670,7 +691,6 @@ function playNote(freq, t, dur, vol, type = 'square') {
 const BPM  = 152;
 const BEAT = 60 / BPM;
 
-// メロディ（サルゲッチュ風・明るいCメジャー）
 const MEL = [
   [784.0,0.5],[880.0,0.5],[784.0,0.5],[659.3,0.5],
   [523.3,0.5],[587.3,0.5],[659.3,1.0],
@@ -681,7 +701,6 @@ const MEL = [
   [784.0,0.5],[698.5,0.5],[659.3,0.5],[587.3,0.5],
   [523.3,2.0],
 ];
-// ベースライン
 const BAS = [
   [261.6,1],[261.6,1],[392.0,1],[392.0,1],
   [349.2,1],[349.2,1],[392.0,1],[392.0,1],
@@ -705,7 +724,6 @@ function bgmTick() {
 }
 function startBGM() { bgmOn = true; bgmNext = 0; bgmTick(); }
 
-// 捕獲SE（上昇ファンファーレ）
 function playCatchSE() {
   const t = getAC().currentTime;
   [[523.3,0],[659.3,0.09],[784.0,0.18],[1046.5,0.27]].forEach(([f,dt]) => {
@@ -713,10 +731,8 @@ function playCatchSE() {
   });
 }
 
-// ボイス「ゴリゲッチュ！」
 function unlockSpeech() {
   if (!window.speechSynthesis) return;
-  // iOS: ユーザー操作内でダミー発話してAPI解放
   const u = new SpeechSynthesisUtterance(' ');
   u.volume = 0; u.lang = 'ja-JP';
   speechSynthesis.speak(u);
@@ -727,11 +743,10 @@ function speakCatch() {
   if (speechSynthesis.paused) speechSynthesis.resume();
   const u = new SpeechSynthesisUtterance('ゴリゲッチュ！');
   u.lang = 'ja-JP';
-  u.pitch = 1.7;   // 高め＝子供っぽく明るく
-  u.rate  = 1.15;  // 少し速めで元気よく
+  u.pitch = 1.7;
+  u.rate  = 1.15;
   u.volume = 1.0;
   const voices = speechSynthesis.getVoices();
-  // 女性・明るい日本語音声を優先（Kyoko/Hana = iOS、Haruka = Android）
   const brightJa = voices.find(v => v.lang.startsWith('ja') &&
     /kyoko|hana|haruka|hikari|female/i.test(v.name));
   const ja = brightJa || voices.find(v => v.lang.startsWith('ja'));
@@ -739,7 +754,6 @@ function speakCatch() {
   speechSynthesis.speak(u);
 }
 
-// カットインを2回フラッシュさせる
 const CUTIN_IMGS = ['cutin.jpg', 'cutin2.jpg', 'cutin3.jpg', 'cutin4.jpg'];
 let lastCutIn = -1;
 function triggerCutIn() {
@@ -753,10 +767,22 @@ function triggerCutIn() {
   setTimeout(() => { el.classList.remove('show'); }, 600);
 }
 
+// ── アニメーション切り替え ───────────────────────────────────────────────────
+function playAnim(name, fade) {
+  if (!playerReady || !playerAnims[name]) return;
+  if (currentAnim === playerAnims[name]) return;
+  fade = (fade === undefined) ? 0.2 : fade;
+  if (currentAnim) currentAnim.fadeOut(fade);
+  currentAnim = playerAnims[name];
+  currentAnim.reset().fadeIn(fade).play();
+}
+
 function doSwing() {
   if (P.netCooldown > 0) return;
   P.netSwing = P.NET_DUR; P.netCooldown = P.NET_CD;
   netGroup.visible = true;
+  isCapturing = true;
+  playAnim('Capture', 0.1);
   for (const m of monkeys) {
     if (m.caught) continue;
     const dx = m.x - P.x, dz = m.z - P.z;
@@ -805,6 +831,7 @@ document.getElementById('startBtn').addEventListener('click', () => {
   running = true;
   startBGM();
   unlockSpeech();
+  playAnim('Idle', 0);
 });
 document.getElementById('restartBtn').addEventListener('click',  () => location.reload());
 document.getElementById('restartBtn2').addEventListener('click', () => location.reload());
@@ -848,6 +875,15 @@ function loop(ts) {
   }
   playerMesh.position.set(P.x, 0, P.z);
 
+  // アニメーション切り替え
+  if (isCapturing) {
+    // Capture再生中は割り込まない（finishedイベントで自動終了）
+  } else if (ml > 0.01) {
+    playAnim('Walk', 0.15);
+  } else {
+    playAnim('Idle', 0.2);
+  }
+
   if (netQ || jp.has('Space') || jp.has('KeyZ')) { doSwing(); netQ = false; }
   if (P.netSwing > 0) {
     P.netSwing -= dt;
@@ -866,6 +902,7 @@ function loop(ts) {
 
   updateCamera();
   jp.clear();
+  if (playerMixer) playerMixer.update(dt);
   renderer.render(scene, camera);
 }
 
@@ -874,7 +911,6 @@ requestAnimationFrame(loop);
 // ── 閲覧数カウンター ────────────────────────────────────────────────────────
 (function() {
   const el = document.getElementById('viewEl');
-  // CountAPI: 無料・匿名・静的サイト向け
   fetch('https://api.counterapi.dev/v1/gorilla-banana-takahashi/monkey/up')
     .then(r => r.json())
     .then(d => { el.textContent = (d.count || d.value || '?').toLocaleString() + '回'; })

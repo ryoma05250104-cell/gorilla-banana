@@ -269,11 +269,11 @@ function makeIconTex(icon) {
 // ── プレイヤーキャラ ──────────────────────────────────────────────────────────
 function buildPlayerChar() {
   var g = new THREE.Group();
-  var skin = new THREE.MeshLambertMaterial({ color: 0xFFCC88 });
-  var suit = new THREE.MeshLambertMaterial({ color: 0x3399EE });
-  var hat  = new THREE.MeshLambertMaterial({ color: 0xDD1100 });
-  var pant = new THREE.MeshLambertMaterial({ color: 0x223366 });
-  var shoe = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+  var skin  = new THREE.MeshLambertMaterial({ color: 0xFFCC88 }); // 肌色
+  var shirt = new THREE.MeshLambertMaterial({ color: 0xFFFFFF }); // 白シャツ
+  var pants = new THREE.MeshLambertMaterial({ color: 0x4466CC }); // 青ズボン
+  var shoe  = new THREE.MeshLambertMaterial({ color: 0x8B4513 }); // 茶色の靴
+  var hat   = new THREE.MeshLambertMaterial({ color: 0xDDAA44 }); // 麦わら帽子
 
   // 靴
   var shL = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.13, 0.40), shoe);
@@ -281,37 +281,37 @@ function buildPlayerChar() {
   var shR = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.13, 0.40), shoe);
   shR.position.set( 0.18, 0.065, 0.06); g.add(shR);
 
-  // 脚
-  var lgL = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.52, 0.24), pant);
+  // 脚（青ズボン）
+  var lgL = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.52, 0.24), pants);
   lgL.position.set(-0.18, 0.39, 0); g.add(lgL);
-  var lgR = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.52, 0.24), pant);
+  var lgR = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.52, 0.24), pants);
   lgR.position.set( 0.18, 0.39, 0); g.add(lgR);
 
-  // 胴体
-  var body = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.80, 0.44), suit);
+  // 胴体（白シャツ）
+  var body = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.80, 0.44), shirt);
   body.position.y = 0.90; g.add(body);
 
-  // 腕
-  var arL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.64, 0.22), suit);
+  // 腕（肌色）
+  var arL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.64, 0.22), skin);
   arL.position.set(-0.54, 0.74, 0); g.add(arL);
-  var arR = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.64, 0.22), suit);
+  var arR = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.64, 0.22), skin);
   arR.position.set( 0.54, 0.74, 0); g.add(arR);
 
-  // 手
+  // 手（肌色）
   var hnL = new THREE.Mesh(new THREE.SphereGeometry(0.13, 6, 6), skin);
   hnL.position.set(-0.54, 0.40, 0); g.add(hnL);
   var hnR = new THREE.Mesh(new THREE.SphereGeometry(0.13, 6, 6), skin);
   hnR.position.set( 0.54, 0.40, 0); g.add(hnR);
 
-  // 頭
+  // 頭（肌色）
   var head = new THREE.Mesh(new THREE.SphereGeometry(0.40, 12, 10), skin);
   head.position.y = 1.60; g.add(head);
 
-  // 帽子（ベレー）
-  var brim = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.44, 0.07, 12), hat);
-  brim.position.y = 1.88; g.add(brim);
-  var top = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 8), hat);
-  top.position.y = 2.04; top.scale.y = 0.70; g.add(top);
+  // 麦わら帽子：広いつば＋丸いてっぺん
+  var brim = new THREE.Mesh(new THREE.CylinderGeometry(0.70, 0.72, 0.07, 16), hat);
+  brim.position.y = 1.82; g.add(brim);
+  var crown = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.36, 0.34, 12), hat);
+  crown.position.y = 2.05; g.add(crown);
 
   return g;
 }

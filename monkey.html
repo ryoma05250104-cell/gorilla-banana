@@ -138,7 +138,7 @@ body { background:#87CEEB; overflow:hidden; touch-action:none; }
 <!-- カットイン -->
 <div id="cutIn">
   <div id="cutInInner">
-    <img src="cutin.jpg" alt="">
+    <img id="cutInImg" src="cutin.jpg" alt="">
     <div id="cutInLabel">🦍 ゴリゲッチュ</div>
   </div>
 </div>
@@ -740,8 +740,12 @@ function speakCatch() {
 }
 
 // カットインを2回フラッシュさせる
+let cutInCount = 0;
 function triggerCutIn() {
-  const el = document.getElementById('cutIn');
+  const el  = document.getElementById('cutIn');
+  const img = document.getElementById('cutInImg');
+  img.src = (cutInCount % 2 === 0) ? 'cutin.jpg' : 'cutin2.jpg';
+  cutInCount++;
   el.classList.add('show');
   setTimeout(() => { el.classList.remove('show'); }, 600);
 }

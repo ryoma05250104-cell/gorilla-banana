@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:#87CEEB; overflow:hidden; touch-action:none; }
@@ -88,7 +87,6 @@ body { background:#87CEEB; overflow:hidden; touch-action:none; }
   font:bold 52px Arial; color:#FFD700;
   text-shadow:3px 3px 12px rgba(0,0,0,0.9); pointer-events:none; display:none;
 }
-/* カットイン */
 #cutIn {
   position:fixed; top:60px; right:15px; z-index:25; pointer-events:none;
   width:min(72vw, 360px);
@@ -136,7 +134,6 @@ body { background:#87CEEB; overflow:hidden; touch-action:none; }
 <div id="netBtn"><span style="font-size:28px">🥅</span><span>ネット</span></div>
 <div id="catchLabel">GET! 🎉</div>
 
-<!-- カットイン -->
 <div id="cutIn">
   <div id="cutInInner">
     <img id="cutInImg" src="cutin.jpg" alt="">
@@ -235,70 +232,183 @@ for (let i = 0; i < 40; i++) {
   scene.add(tree);
 }
 
-// ── プレイヤー（GLBモデル）──────────────────────────────────────────────────
-const playerMesh = new THREE.Group();
+// ── テクスチャキャッシュ ─────────────────────────────────────────────────────
+const IMG = {
+  normal: document.getElementById('img_normal'),
+  scared: document.getElementById('img_scared'),
+  panic:  document.getElementById('img_panic'),
+  caught: document.getElementById('img_caught'),
+};
+const texCache = {};
+
+Object.values(IMG).forEach(img => {
+  img.addEventListener('load', () => {
+    ['mf_wander','mf_sleep','mf_alert','mf_flee','mf_caught','player_normal','player_capture'].forEach(k => {
+      if (texCache[k]) { texCache[k].dispose(); delete texCache[k]; }
+    });
+    if (typeof monkeys !== 'undefined') monkeys.forEach(m => { m._prevState = null; });
+    if (playerMesh.userData.playerFaceMat) {
+      playerMesh.userData.playerFaceMat.map = makePlayerFaceTex('normal');
+      playerMesh.userData.playerFaceMat.needsUpdate = true;
+    }
+  });
+});
+
+function makeFaceTex(img, key) {
+  if (texCache[key]) return texCache[key];
+  const W = 190, H = 215;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  if (img.complete && img.naturalWidth > 0) {
+    ctx.drawImage(img, 0, 0, W, H);
+    const id = ctx.getImageData(0, 0, W, H);
+    const d = id.data;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i] > 218 && d[i+1] > 218 && d[i+2] > 218) d[i+3] = 0;
+    }
+    ctx.putImageData(id, 0, 0);
+  } else {
+    ctx.font = '160px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('😊', W/2, H/2);
+  }
+  const tex = new THREE.CanvasTexture(cv);
+  texCache[key] = tex;
+  return tex;
+}
+
+function makePlayerFaceTex(state) {
+  const img = state === 'capture' ? IMG.panic : IMG.normal;
+  return makeFaceTex(img, 'player_' + state);
+}
+
+function makeMonkeyFaceTex(state) {
+  const img = state === 'flee' ? IMG.panic : state === 'alert' ? IMG.scared : state === 'caught' ? IMG.caught : IMG.normal;
+  return makeFaceTex(img, 'mf_' + state);
+}
+
+function makeIconTex(icon) {
+  const key = 'icon_' + icon;
+  if (texCache[key]) return texCache[key];
+  const cv = document.createElement('canvas');
+  cv.width = 64; cv.height = 64;
+  const ctx = cv.getContext('2d');
+  ctx.font = '52px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(icon, 32, 32);
+  const tex = new THREE.CanvasTexture(cv);
+  texCache[key] = tex;
+  return tex;
+}
+
+// ── プレイヤー（タカハシ 3Dキャラ）─────────────────────────────────────────
+function buildPlayerChar() {
+  const g = new THREE.Group();
+
+  const suitMat = new THREE.MeshLambertMaterial({ color: 0xE8E8E0 });
+  const skinMat = new THREE.MeshLambertMaterial({ color: 0xC49060 });
+  const hatMat  = new THREE.MeshLambertMaterial({ color: 0xCC2200 });
+  const shoeMat = new THREE.MeshLambertMaterial({ color: 0xF0F0F0 });
+  const tagMat  = new THREE.MeshLambertMaterial({ color: 0x2244AA });
+
+  // 頭部グループ（大きめ・チビキャラ）
+  const headGroup = new THREE.Group();
+  headGroup.position.y = 1.45;
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.52, 14, 10), skinMat);
+  headGroup.add(head);
+
+  // 顔テクスチャパネル
+  const playerFaceMat = new THREE.MeshBasicMaterial({
+    map: makePlayerFaceTex('normal'),
+    transparent: true, alphaTest: 0.05, depthWrite: false,
+  });
+  const facePanel = new THREE.Mesh(new THREE.PlaneGeometry(0.88, 0.98), playerFaceMat);
+  facePanel.position.set(0, 0, 0.53);
+  headGroup.add(facePanel);
+
+  // 耳
+  [-1, 1].forEach(s => {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), skinMat);
+    ear.position.set(s * 0.53, 0.05, 0);
+    headGroup.add(ear);
+  });
+
+  // 赤いベレー帽
+  const hatBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.38, 0.07, 14), hatMat);
+  hatBrim.position.y = 0.46;
+  headGroup.add(hatBrim);
+  const hatTop = new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 8), hatMat);
+  hatTop.scale.y = 0.75;
+  hatTop.position.y = 0.62;
+  headGroup.add(hatTop);
+
+  g.add(headGroup);
+
+  // 胴体（ジャンプスーツ）
+  const bodyMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.26, 0.72, 12), suitMat);
+  bodyMesh.position.y = 0.76;
+  g.add(bodyMesh);
+
+  // ネームタグ
+  const tag = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.1, 0.04), tagMat);
+  tag.position.set(-0.08, 0.88, 0.29);
+  g.add(tag);
+
+  // 腕L
+  const armLPivot = new THREE.Group();
+  armLPivot.position.set(-0.38, 1.02, 0);
+  armLPivot.add(Object.assign(
+    new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.52, 8), suitMat),
+    { position: new THREE.Vector3(0, -0.26, 0) }
+  ));
+  const handL = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), skinMat);
+  handL.position.y = -0.53; armLPivot.add(handL);
+  g.add(armLPivot);
+
+  // 腕R
+  const armRPivot = new THREE.Group();
+  armRPivot.position.set(0.38, 1.02, 0);
+  armRPivot.add(Object.assign(
+    new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.52, 8), suitMat),
+    { position: new THREE.Vector3(0, -0.26, 0) }
+  ));
+  const handR = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), skinMat);
+  handR.position.y = -0.53; armRPivot.add(handR);
+  g.add(armRPivot);
+
+  // 脚L
+  const legLPivot = new THREE.Group();
+  legLPivot.position.set(-0.15, 0.42, 0);
+  legLPivot.add(Object.assign(
+    new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.52, 8), suitMat),
+    { position: new THREE.Vector3(0, -0.26, 0) }
+  ));
+  const shoeL = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.11, 0.3), shoeMat);
+  shoeL.position.set(0, -0.55, 0.05); legLPivot.add(shoeL);
+  g.add(legLPivot);
+
+  // 脚R
+  const legRPivot = new THREE.Group();
+  legRPivot.position.set(0.15, 0.42, 0);
+  legRPivot.add(Object.assign(
+    new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.52, 8), suitMat),
+    { position: new THREE.Vector3(0, -0.26, 0) }
+  ));
+  const shoeR = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.11, 0.3), shoeMat);
+  shoeR.position.set(0, -0.55, 0.05); legRPivot.add(shoeR);
+  g.add(legRPivot);
+
+  g.userData = { armLPivot, armRPivot, legLPivot, legRPivot, headGroup, playerFaceMat };
+  return g;
+}
+
+const playerMesh = buildPlayerChar();
 scene.add(playerMesh);
 
-let playerModel  = null;
-let playerMixer  = null;
-let playerAnims  = {};
-let currentAnim  = null;
-let playerReady  = false;
-let isCapturing  = false;
-
-const gltfLoader = new THREE.GLTFLoader();
-gltfLoader.load(
-  'player.glb',
-  function(gltf) {
-    playerModel = gltf.scene;
-
-    // ── スケール・位置・向き調整 ────────────────────────────────────────────
-    // GLBが大きすぎる場合は scaleVal を小さく（例: 0.7）、小さすぎる場合は大きく（例: 1.3）
-    const scaleVal = 1.0;
-    playerModel.scale.set(scaleVal, scaleVal, scaleVal);
-    // 足が地面に浮く場合は Y をマイナスに（例: -0.1）、埋まる場合はプラスに
-    playerModel.position.set(0, 0, 0);
-    // GLBが後ろ向きに出る場合は Math.PI のまま、正面向きなら 0 に変更
-    playerModel.rotation.y = Math.PI;
-
-    playerMesh.add(playerModel);
-
-    // ── AnimationMixer ──────────────────────────────────────────────────────
-    playerMixer = new THREE.AnimationMixer(playerModel);
-
-    playerMixer.addEventListener('finished', function(e) {
-      if (playerAnims['Capture'] && e.action === playerAnims['Capture']) {
-        isCapturing = false;
-      }
-    });
-
-    gltf.animations.forEach(clip => {
-      playerAnims[clip.name] = playerMixer.clipAction(clip);
-    });
-
-    if (playerAnims['Capture']) {
-      playerAnims['Capture'].setLoop(THREE.LoopOnce, 1);
-      playerAnims['Capture'].clampWhenFinished = true;
-    }
-
-    console.log('player.glb 読み込み完了 / アニメーション:', Object.keys(playerAnims));
-    playerReady = true;
-    playAnim('Idle', 0);
-  },
-  null,
-  function(err) {
-    console.warn('player.glb 読み込み失敗。フォールバック使用:', err);
-    const g = new THREE.Group();
-    const bM = new THREE.MeshLambertMaterial({ color: 0x2266CC });
-    const hM = new THREE.MeshLambertMaterial({ color: 0xFFCC88 });
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.1, 0.5), bM);
-    body.position.y = 0.55; g.add(body);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 10), hM);
-    head.position.y = 1.35; g.add(head);
-    playerMesh.add(g);
-    playerReady = true;
-  }
-);
+// プレイヤーアニメーション状態
+let playerAnimT       = 0;
+let playerCaptureTimer = 0;
+let playerFaceState   = 'normal';
 
 // ネット
 const netGroup = new THREE.Group();
@@ -333,78 +443,12 @@ function updateCamera() {
   camera.lookAt(P.x, 1.5, P.z);
 }
 
-// ── テクスチャ生成 ───────────────────────────────────────────────────────────
-const IMG = {
-  normal: document.getElementById('img_normal'),
-  scared: document.getElementById('img_scared'),
-  panic:  document.getElementById('img_panic'),
-  caught: document.getElementById('img_caught'),
-};
-const texCache = {};
-
-Object.values(IMG).forEach(img => {
-  img.addEventListener('load', () => {
-    ['mf_wander','mf_sleep','mf_alert','mf_flee','mf_caught'].forEach(k => {
-      if (texCache[k]) { texCache[k].dispose(); delete texCache[k]; }
-    });
-    if (typeof monkeys !== 'undefined') monkeys.forEach(m => { m._prevState = null; });
-  });
-});
-
-function makeMonkeyFaceTex(state) {
-  const key = `mf_${state}`;
-  if (texCache[key]) return texCache[key];
-
-  const faceImg = state === 'flee'   ? IMG.panic
-    :             state === 'alert'  ? IMG.scared
-    :             state === 'caught' ? IMG.caught
-    :                                  IMG.normal;
-
-  const W = 190, H = 215;
-  const cv = document.createElement('canvas');
-  cv.width = W; cv.height = H;
-  const ctx = cv.getContext('2d');
-
-  if (faceImg.complete && faceImg.naturalWidth > 0) {
-    ctx.drawImage(faceImg, 0, 0, W, H);
-    const id = ctx.getImageData(0, 0, W, H);
-    const d = id.data;
-    for (let i = 0; i < d.length; i += 4) {
-      if (d[i] > 218 && d[i+1] > 218 && d[i+2] > 218) d[i+3] = 0;
-    }
-    ctx.putImageData(id, 0, 0);
-  } else {
-    ctx.font = '160px serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('🐒', W/2, H/2);
-  }
-
-  const tex = new THREE.CanvasTexture(cv);
-  texCache[key] = tex;
-  return tex;
-}
-
-function makeIconTex(icon) {
-  const key = `icon_${icon}`;
-  if (texCache[key]) return texCache[key];
-  const cv = document.createElement('canvas');
-  cv.width = 64; cv.height = 64;
-  const ctx = cv.getContext('2d');
-  ctx.font = '52px serif';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(icon, 32, 32);
-  const tex = new THREE.CanvasTexture(cv);
-  texCache[key] = tex;
-  return tex;
-}
-
-// ── サルクラス（3Dボディ + 顔テクスチャパネル）──────────────────────────────
+// ── サルクラス ────────────────────────────────────────────────────────────────
 const MCFG = {
   normal: { ws:2.5, fs:6.0,  dr:7.0  },
   fast:   { ws:3.5, fs:11.5, dr:10.0 },
   sleep:  { ws:2.0, fs:6.5,  dr:2.5  },
 };
-
 const TYPE_COLORS = {
   normal: { body:0x8B4513, head:0xCD853F },
   fast:   { body:0xAA2211, head:0xDD4422 },
@@ -435,58 +479,41 @@ class Monkey {
 
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.9, 0.5), bodyMat);
     body.position.y = 0.55; this.group.add(body);
-
     const bellyMat = new THREE.MeshLambertMaterial({ color: cols.head });
     const belly = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.55, 0.26), bellyMat);
     belly.position.set(0, 0.58, 0.14); this.group.add(belly);
-
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 10), headMat);
     head.position.y = 1.32; this.group.add(head);
-
     [-1,1].forEach(s => {
       const e = new THREE.Mesh(new THREE.SphereGeometry(0.058, 6, 6), eyeMat);
       e.position.set(s*0.14, 1.38, 0.37); this.group.add(e);
     });
-
     this.faceMat = new THREE.MeshBasicMaterial({
       map: makeMonkeyFaceTex(this.state),
-      transparent: true,
-      alphaTest: 0.05,
-      depthWrite: false,
+      transparent: true, alphaTest: 0.05, depthWrite: false,
     });
     const facePanel = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.88), this.faceMat);
     facePanel.position.set(0, 1.32, 0.445);
     this.group.add(facePanel);
-
     this.armL = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.74, 0.21), bodyMat);
-    this.armL.position.set(-0.52, 0.55, 0); this.armL.rotation.z = -0.28;
-    this.group.add(this.armL);
+    this.armL.position.set(-0.52, 0.55, 0); this.armL.rotation.z = -0.28; this.group.add(this.armL);
     this.armR = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.74, 0.21), bodyMat);
-    this.armR.position.set( 0.52, 0.55, 0); this.armR.rotation.z =  0.28;
-    this.group.add(this.armR);
-
+    this.armR.position.set( 0.52, 0.55, 0); this.armR.rotation.z =  0.28; this.group.add(this.armR);
     this.legL = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.52, 0.24), bodyMat);
     this.legL.position.set(-0.2, 0.06, 0); this.group.add(this.legL);
     this.legR = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.52, 0.24), bodyMat);
     this.legR.position.set( 0.2, 0.06, 0); this.group.add(this.legR);
-
     const tailCurve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0,    0.35, -0.26),
-      new THREE.Vector3(-0.2, 0.58, -0.42),
-      new THREE.Vector3(-0.38, 0.82, -0.32),
-      new THREE.Vector3(-0.28, 1.05, -0.12),
+      new THREE.Vector3(0, 0.35, -0.26), new THREE.Vector3(-0.2, 0.58, -0.42),
+      new THREE.Vector3(-0.38, 0.82, -0.32), new THREE.Vector3(-0.28, 1.05, -0.12),
     ]);
-    const tailGeo = new THREE.TubeGeometry(tailCurve, 8, 0.055, 6, false);
-    this.group.add(new THREE.Mesh(tailGeo, bodyMat));
-
+    this.group.add(new THREE.Mesh(new THREE.TubeGeometry(tailCurve, 8, 0.055, 6, false), bodyMat));
     this.iconMat = new THREE.SpriteMaterial({ transparent: true, opacity: 0 });
     this.iconSprite = new THREE.Sprite(this.iconMat);
     this.iconSprite.scale.set(0.68, 0.68, 1);
     this.iconSprite.position.set(0, 2.08, 0);
     this.group.add(this.iconSprite);
-
     scene.add(this.group);
-
     this.shadow = new THREE.Mesh(
       new THREE.CircleGeometry(0.52, 12),
       new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22 })
@@ -499,24 +526,17 @@ class Monkey {
   _updateTex() {
     if (this.state === this._prevState) return;
     this._prevState = this.state;
-
     this.faceMat.map = makeMonkeyFaceTex(this.state);
     this.faceMat.needsUpdate = true;
-
     const iconMap = { sleep:'💤', alert:'❗', flee:'💨', caught:'✨' };
     const icon = iconMap[this.state];
     if (icon) {
-      this.iconMat.map     = makeIconTex(icon);
-      this.iconMat.opacity = 1;
-      this.iconMat.needsUpdate = true;
-    } else {
-      this.iconMat.opacity = 0;
-    }
+      this.iconMat.map = makeIconTex(icon); this.iconMat.opacity = 1; this.iconMat.needsUpdate = true;
+    } else { this.iconMat.opacity = 0; }
   }
 
   update(dt) {
     this.bobT += dt * 4;
-
     if (this.caught) {
       this._updateTex();
       this.ca += dt * 2.5;
@@ -525,8 +545,7 @@ class Monkey {
         this._fadeMats = [];
         this.group.traverse(obj => {
           if (obj.isMesh && obj.material) {
-            obj.material = obj.material.clone();
-            obj.material.transparent = true;
+            obj.material = obj.material.clone(); obj.material.transparent = true;
             this._fadeMats.push(obj.material);
           }
         });
@@ -534,21 +553,18 @@ class Monkey {
       const alpha = Math.max(0, 1 - this.ca * 1.4);
       this._fadeMats.forEach(m => { m.opacity = alpha; m.needsUpdate = true; });
       this.iconMat.opacity = alpha;
-      this.shadow.visible  = false;
+      this.shadow.visible = false;
       if (this.ca > 0.9) this.group.visible = false;
       return;
     }
-
     const dx = this.x - P.x, dz = this.z - P.z;
     const dist = Math.hypot(dx, dz);
-
     if (this.state === 'sleep') {
       if (dist < this.dr) { this.state = 'alert'; this.at = 0.5; }
       this.group.position.set(this.x, Math.sin(this.bobT * 0.5) * 0.04, this.z);
       this.shadow.position.set(this.x, 0.01, this.z);
       this._updateTex(); return;
     }
-
     if (this.state === 'alert') {
       this.at -= dt;
       const sh = Math.sin(this.bobT * 18) * 0.065;
@@ -557,10 +573,8 @@ class Monkey {
       if (this.at <= 0) this.state = 'flee';
       this._updateTex(); return;
     }
-
     if (this.state === 'wander' && dist < this.dr) this.state = 'flee';
     if (this.state === 'flee' && dist > this.dr * 2.1) { this.state = 'wander'; this.wt = 1; }
-
     if (this.state === 'flee') {
       const l = Math.max(dist, 0.01);
       this.mx = dx/l; this.mz = dz/l;
@@ -573,32 +587,20 @@ class Monkey {
       const nx = clamp(this.x + this.mx*this.ws*dt, -BOUND+1, BOUND-1);
       const nz = clamp(this.z + this.mz*this.ws*dt, -BOUND+1, BOUND-1);
       if (nx === this.x) { this.dir = Math.PI-this.dir; this.mx *= -1; }
-      if (nz === this.z) { this.dir = -this.dir;        this.mz *= -1; }
+      if (nz === this.z) { this.dir = -this.dir; this.mz *= -1; }
       this.x = nx; this.z = nz;
     }
-
-    const bob = this.state === 'flee'
-      ? Math.abs(Math.sin(this.bobT)) * 0.3
-      : Math.sin(this.bobT) * 0.08;
-
+    const bob = this.state === 'flee' ? Math.abs(Math.sin(this.bobT)) * 0.3 : Math.sin(this.bobT) * 0.08;
     this.group.position.set(this.x, bob, this.z);
     this.shadow.position.set(this.x, 0.01, this.z);
-
-    if (Math.hypot(this.mx, this.mz) > 0.05) {
-      this.group.rotation.y = Math.atan2(this.mx, this.mz);
-    }
-
+    if (Math.hypot(this.mx, this.mz) > 0.05) this.group.rotation.y = Math.atan2(this.mx, this.mz);
     const swing = Math.sin(this.bobT * 1.5) * (this.state === 'flee' ? 0.62 : 0.38);
-    this.armL.rotation.x =  swing;
-    this.armR.rotation.x = -swing;
-    this.legL.rotation.x = -swing * 0.75;
-    this.legR.rotation.x =  swing * 0.75;
-
+    this.armL.rotation.x =  swing; this.armR.rotation.x = -swing;
+    this.legL.rotation.x = -swing * 0.75; this.legR.rotation.x = swing * 0.75;
     this._updateTex();
   }
 }
 
-// サル生成（計12匹）
 const TYPES = [...Array(6).fill('normal'), ...Array(4).fill('fast'), ...Array(2).fill('sleep')];
 const monkeys = TYPES.map(type => {
   let x, z, tries = 0;
@@ -615,14 +617,12 @@ const joy = { x:0, y:0, id:null, cx:0, cy:0 };
 const jZone  = document.getElementById('joystickZone');
 const jThumb = document.getElementById('joystickThumb');
 const JR = 74, TR = 31;
-
 jZone.addEventListener('touchstart', e => {
   e.preventDefault();
   const t = e.changedTouches[0]; joy.id = t.identifier;
   const r = jZone.getBoundingClientRect();
   joy.cx = r.left + r.width/2; joy.cy = r.top + r.height/2;
 }, { passive: false });
-
 document.addEventListener('touchmove', e => {
   e.preventDefault();
   for (const t of e.changedTouches) {
@@ -635,7 +635,6 @@ document.addEventListener('touchmove', e => {
     jThumb.style.top  = (JR-TR + Math.sin(a)*Math.min(d,JR-TR)) + 'px';
   }
 }, { passive: false });
-
 const resetJoy = e => {
   for (const t of e.changedTouches) if (t.identifier===joy.id) {
     joy.x=0; joy.y=0; joy.id=null;
@@ -645,25 +644,21 @@ const resetJoy = e => {
 document.addEventListener('touchend',    resetJoy);
 document.addEventListener('touchcancel', resetJoy);
 
-// ── ネットボタン ─────────────────────────────────────────────────────────────
+// ── ネットボタン / キーボード ──────────────────────────────────────────────
 const netBtn = document.getElementById('netBtn');
 let netQ = false;
 netBtn.addEventListener('touchstart', e => {
   e.preventDefault(); netQ = true; netBtn.classList.add('pressed');
 }, { passive: false });
 netBtn.addEventListener('touchend', () => netBtn.classList.remove('pressed'));
-
-// ── キーボード ───────────────────────────────────────────────────────────────
 const keys = {}, jp = new Set();
 document.addEventListener('keydown', e => {
-  keys[e.code] = true;
-  if (!e.repeat) jp.add(e.code);
+  keys[e.code] = true; if (!e.repeat) jp.add(e.code);
   if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
 });
 document.addEventListener('keyup', e => { keys[e.code] = false; });
 document.addEventListener('contextmenu', e => e.preventDefault());
 
-// ── ネット振り ───────────────────────────────────────────────────────────────
 const scoreEl    = document.getElementById('scoreEl');
 const catchLabel = document.getElementById('catchLabel');
 let catchTimer = 0;
@@ -675,114 +670,68 @@ function getAC() {
   if (AC.state === 'suspended') AC.resume();
   return AC;
 }
-
 function playNote(freq, t, dur, vol, type = 'square') {
   const ac = getAC();
-  const osc = ac.createOscillator();
-  const g   = ac.createGain();
+  const osc = ac.createOscillator(), g = ac.createGain();
   osc.connect(g); g.connect(ac.destination);
-  osc.type = type;
-  osc.frequency.value = freq;
+  osc.type = type; osc.frequency.value = freq;
   g.gain.setValueAtTime(vol, t);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.88);
   osc.start(t); osc.stop(t + dur);
 }
-
-const BPM  = 152;
-const BEAT = 60 / BPM;
-
+const BPM = 152, BEAT = 60 / BPM;
 const MEL = [
-  [784.0,0.5],[880.0,0.5],[784.0,0.5],[659.3,0.5],
-  [523.3,0.5],[587.3,0.5],[659.3,1.0],
-  [698.5,0.5],[784.0,0.5],[698.5,0.5],[587.3,0.5],
-  [493.9,0.5],[523.3,0.5],[587.3,1.0],
-  [659.3,0.5],[784.0,0.5],[880.0,0.5],[784.0,0.5],
-  [659.3,0.5],[523.3,0.5],[587.3,1.0],
-  [784.0,0.5],[698.5,0.5],[659.3,0.5],[587.3,0.5],
-  [523.3,2.0],
+  [784.0,0.5],[880.0,0.5],[784.0,0.5],[659.3,0.5],[523.3,0.5],[587.3,0.5],[659.3,1.0],
+  [698.5,0.5],[784.0,0.5],[698.5,0.5],[587.3,0.5],[493.9,0.5],[523.3,0.5],[587.3,1.0],
+  [659.3,0.5],[784.0,0.5],[880.0,0.5],[784.0,0.5],[659.3,0.5],[523.3,0.5],[587.3,1.0],
+  [784.0,0.5],[698.5,0.5],[659.3,0.5],[587.3,0.5],[523.3,2.0],
 ];
 const BAS = [
-  [261.6,1],[261.6,1],[392.0,1],[392.0,1],
-  [349.2,1],[349.2,1],[392.0,1],[392.0,1],
-  [261.6,1],[261.6,1],[440.0,1],[440.0,1],
-  [349.2,1],[392.0,1],[261.6,2],
+  [261.6,1],[261.6,1],[392.0,1],[392.0,1],[349.2,1],[349.2,1],[392.0,1],[392.0,1],
+  [261.6,1],[261.6,1],[440.0,1],[440.0,1],[349.2,1],[392.0,1],[261.6,2],
 ];
-
 let bgmNext = 0, bgmOn = false;
 function bgmTick() {
   if (!bgmOn) return;
   const ac = getAC(), now = ac.currentTime;
   if (bgmNext < now + 0.35) {
-    const st = Math.max(bgmNext, now + 0.05);
-    let t = st;
+    const st = Math.max(bgmNext, now + 0.05); let t = st;
     MEL.forEach(([f,b]) => { playNote(f, t, b*BEAT, 0.09, 'square'); t += b*BEAT; });
-    t = st;
-    BAS.forEach(([f,b]) => { playNote(f, t, b*BEAT, 0.06, 'triangle'); t += b*BEAT; });
+    t = st; BAS.forEach(([f,b]) => { playNote(f, t, b*BEAT, 0.06, 'triangle'); t += b*BEAT; });
     bgmNext = st + MEL.reduce((s,[,b]) => s + b*BEAT, 0);
   }
   requestAnimationFrame(bgmTick);
 }
 function startBGM() { bgmOn = true; bgmNext = 0; bgmTick(); }
-
-function playCatchSE() {
-  const t = getAC().currentTime;
-  [[523.3,0],[659.3,0.09],[784.0,0.18],[1046.5,0.27]].forEach(([f,dt]) => {
-    playNote(f, t+dt, 0.22, 0.18, 'sine');
-  });
-}
-
 function unlockSpeech() {
   if (!window.speechSynthesis) return;
-  const u = new SpeechSynthesisUtterance(' ');
-  u.volume = 0; u.lang = 'ja-JP';
-  speechSynthesis.speak(u);
+  const u = new SpeechSynthesisUtterance(' '); u.volume = 0; u.lang = 'ja-JP'; speechSynthesis.speak(u);
 }
-
 function speakCatch() {
   if (!window.speechSynthesis) return;
   if (speechSynthesis.paused) speechSynthesis.resume();
   const u = new SpeechSynthesisUtterance('ゴリゲッチュ！');
-  u.lang = 'ja-JP';
-  u.pitch = 1.7;
-  u.rate  = 1.15;
-  u.volume = 1.0;
+  u.lang = 'ja-JP'; u.pitch = 1.7; u.rate = 1.15; u.volume = 1.0;
   const voices = speechSynthesis.getVoices();
-  const brightJa = voices.find(v => v.lang.startsWith('ja') &&
-    /kyoko|hana|haruka|hikari|female/i.test(v.name));
-  const ja = brightJa || voices.find(v => v.lang.startsWith('ja'));
+  const ja = voices.find(v => v.lang.startsWith('ja') && /kyoko|hana|haruka|hikari|female/i.test(v.name))
+          || voices.find(v => v.lang.startsWith('ja'));
   if (ja) u.voice = ja;
   speechSynthesis.speak(u);
 }
-
-const CUTIN_IMGS = ['cutin.jpg', 'cutin2.jpg', 'cutin3.jpg', 'cutin4.jpg'];
+const CUTIN_IMGS = ['cutin.jpg','cutin2.jpg','cutin3.jpg','cutin4.jpg'];
 let lastCutIn = -1;
 function triggerCutIn() {
-  const el  = document.getElementById('cutIn');
-  const img = document.getElementById('cutInImg');
-  let idx;
-  do { idx = Math.floor(Math.random() * CUTIN_IMGS.length); } while (idx === lastCutIn);
-  lastCutIn = idx;
-  img.src = CUTIN_IMGS[idx];
-  el.classList.add('show');
-  setTimeout(() => { el.classList.remove('show'); }, 600);
-}
-
-// ── アニメーション切り替え ───────────────────────────────────────────────────
-function playAnim(name, fade) {
-  if (!playerReady || !playerAnims[name]) return;
-  if (currentAnim === playerAnims[name]) return;
-  fade = (fade === undefined) ? 0.2 : fade;
-  if (currentAnim) currentAnim.fadeOut(fade);
-  currentAnim = playerAnims[name];
-  currentAnim.reset().fadeIn(fade).play();
+  const el = document.getElementById('cutIn'), img = document.getElementById('cutInImg');
+  let idx; do { idx = Math.floor(Math.random() * CUTIN_IMGS.length); } while (idx === lastCutIn);
+  lastCutIn = idx; img.src = CUTIN_IMGS[idx];
+  el.classList.add('show'); setTimeout(() => { el.classList.remove('show'); }, 600);
 }
 
 function doSwing() {
   if (P.netCooldown > 0) return;
   P.netSwing = P.NET_DUR; P.netCooldown = P.NET_CD;
   netGroup.visible = true;
-  isCapturing = true;
-  playAnim('Capture', 0.1);
+  playerCaptureTimer = 0.55;
   for (const m of monkeys) {
     if (m.caught) continue;
     const dx = m.x - P.x, dz = m.z - P.z;
@@ -790,15 +739,10 @@ function doSwing() {
     if (dist > P.NET_R) continue;
     const dot = (dx/dist)*P.dirX + (dz/dist)*P.dirZ;
     if (dot > Math.cos(Math.PI * 0.6)) {
-      m.caught = true;
-      m.state  = 'caught';
-      m._prevState = null;
-      P.caught++;
-      scoreEl.textContent = P.caught;
-      catchLabel.style.display = 'block';
-      catchTimer = 1.1;
-      speakCatch();
-      triggerCutIn();
+      m.caught = true; m.state = 'caught'; m._prevState = null;
+      P.caught++; scoreEl.textContent = P.caught;
+      catchLabel.style.display = 'block'; catchTimer = 1.1;
+      speakCatch(); triggerCutIn();
       if (P.caught >= 12) {
         running = false;
         const elapsed = Math.floor(60 - timeLeft);
@@ -813,7 +757,7 @@ function doSwing() {
           document.getElementById('rankDisplay').style.color = color;
           document.getElementById('rankDisplay').style.textShadow =
             '-4px -4px 0 #000,4px -4px 0 #000,-4px 4px 0 #000,4px 4px 0 #000,6px 6px 0 rgba(0,0,0,0.5)';
-          document.getElementById('rankLabel').textContent   = label;
+          document.getElementById('rankLabel').textContent = label;
           document.getElementById('winScreen').style.display = 'flex';
         }, 900);
       }
@@ -822,19 +766,17 @@ function doSwing() {
 }
 
 // ── ゲームループ ─────────────────────────────────────────────────────────────
-let running = false, last = performance.now();
-let timeLeft = 60;
+let running = false, last = performance.now(), timeLeft = 60;
 const timerEl = document.getElementById('timerEl');
 
 document.getElementById('startBtn').addEventListener('click', () => {
   document.getElementById('titleScreen').style.display = 'none';
-  running = true;
-  startBGM();
-  unlockSpeech();
-  playAnim('Idle', 0);
+  running = true; startBGM(); unlockSpeech();
 });
 document.getElementById('restartBtn').addEventListener('click',  () => location.reload());
 document.getElementById('restartBtn2').addEventListener('click', () => location.reload());
+
+function lerpR(cur, tgt, t) { return cur + (tgt - cur) * t; }
 
 function loop(ts) {
   requestAnimationFrame(loop);
@@ -842,7 +784,6 @@ function loop(ts) {
   last = ts;
   if (!running) { renderer.render(scene, camera); return; }
 
-  // タイマー
   timeLeft -= dt;
   const sec = Math.max(0, Math.ceil(timeLeft));
   timerEl.textContent = sec;
@@ -855,12 +796,8 @@ function loop(ts) {
   }
 
   const crX = -camDZ, crZ = camDX;
-
   let mx = 0, mz = 0;
-  if (Math.hypot(joy.x, joy.y) > 0.08) {
-    mx = crX * joy.x + camDX * (-joy.y);
-    mz = crZ * joy.x + camDZ * (-joy.y);
-  }
+  if (Math.hypot(joy.x, joy.y) > 0.08) { mx = crX*joy.x + camDX*(-joy.y); mz = crZ*joy.x + camDZ*(-joy.y); }
   if (keys['ArrowUp']    || keys['KeyW']) { mx += camDX; mz += camDZ; }
   if (keys['ArrowDown']  || keys['KeyS']) { mx -= camDX; mz -= camDZ; }
   if (keys['ArrowRight'] || keys['KeyD']) { mx += crX;   mz += crZ;   }
@@ -873,16 +810,61 @@ function loop(ts) {
     P.z = clamp(P.z + P.dirZ*P.speed*dt, -BOUND+0.5, BOUND-0.5);
     playerMesh.rotation.y = Math.atan2(P.dirX, P.dirZ);
   }
-  playerMesh.position.set(P.x, 0, P.z);
 
-  // アニメーション切り替え
-  if (isCapturing) {
-    // Capture再生中は割り込まない（finishedイベントで自動終了）
-  } else if (ml > 0.01) {
-    playAnim('Walk', 0.15);
-  } else {
-    playAnim('Idle', 0.2);
+  // プレイヤーアニメーション
+  playerAnimT += dt;
+  playerCaptureTimer = Math.max(0, playerCaptureTimer - dt);
+
+  const ud = playerMesh.userData;
+  if (ud.armLPivot) {
+    if (playerCaptureTimer > 0) {
+      // 捕獲モーション：腕を上げて広げる
+      ud.armLPivot.rotation.x = lerpR(ud.armLPivot.rotation.x, -1.2, 0.3);
+      ud.armRPivot.rotation.x = lerpR(ud.armRPivot.rotation.x, -1.2, 0.3);
+      ud.armLPivot.rotation.z = lerpR(ud.armLPivot.rotation.z, -0.4, 0.3);
+      ud.armRPivot.rotation.z = lerpR(ud.armRPivot.rotation.z,  0.4, 0.3);
+      ud.legLPivot.rotation.x = lerpR(ud.legLPivot.rotation.x, 0, 0.2);
+      ud.legRPivot.rotation.x = lerpR(ud.legRPivot.rotation.x, 0, 0.2);
+      // 顔をpanicに
+      if (playerFaceState !== 'capture') {
+        playerFaceState = 'capture';
+        ud.playerFaceMat.map = makePlayerFaceTex('capture');
+        ud.playerFaceMat.needsUpdate = true;
+      }
+    } else if (ml > 0.01) {
+      // 歩行モーション
+      const swing = Math.sin(playerAnimT * 7) * 0.6;
+      ud.armLPivot.rotation.x = lerpR(ud.armLPivot.rotation.x,  swing, 0.25);
+      ud.armRPivot.rotation.x = lerpR(ud.armRPivot.rotation.x, -swing, 0.25);
+      ud.armLPivot.rotation.z = lerpR(ud.armLPivot.rotation.z, 0, 0.15);
+      ud.armRPivot.rotation.z = lerpR(ud.armRPivot.rotation.z, 0, 0.15);
+      ud.legLPivot.rotation.x = lerpR(ud.legLPivot.rotation.x, -swing * 0.7, 0.25);
+      ud.legRPivot.rotation.x = lerpR(ud.legRPivot.rotation.x,  swing * 0.7, 0.25);
+      if (playerFaceState !== 'normal') {
+        playerFaceState = 'normal';
+        ud.playerFaceMat.map = makePlayerFaceTex('normal');
+        ud.playerFaceMat.needsUpdate = true;
+      }
+    } else {
+      // 待機モーション：わずかに揺れる
+      const sway = Math.sin(playerAnimT * 1.5) * 0.06;
+      ud.armLPivot.rotation.x = lerpR(ud.armLPivot.rotation.x,  sway, 0.07);
+      ud.armRPivot.rotation.x = lerpR(ud.armRPivot.rotation.x, -sway, 0.07);
+      ud.armLPivot.rotation.z = lerpR(ud.armLPivot.rotation.z, 0, 0.1);
+      ud.armRPivot.rotation.z = lerpR(ud.armRPivot.rotation.z, 0, 0.1);
+      ud.legLPivot.rotation.x = lerpR(ud.legLPivot.rotation.x, 0, 0.1);
+      ud.legRPivot.rotation.x = lerpR(ud.legRPivot.rotation.x, 0, 0.1);
+      if (playerFaceState !== 'normal') {
+        playerFaceState = 'normal';
+        ud.playerFaceMat.map = makePlayerFaceTex('normal');
+        ud.playerFaceMat.needsUpdate = true;
+      }
+    }
   }
+
+  // 体の上下ボブ
+  const bobY = ml > 0.01 ? Math.abs(Math.sin(playerAnimT * 7)) * 0.07 : Math.sin(playerAnimT * 1.5) * 0.02;
+  playerMesh.position.set(P.x, bobY, P.z);
 
   if (netQ || jp.has('Space') || jp.has('KeyZ')) { doSwing(); netQ = false; }
   if (P.netSwing > 0) {
@@ -902,7 +884,6 @@ function loop(ts) {
 
   updateCamera();
   jp.clear();
-  if (playerMixer) playerMixer.update(dt);
   renderer.render(scene, camera);
 }
 

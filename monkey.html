@@ -741,12 +741,14 @@ function speakCatch() {
 
 // カットインを2回フラッシュさせる
 const CUTIN_IMGS = ['cutin.jpg', 'cutin2.jpg', 'cutin3.jpg', 'cutin4.jpg'];
-let cutInCount = 0;
+let lastCutIn = -1;
 function triggerCutIn() {
   const el  = document.getElementById('cutIn');
   const img = document.getElementById('cutInImg');
-  img.src = CUTIN_IMGS[cutInCount % CUTIN_IMGS.length];
-  cutInCount++;
+  let idx;
+  do { idx = Math.floor(Math.random() * CUTIN_IMGS.length); } while (idx === lastCutIn);
+  lastCutIn = idx;
+  img.src = CUTIN_IMGS[idx];
   el.classList.add('show');
   setTimeout(() => { el.classList.remove('show'); }, 600);
 }
@@ -772,18 +774,19 @@ function doSwing() {
       speakCatch();
       triggerCutIn();
       if (P.caught >= 12) {
+        running = false;
         const elapsed = Math.floor(60 - timeLeft);
-        const [rank, label, color] =
-          elapsed <= 20 ? ['S', '神速！伝説のゴリゲッチュ！', '#FFD700'] :
-          elapsed <= 35 ? ['A', 'すごい！かなり速い！',       '#C0C0C0'] :
-          elapsed <= 50 ? ['B', 'なかなかやるね！',           '#CD7F32'] :
-                          ['C', 'ギリギリクリア！',           '#88CCFF'];
-        setTimeout(() => {
+        var rank, label, color;
+        if      (elapsed <= 20) { rank='S'; label='神速！伝説のゴリゲッチュ！'; color='#FFD700'; }
+        else if (elapsed <= 35) { rank='A'; label='すごい！かなり速い！';       color='#C0C0C0'; }
+        else if (elapsed <= 50) { rank='B'; label='なかなかやるね！';           color='#CD7F32'; }
+        else                    { rank='C'; label='ギリギリクリア！';           color='#88CCFF'; }
+        setTimeout(function() {
           document.getElementById('clearTime').textContent   = elapsed;
           document.getElementById('rankDisplay').textContent = rank;
           document.getElementById('rankDisplay').style.color = color;
           document.getElementById('rankDisplay').style.textShadow =
-            `-4px -4px 0 #000,4px -4px 0 #000,-4px 4px 0 #000,4px 4px 0 #000,6px 6px 0 rgba(0,0,0,0.5)`;
+            '-4px -4px 0 #000,4px -4px 0 #000,-4px 4px 0 #000,4px 4px 0 #000,6px 6px 0 rgba(0,0,0,0.5)';
           document.getElementById('rankLabel').textContent   = label;
           document.getElementById('winScreen').style.display = 'flex';
         }, 900);

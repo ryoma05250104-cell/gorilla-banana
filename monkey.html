@@ -357,45 +357,45 @@ function buildPlayerChar() {
   // 腕L
   const armLPivot = new THREE.Group();
   armLPivot.position.set(-0.38, 1.02, 0);
-  armLPivot.add(Object.assign(
-    new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.52, 8), suitMat),
-    { position: new THREE.Vector3(0, -0.26, 0) }
-  ));
+  const armLCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.52, 8), suitMat);
+  armLCyl.position.y = -0.26;
+  armLPivot.add(armLCyl);
   const handL = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), skinMat);
-  handL.position.y = -0.53; armLPivot.add(handL);
+  handL.position.y = -0.53;
+  armLPivot.add(handL);
   g.add(armLPivot);
 
   // 腕R
   const armRPivot = new THREE.Group();
   armRPivot.position.set(0.38, 1.02, 0);
-  armRPivot.add(Object.assign(
-    new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.52, 8), suitMat),
-    { position: new THREE.Vector3(0, -0.26, 0) }
-  ));
+  const armRCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.52, 8), suitMat);
+  armRCyl.position.y = -0.26;
+  armRPivot.add(armRCyl);
   const handR = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), skinMat);
-  handR.position.y = -0.53; armRPivot.add(handR);
+  handR.position.y = -0.53;
+  armRPivot.add(handR);
   g.add(armRPivot);
 
-  // 脚L
+  // 脚L（pivot=腰、y=0.55で足が地面に接地）
   const legLPivot = new THREE.Group();
-  legLPivot.position.set(-0.15, 0.42, 0);
-  legLPivot.add(Object.assign(
-    new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.52, 8), suitMat),
-    { position: new THREE.Vector3(0, -0.26, 0) }
-  ));
+  legLPivot.position.set(-0.15, 0.55, 0);
+  const legLCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.52, 8), suitMat);
+  legLCyl.position.y = -0.26;
+  legLPivot.add(legLCyl);
   const shoeL = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.11, 0.3), shoeMat);
-  shoeL.position.set(0, -0.55, 0.05); legLPivot.add(shoeL);
+  shoeL.position.set(0, -0.54, 0.05);
+  legLPivot.add(shoeL);
   g.add(legLPivot);
 
   // 脚R
   const legRPivot = new THREE.Group();
-  legRPivot.position.set(0.15, 0.42, 0);
-  legRPivot.add(Object.assign(
-    new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.52, 8), suitMat),
-    { position: new THREE.Vector3(0, -0.26, 0) }
-  ));
+  legRPivot.position.set(0.15, 0.55, 0);
+  const legRCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.52, 8), suitMat);
+  legRCyl.position.y = -0.26;
+  legRPivot.add(legRCyl);
   const shoeR = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.11, 0.3), shoeMat);
-  shoeR.position.set(0, -0.55, 0.05); legRPivot.add(shoeR);
+  shoeR.position.set(0, -0.54, 0.05);
+  legRPivot.add(shoeR);
   g.add(legRPivot);
 
   g.userData = { armLPivot, armRPivot, legLPivot, legRPivot, headGroup, playerFaceMat };

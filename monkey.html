@@ -263,102 +263,15 @@ function makeIconTex(icon) {
   } catch(e) { return null; }
 }
 
-// ── タカハシ 3Dキャラ ─────────────────────────────────────────────────────────
+// ── プレイヤー（シンプルキャラ）──────────────────────────────────────────────
 function buildPlayerChar() {
   var g = new THREE.Group();
-
-  var suitMat = new THREE.MeshLambertMaterial({ color: 0xE0E0D8 });
-  var skinMat = new THREE.MeshLambertMaterial({ color: 0xC49060 });
-  var hatMat  = new THREE.MeshLambertMaterial({ color: 0xCC2200 });
-  var shoeMat = new THREE.MeshLambertMaterial({ color: 0xF0F0F0 });
-  var tagMat  = new THREE.MeshLambertMaterial({ color: 0x2244AA });
-
-  // 胴体
-  var body = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.26, 0.70, 10), suitMat);
-  body.position.y = 0.73;
-  g.add(body);
-
-  // ネームタグ
-  var tag = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.10, 0.05), tagMat);
-  tag.position.set(-0.06, 0.84, 0.29);
-  g.add(tag);
-
-  // 腕L（ピボット → 腕シリンダー）
-  var armLPivot = new THREE.Group();
-  armLPivot.position.set(-0.38, 1.0, 0);
-  var armLCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.52, 8), suitMat);
-  armLCyl.position.y = -0.26;
-  armLPivot.add(armLCyl);
-  var handL = new THREE.Mesh(new THREE.SphereGeometry(0.10, 8, 6), skinMat);
-  handL.position.y = -0.53;
-  armLPivot.add(handL);
-  g.add(armLPivot);
-
-  // 腕R
-  var armRPivot = new THREE.Group();
-  armRPivot.position.set(0.38, 1.0, 0);
-  var armRCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.52, 8), suitMat);
-  armRCyl.position.y = -0.26;
-  armRPivot.add(armRCyl);
-  var handR = new THREE.Mesh(new THREE.SphereGeometry(0.10, 8, 6), skinMat);
-  handR.position.y = -0.53;
-  armRPivot.add(handR);
-  g.add(armRPivot);
-
-  // 脚L（pivot y=0.55 → 足底がほぼ地面）
-  var legLPivot = new THREE.Group();
-  legLPivot.position.set(-0.15, 0.55, 0);
-  var legLCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.09, 0.52, 8), suitMat);
-  legLCyl.position.y = -0.26;
-  legLPivot.add(legLCyl);
-  var shoeL = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.11, 0.30), shoeMat);
-  shoeL.position.set(0, -0.54, 0.05);
-  legLPivot.add(shoeL);
-  g.add(legLPivot);
-
-  // 脚R
-  var legRPivot = new THREE.Group();
-  legRPivot.position.set(0.15, 0.55, 0);
-  var legRCyl = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.09, 0.52, 8), suitMat);
-  legRCyl.position.y = -0.26;
-  legRPivot.add(legRCyl);
-  var shoeR = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.11, 0.30), shoeMat);
-  shoeR.position.set(0, -0.54, 0.05);
-  legRPivot.add(shoeR);
-  g.add(legRPivot);
-
-  // 頭部（最後に追加 - 一番目立つ）
-  var headGroup = new THREE.Group();
-  headGroup.position.y = 1.45;
-
-  var head = new THREE.Mesh(new THREE.SphereGeometry(0.52, 14, 10), skinMat);
-  headGroup.add(head);
-
-  // 耳
-  var earGeo = new THREE.SphereGeometry(0.13, 8, 6);
-  var earL = new THREE.Mesh(earGeo, skinMat);
-  earL.position.set(-0.53, 0.05, 0);
-  headGroup.add(earL);
-  var earR = new THREE.Mesh(earGeo, skinMat);
-  earR.position.set(0.53, 0.05, 0);
-  headGroup.add(earR);
-
-  // 赤いベレー帽
-  var hatBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.40, 0.08, 14), hatMat);
-  hatBrim.position.y = 0.46;
-  headGroup.add(hatBrim);
-  var hatTop = new THREE.Mesh(new THREE.SphereGeometry(0.30, 14, 8), hatMat);
-  hatTop.position.y = 0.62;
-  hatTop.scale.y = 0.72;
-  headGroup.add(hatTop);
-
-  g.add(headGroup);
-
-  g.userData.armLPivot = armLPivot;
-  g.userData.armRPivot = armRPivot;
-  g.userData.legLPivot = legLPivot;
-  g.userData.legRPivot = legRPivot;
-
+  var bM = new THREE.MeshLambertMaterial({ color: 0x2266CC });
+  var hM = new THREE.MeshLambertMaterial({ color: 0xFFCC88 });
+  var body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.1, 0.5), bM);
+  body.position.y = 0.55; g.add(body);
+  var head = new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 10), hM);
+  head.position.y = 1.35; g.add(head);
   return g;
 }
 
@@ -743,7 +656,7 @@ function doSwing() {
 // ── ゲームループ ─────────────────────────────────────────────────────────────
 var running=false, last=performance.now(), timeLeft=60;
 var timerEl=document.getElementById('timerEl');
-var playerAnimT=0, playerCaptureTimer=0;
+var playerCaptureTimer=0;
 
 document.getElementById('startBtn').addEventListener('click', function() {
   document.getElementById('titleScreen').style.display='none';
@@ -786,39 +699,7 @@ function loop(ts) {
     playerMesh.rotation.y=Math.atan2(P.dirX,P.dirZ);
   }
 
-  playerAnimT += dt;
-  playerCaptureTimer = Math.max(0, playerCaptureTimer-dt);
-
-  var ud = playerMesh.userData;
-  if (ud.armLPivot) {
-    if (playerCaptureTimer > 0) {
-      ud.armLPivot.rotation.x = lerp(ud.armLPivot.rotation.x, -1.2, 0.3);
-      ud.armRPivot.rotation.x = lerp(ud.armRPivot.rotation.x, -1.2, 0.3);
-      ud.armLPivot.rotation.z = lerp(ud.armLPivot.rotation.z, -0.4, 0.3);
-      ud.armRPivot.rotation.z = lerp(ud.armRPivot.rotation.z,  0.4, 0.3);
-      ud.legLPivot.rotation.x = lerp(ud.legLPivot.rotation.x, 0, 0.2);
-      ud.legRPivot.rotation.x = lerp(ud.legRPivot.rotation.x, 0, 0.2);
-    } else if (ml > 0.01) {
-      var swing = Math.sin(playerAnimT*7)*0.6;
-      ud.armLPivot.rotation.x = lerp(ud.armLPivot.rotation.x,  swing, 0.25);
-      ud.armRPivot.rotation.x = lerp(ud.armRPivot.rotation.x, -swing, 0.25);
-      ud.armLPivot.rotation.z = lerp(ud.armLPivot.rotation.z, 0, 0.15);
-      ud.armRPivot.rotation.z = lerp(ud.armRPivot.rotation.z, 0, 0.15);
-      ud.legLPivot.rotation.x = lerp(ud.legLPivot.rotation.x, -swing*0.7, 0.25);
-      ud.legRPivot.rotation.x = lerp(ud.legRPivot.rotation.x,  swing*0.7, 0.25);
-    } else {
-      var sway = Math.sin(playerAnimT*1.5)*0.06;
-      ud.armLPivot.rotation.x = lerp(ud.armLPivot.rotation.x,  sway, 0.07);
-      ud.armRPivot.rotation.x = lerp(ud.armRPivot.rotation.x, -sway, 0.07);
-      ud.armLPivot.rotation.z = lerp(ud.armLPivot.rotation.z, 0, 0.1);
-      ud.armRPivot.rotation.z = lerp(ud.armRPivot.rotation.z, 0, 0.1);
-      ud.legLPivot.rotation.x = lerp(ud.legLPivot.rotation.x, 0, 0.1);
-      ud.legRPivot.rotation.x = lerp(ud.legRPivot.rotation.x, 0, 0.1);
-    }
-  }
-
-  var bobY = ml>0.01 ? Math.abs(Math.sin(playerAnimT*7))*0.07 : Math.sin(playerAnimT*1.5)*0.02;
-  playerMesh.position.set(P.x, bobY, P.z);
+  playerMesh.position.set(P.x, 0, P.z);
 
   if (netQ || jp['Space'] || jp['KeyZ']) { doSwing(); netQ=false; }
   jp = {};

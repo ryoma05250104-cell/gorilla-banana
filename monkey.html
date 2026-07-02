@@ -725,14 +725,16 @@ function doSwing() {
         else if (elapsed<=35){rank='A';label='すごい！かなり速い！';color='#C0C0C0';}
         else if (elapsed<=50){rank='B';label='なかなかやるね！';color='#CD7F32';}
         else                 {rank='C';label='ギリギリクリア！';color='#88CCFF';}
+        // ランクを即座にDOMにセット（クロージャのタイミング問題を回避）
+        document.getElementById('clearTime').textContent=elapsed;
+        document.getElementById('rankDisplay').textContent=rank;
+        document.getElementById('rankDisplay').style.color=color;
+        document.getElementById('rankDisplay').style.textShadow='-4px -4px 0 #000,4px -4px 0 #000,-4px 4px 0 #000,4px 4px 0 #000,6px 6px 0 rgba(0,0,0,0.5)';
+        document.getElementById('rankLabel').textContent=label;
+        // 画面表示だけ少し遅らせる
         setTimeout(function(){
-          document.getElementById('clearTime').textContent=elapsed;
-          document.getElementById('rankDisplay').textContent=rank;
-          document.getElementById('rankDisplay').style.color=color;
-          document.getElementById('rankDisplay').style.textShadow='-4px -4px 0 #000,4px -4px 0 #000,-4px 4px 0 #000,4px 4px 0 #000,6px 6px 0 rgba(0,0,0,0.5)';
-          document.getElementById('rankLabel').textContent=label;
           document.getElementById('winScreen').style.display='flex';
-        },900);
+        },600);
       }
     }
   }

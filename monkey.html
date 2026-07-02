@@ -740,11 +740,12 @@ function speakCatch() {
 }
 
 // カットインを2回フラッシュさせる
+const CUTIN_IMGS = ['cutin.jpg', 'cutin2.jpg', 'cutin3.jpg', 'cutin4.jpg'];
 let cutInCount = 0;
 function triggerCutIn() {
   const el  = document.getElementById('cutIn');
   const img = document.getElementById('cutInImg');
-  img.src = (cutInCount % 2 === 0) ? 'cutin.jpg' : 'cutin2.jpg';
+  img.src = CUTIN_IMGS[cutInCount % CUTIN_IMGS.length];
   cutInCount++;
   el.classList.add('show');
   setTimeout(() => { el.classList.remove('show'); }, 600);

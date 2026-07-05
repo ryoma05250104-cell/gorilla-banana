@@ -808,12 +808,13 @@
       else if(moving)   spr = PSP.walk  || PSP.idle;
 
       if(spr){
-        // 描画サイズ（当たり判定より少し大きめに表示）
-        const DW=80, DH=110;
+        const DH=110;
+        const DW=Math.round(DH*spr.width/spr.height);
         walkT += moving ? 0.2 : 0;
-        // 歩きのみ上下バウンス
         const bob = moving ? Math.sin(walkT)*3 : 0;
-        ctx.drawImage(spr, cx-DW/2, cy-DH*0.62+bob, DW, DH);
+        // 足元を当たり判定の底に合わせる
+        const top = player.y + player.h - DH;
+        ctx.drawImage(spr, cx-DW/2, top+bob, DW, DH);
         return;
       }
     }

@@ -94,6 +94,30 @@ function loadImg(name,src){
   });
 }
 
+/* ── 人間モード個別フレーム ── */
+const HFRS={idle:null,walk:null,run:null,jump:null};
+let hfrsReady=false;
+function loadHumanFrames(){
+  const list=[['idle','assets/player/idle.png'],['walk','assets/player/walk.png'],
+              ['run','assets/player/run.png'],['jump','assets/player/jump.png']];
+  let done=0;
+  list.forEach(([key,src])=>{
+    const im=new Image();
+    im.onload=()=>{
+      try{
+        const oc=document.createElement('canvas');oc.width=im.width;oc.height=im.height;
+        const ox=oc.getContext('2d');ox.drawImage(im,0,0);
+        const id=ox.getImageData(0,0,oc.width,oc.height),d=id.data;
+        for(let i=0;i<d.length;i+=4)if(d[i]>230&&d[i+1]>230&&d[i+2]>230)d[i+3]=0;
+        ox.putImageData(id,0,0);HFRS[key]=oc;
+      }catch(e){HFRS[key]=im;}
+      if(++done===list.length)hfrsReady=true;
+    };
+    im.onerror=()=>{if(++done===list.length)hfrsReady=true;};
+    im.src=src;
+  });
+}
+
 /* ── スプライト座標
   human.png / gorilla.png (1536×1024, 白背景)
   行1 y=40 sh=155: あるく×3  はしる×4  ジャンプ×2
@@ -269,8 +293,27 @@ class Player{
         ctx.font='40px sans-serif';ctx.fillText('🚗',dx+10,cy+70);
       }
     } else {
-      // キャラ本体
       const st=this.state;
+      // 人間モード：個別フレーム画像で大きく表示
+      if(this.mode===0 && hfrsReady && st!=='bow'){
+        let img=HFRS.idle;
+        if(st==='jump'||st==='jump2') img=HFRS.jump||HFRS.idle;
+        else if(st==='run')  img=HFRS.run||HFRS.walk||HFRS.idle;
+        else if(st==='walk') img=HFRS.walk||HFRS.idle;
+        if(img){
+          const DH=120,DW=Math.round(DH*img.width/img.height);
+          const ix=dx+this.w/2-DW/2, iy=this.y+this.h-DH;
+          if(this.dir<0){ctx.save();ctx.translate(ix+DW,iy);ctx.scale(-1,1);ctx.drawImage(img,0,0,DW,DH);ctx.restore();}
+          else ctx.drawImage(img,ix,iy,DW,DH);
+          if(st==='punch'&&this.stT<.18){
+            const ex=this.dir>0?dx+this.w+4:dx-34;
+            ctx.fillStyle='rgba(255,200,0,.8)';
+            ctx.beginPath();ctx.arc(ex+15,this.y+this.h*.44,22,0,Math.PI*2);ctx.fill();
+          }
+          return;
+        }
+      }
+      // ゴリラモード or bow: スプライトシート
       const sheet=this.mode===0?(st==='bow'?IMGS.human2:IMGS.human):IMGS.gorilla;
       const a=this.an;
       let anim=a.idle;
@@ -295,7 +338,6 @@ class Player{
           ctx.fillStyle='#ffddbb';ctx.fillRect(dx+this.w*.2,this.y+this.h*.05,this.w*.6,this.h*.28);
         }
       }
-      // パンチエフェクト
       if(st==='punch'&&this.stT<.18){
         const ex=this.dir>0?dx+this.w+4:dx-34;
         ctx.fillStyle='rgba(255,200,0,.8)';
@@ -689,6 +731,7 @@ let transCamDone=false;
 
 async function init(){
   resize();
+  loadHumanFrames();
   if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(()=>{});
   await Promise.all([loadImg('title','title.png'),loadImg('human','human.png'),loadImg('gorilla','gorilla.png'),loadImg('human2','human2.png')]);
   showCtrl(false);

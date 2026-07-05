@@ -171,6 +171,33 @@
     + '</svg>';
 
   const TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints>0);
+
+  // ── スプライト画像（白背景透過） ──
+  const PSP = {walk:null, run:null, jump:null, idle:null};
+  let pspReady = false;
+  let walkT = 0; // 歩きアニメ用タイマー
+  (function loadPSP(){
+    const list = [['walk','assets/player/walk.png'],['run','assets/player/run.png'],
+                  ['jump','assets/player/jump.png'],['idle','assets/player/idle.png']];
+    let done = 0;
+    list.forEach(([key,src])=>{
+      const im = new Image();
+      im.onload = ()=>{
+        try{
+          const oc=document.createElement('canvas');
+          oc.width=im.width; oc.height=im.height;
+          const ox=oc.getContext('2d'); ox.drawImage(im,0,0);
+          const id=ox.getImageData(0,0,oc.width,oc.height),d=id.data;
+          for(let i=0;i<d.length;i+=4) if(d[i]>230&&d[i+1]>230&&d[i+2]>230) d[i+3]=0;
+          ox.putImageData(id,0,0); PSP[key]=oc;
+        }catch(e){PSP[key]=im;}
+        if(++done===list.length) pspReady=true;
+      };
+      im.onerror=()=>{if(++done===list.length) pspReady=true;};
+      im.src=src;
+    });
+  })();
+
   let CW=0, CH=0, dpr=1, groundY=0;
   function resize(){
     dpr=Math.min(window.devicePixelRatio||1,2);
@@ -193,7 +220,7 @@
   const HI_KEY='gorilla_banana2_hi';
   let hiScore=+(localStorage.getItem(HI_KEY)||0);
 
-  const player={x:0,y:0,w:46,h:58,vx:0,vy:0,onGround:false,face:1,jumps:0,jumpHeld:false};
+  const player={x:0,y:0,w:52,h:74,vx:0,vy:0,onGround:false,face:1,jumps:0,jumpHeld:false};
   const GRAV=0.8, JUMP=-15.5, SPEED=4.6, MAXFALL=16;
 
   // ---- 入力 ----
@@ -767,14 +794,35 @@
     }
   }
 
-  // プレイヤーのゴリラ（横向き・マリオのように走る／右向き基準。左向きはdrawPlayerで反転）
+  // プレイヤー描画（スプライト＋フォールバック）
   function drawGorilla(cx,cy){
+    const air    = !player.onGround;
     const moving = player.onGround && Math.abs(player.vx)>0.3;
-    const air = !player.onGround;
-    const phase = performance.now()*0.022;
-    const s  = moving ? Math.sin(phase) : 0;            // 前側の手足
-    const sb = moving ? Math.sin(phase+Math.PI) : 0;    // 後ろ側の手足
+    const fast   = benzTimer>0;
 
+    if(pspReady){
+      // 状態に合ったスプライト選択
+      let spr = PSP.idle;
+      if(air)           spr = PSP.jump  || PSP.idle;
+      else if(moving && fast) spr = PSP.run || PSP.walk || PSP.idle;
+      else if(moving)   spr = PSP.walk  || PSP.idle;
+
+      if(spr){
+        // 描画サイズ（当たり判定より少し大きめに表示）
+        const DW=80, DH=110;
+        walkT += moving ? 0.2 : 0;
+        // 歩きのみ上下バウンス
+        const bob = moving ? Math.sin(walkT)*3 : 0;
+        ctx.drawImage(spr, cx-DW/2, cy-DH*0.62+bob, DW, DH);
+        return;
+      }
+    }
+
+    // ── フォールバック（スプライト未ロード時の旧描画） ──
+    const moving2 = player.onGround && Math.abs(player.vx)>0.3;
+    const phase = performance.now()*0.022;
+    const s  = moving2 ? Math.sin(phase) : 0;
+    const sb = moving2 ? Math.sin(phase+Math.PI) : 0;
     const hipX=cx-1, hipY=cy+8, footY=cy+27;
     const shX=cx-4, shY=cy-5;
 

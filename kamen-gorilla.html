@@ -673,6 +673,11 @@ function overlapR(ax,ay,aw,ah,bx,by,bw,bh){return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&
 /* ── ゲーム管理 ── */
 let gs=GS.TITLE,player,stage,camX=0,peels=[];
 let hospMsg='',hospTimer=0,transTimer=0,titleT=0,lastT=0;
+// ロックマン式シャッター
+const STRIPS=8, STRIP_H=CH/STRIPS;
+const TRANS_CLOSE=0.45, TRANS_HOLD=0.15, TRANS_OPEN=0.4;
+const TRANS_TOTAL=TRANS_CLOSE+TRANS_HOLD+TRANS_OPEN;
+let transCamDone=false;
 
 async function init(){
   resize();
@@ -762,7 +767,7 @@ function updatePlay(dt){
     }
   }
   // シャッター
-  if(gs!==GS.BOSS&&player.x+player.w>stage.shutterX){gs=GS.TRANS;transTimer=1;return;}
+  if(gs!==GS.BOSS&&player.x+player.w>stage.shutterX){gs=GS.TRANS;transTimer=0;transCamDone=false;return;}
   // 皮
   for(let i=peels.length-1;i>=0;i--){peels[i].update(stage.plats);if(!peels[i].alive)peels.splice(i,1);}
   // プレイヤー
@@ -800,10 +805,42 @@ function updateHosp(dt){
 }
 
 function updateTrans(dt){
-  transTimer-=dt;drawScene();
-  const closed=Math.max(0,1-transTimer),hw=CW/2*closed;
-  ctx.fillStyle='#111';ctx.fillRect(0,0,hw,CH);ctx.fillRect(CW-hw,0,hw,CH);
-  if(transTimer<=0){gs=GS.BOSS;camX=stage.shutterX+80;}
+  transTimer+=dt;
+
+  // カメラスナップはシャッターが完全に閉じた瞬間
+  if(transTimer>=TRANS_CLOSE&&!transCamDone){
+    camX=stage.shutterX+80;transCamDone=true;
+  }
+  drawScene();
+  _drawShutterStrips(transTimer);
+  if(transTimer>=TRANS_TOTAL)gs=GS.BOSS;
+}
+function _drawShutterStrips(t){
+  for(let i=0;i<STRIPS;i++){
+    const fromLeft=(i%2===0);
+    let slideX;
+    if(t<=TRANS_CLOSE){
+      // 閉じる: 0→1
+      const p=t/TRANS_CLOSE;
+      const easedP=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2; // ease in-out
+      slideX=fromLeft?(-CW+easedP*CW):(CW-easedP*CW);
+    } else if(t<=TRANS_CLOSE+TRANS_HOLD){
+      // 全閉（黒）
+      slideX=0;
+    } else {
+      // 開く: 0→1
+      const p=(t-TRANS_CLOSE-TRANS_HOLD)/TRANS_OPEN;
+      const easedP=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+      slideX=fromLeft?(-easedP*CW):(easedP*CW);
+    }
+    // 帯描画
+    ctx.fillStyle='#111';
+    ctx.fillRect(slideX,i*STRIP_H,CW,STRIP_H+1);
+    // 帯の端にハイライト（ロックマンぽいエッジ）
+    ctx.fillStyle='#444';
+    if(fromLeft)ctx.fillRect(slideX+CW-4,i*STRIP_H,4,STRIP_H+1);
+    else ctx.fillRect(slideX,i*STRIP_H,4,STRIP_H+1);
+  }
 }
 
 function drawClear(){

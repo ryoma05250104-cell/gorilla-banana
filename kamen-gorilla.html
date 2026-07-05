@@ -691,19 +691,23 @@ async function init(){
   resize();
   if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(()=>{});
   await Promise.all([loadImg('title','title.png'),loadImg('human','human.png'),loadImg('gorilla','gorilla.png'),loadImg('human2','human2.png')]);
+  showCtrl(false);
   requestAnimationFrame(loop);
 }
+
+function showCtrl(v){document.getElementById('ctrl').style.visibility=v?'visible':'hidden';}
 
 function startGame(){
   player=new Player();stage=new Stage();
   camX=0;peels=[];
   screenAnchor=0;scrSliding=false;scrSlideT=0;scrSlideDir=0;
   gs=GS.PLAY;
+  showCtrl(true);
 }
 
 cv.addEventListener('pointerdown',()=>{
-  if(gs===GS.TITLE)startGame();
-  else if(gs===GS.CLEAR||gs===GS.OVER)gs=GS.TITLE;
+  if(gs===GS.TITLE){startGame();return;}
+  if(gs===GS.CLEAR||gs===GS.OVER){gs=GS.TITLE;showCtrl(false);}
 });
 document.addEventListener('keydown',e=>{
   if((e.code==='Enter'||e.code==='Space')&&(gs===GS.TITLE))startGame();

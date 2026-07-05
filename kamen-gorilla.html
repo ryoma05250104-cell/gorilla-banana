@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>仮面ゴリラー</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:none;user-select:none;-webkit-user-select:none;}
+#c{position:fixed;image-rendering:pixelated;image-rendering:crisp-edges;}
+/* ─── タッチコントロール オーバーレイ ─── */
+#ctrl{position:fixed;display:none;pointer-events:none;}
+/* 左：移動ボタン */
+#dpad{position:absolute;bottom:16px;left:12px;display:flex;gap:10px;pointer-events:all;}
+.mv{width:82px;height:82px;border-radius:16px;background:rgba(255,255,255,.15);border:3px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;color:#fff;font-size:34px;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;active-color:#fff;}
+.mv:active{background:rgba(255,255,255,.35);}
+/* 右：アクションボタン */
+#rbtns{position:absolute;bottom:16px;right:12px;display:flex;flex-direction:column;gap:10px;pointer-events:all;align-items:flex-end;}
+.arow{display:flex;gap:10px;}
+.ab{border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;font-family:sans-serif;color:#fff;border:3px solid rgba(255,255,255,.5);user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;}
+#btnJump{width:92px;height:92px;background:rgba(60,200,80,.55);font-size:28px;}
+#btnAtk {width:80px;height:80px;background:rgba(220,60,60,.55);}
+#btnChg {width:68px;height:68px;background:rgba(80,80,230,.55);font-size:13px;}
+.ab:active{opacity:.7;}
+</style>
+</head>
+<body>
+<canvas id="c" width="960" height="540"></canvas>
+<!-- 縦持ち警告 -->
+<div id="rotWarn" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:999;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:22px;font-family:sans-serif;text-align:center;gap:20px;">
+  <div style="font-size:60px">📱↔️</div>
+  <div>スマホを横向きにしてください</div>
+</div>
+<div id="ctrl">
+  <div id="dpad">
+    <div class="mv" id="btnL">◀</div>
+    <div class="mv" id="btnR">▶</div>
+  </div>
+  <div id="rbtns">
+    <div class="arow">
+      <div class="ab" id="btnChg">変身</div>
+      <div class="ab" id="btnAtk">攻撃</div>
+    </div>
+    <div class="arow" style="justify-content:flex-end">
+      <div class="ab" id="btnJump">↑</div>
+    </div>
+  </div>
+</div>
+<script>
+'use strict';
+// ═══════════════════════════════════════════════
+//  定数
+// ═══════════════════════════════════════════════
+const CW=960,CH=540,TILE=48;
+const GRAV=0.58, SPD_H=4.5, SPD_G=3.8;
+const JV=-13, JV2=-11;
+const MAX_GP=3;
+const GS={TITLE:0,LOADING:1,PLAYING:2,TRANSITION:3,BOSS:4,CLEAR:5,OVER:6,HOSPITAL:7};
+const PM={HUMAN:0,GORILLA:1};
+
+// ═══════════════════════════════════════════════
+//  スプライト定義（1536×1024 シート座標）
+// ═══════════════════════════════════════════════
+// simple human sheet (human.png) & gorilla sheet (gorilla.png)
+// 各スプライト約 88×155 px
+const SP = {
+  human: {
+    idle:   [{sx:760,sy:235,sw:88,sh:155},{sx:852,sy:235,sw:88,sh:155}],
+    walk:   [{sx:135,sy:35,sw:88,sh:155},{sx:228,sy:35,sw:88,sh:155},{sx:321,sy:35,sw:88,sh:155}],
+    run:    [{sx:530,sy:35,sw:88,sh:155},{sx:623,sy:35,sw:88,sh:155},{sx:716,sy:35,sw:88,sh:155},{sx:809,sy:35,sw:88,sh:155}],
+    jump:   [{sx:1140,sy:35,sw:88,sh:155}],
+    damage: [{sx:135,sy:240,sw:88,sh:150},{sx:240,sy:240,sw:88,sh:150}],
+    fallen: [{sx:445,sy:265,sw:135,sh:110}],
+    crouch: [{sx:1210,sy:255,sw:88,sh:125}],
+  },
+  gorilla: {
+    idle:   [{sx:760,sy:235,sw:88,sh:155},{sx:852,sy:235,sw:88,sh:155}],
+    walk:   [{sx:135,sy:35,sw:88,sh:155},{sx:228,sy:35,sw:88,sh:155},{sx:321,sy:35,sw:88,sh:155}],
+    run:    [{sx:530,sy:35,sw:88,sh:155},{sx:623,sy:35,sw:88,sh:155},{sx:716,sy:35,sw:88,sh:155},{sx:809,sy:35,sw:88,sh:155}],
+    jump:   [{sx:1140,sy:35,sw:88,sh:155}],
+    jump2:  [{sx:1250,sy:35,sw:88,sh:155}],
+    punch:  [{sx:135,sy:240,sw:88,sh:155},{sx:240,sy:240,sw:88,sh:155}],
+    damage: [{sx:135,sy:240,sw:88,sh:150}],
+    fallen: [{sx:445,sy:265,sw:135,sh:110}],
+  },
+  // 詳細シート (human2.png) – 弓矢・車
+  h2: {
+    bow:      [{sx:715,sy:195,sw:115,sh:140},{sx:835,sy:195,sw:115,sh:140},{sx:955,sy:195,sw:115,sh:140}],
+    carEnter: [{sx:0,sy:645,sw:265,sh:230},{sx:270,sy:645,sw:265,sh:230},{sx:540,sy:645,sw:265,sh:230}],
+    carDrive: [{sx:775,sy:645,sw:250,sh:230},{sx:1040,sy:645,sw:250,sh:230}],
+  }
+};
+
+// ═══════════════════════════════════════════════
+//  画像読み込み ＋ 白背景透過処理
+// ═══════════════════════════════════════════════
+const imgs={};
+const rawImgs={};
+function loadImage(name,src){
+  return new Promise(res=>{
+    const im=new Image();
+    im.src=src;
+    im.onload=()=>{
+      rawImgs[name]=im;
+      // 白背景を透明に
+      const oc=document.createElement('canvas');
+      oc.width=im.width; oc.height=im.height;
+      const ox=oc.getContext('2d');
+      ox.drawImage(im,0,0);
+      const id=ox.getImageData(0,0,oc.width,oc.height);
+      const d=id.data;
+      for(let i=0;i<d.length;i+=4){
+        if(d[i]>230&&d[i+1]>230&&d[i+2]>230) d[i+3]=0;
+      }
+      ox.putImageData(id,0,0);
+      imgs[name]=oc;
+      res();
+    };
+    im.onerror=()=>{imgs[name]=null;rawImgs[name]=null;res();};
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  入力（キーボード + マルチタッチ対応）
+// ═══════════════════════════════════════════════
+const KEY={};
+// BTN.jump / atk / chg は「今フレームに押された」フラグ（consumed後 false に）
+const BTN={left:false,right:false,jump:false,atk:false,chg:false};
+const keyJustPressed={};
+
+document.addEventListener('keydown',e=>{
+  if(!KEY[e.code]) keyJustPressed[e.code]=true;
+  KEY[e.code]=true;
+});
+document.addEventListener('keyup',e=>{KEY[e.code]=false;keyJustPressed[e.code]=false;});
+
+function isLeft() {return KEY['ArrowLeft']||KEY['KeyA']||BTN.left;}
+function isRight(){return KEY['ArrowRight']||KEY['KeyD']||BTN.right;}
+
+function consumeChg(){
+  if(keyJustPressed['KeyC']||keyJustPressed['KeyL']||BTN.chg){
+    keyJustPressed['KeyC']=keyJustPressed['KeyL']=false;BTN.chg=false;return true;
+  }
+  return false;
+}
+function consumeJump(){
+  if(keyJustPressed['ArrowUp']||keyJustPressed['KeyW']||keyJustPressed['KeyZ']||BTN.jump){
+    keyJustPressed['ArrowUp']=keyJustPressed['KeyW']=keyJustPressed['KeyZ']=false;
+    BTN.jump=false;return true;
+  }
+  return false;
+}
+function consumeAtk(){
+  if(keyJustPressed['KeyX']||keyJustPressed['KeyJ']||BTN.atk){
+    keyJustPressed['KeyX']=keyJustPressed['KeyJ']=false;BTN.atk=false;return true;
+  }
+  return false;
+}
+
+// ── マルチタッチボタン設定 ──
+// 各ボタンは独立したtouchIdを追跡 → 同時押し対応
+function setupTouchBtn(id, opts){
+  const el=document.getElementById(id);
+  if(!el) return;
+  const activeTouches=new Set();
+
+  const down=(e)=>{
+    e.preventDefault();
+    [...e.changedTouches].forEach(t=>activeTouches.add(t.identifier));
+    if(opts.hold) BTN[opts.hold]=true;
+    if(opts.once) BTN[opts.once]=true; // consumeで1回だけ使われる
+  };
+  const up=(e)=>{
+    e.preventDefault();
+    [...e.changedTouches].forEach(t=>activeTouches.delete(t.identifier));
+    if(activeTouches.size===0 && opts.hold) BTN[opts.hold]=false;
+  };
+
+  el.addEventListener('touchstart',down,{passive:false});
+  el.addEventListener('touchend',  up,  {passive:false});
+  el.addEventListener('touchcancel',up, {passive:false});
+}
+
+setupTouchBtn('btnL',  {hold:'left'});
+setupTouchBtn('btnR',  {hold:'right'});
+setupTouchBtn('btnJump',{once:'jump'});
+setupTouchBtn('btnAtk', {once:'atk'});
+setupTouchBtn('btnChg', {once:'chg'});
+
+// ── 縦持ち時の横向き案内を表示 ──
+function checkOrientation(){
+  const warn=document.getElementById('rotWarn');
+  if(!warn) return;
+  warn.style.display=(window.innerWidth<window.innerHeight)?'flex':'none';
+}
+window.addEventListener('resize',checkOrientation);
+window.addEventListener('orientationchange',()=>setTimeout(checkOrientation,300));
+
+// ═══════════════════════════════════════════════
+//  アニメーション補助
+// ═══════════════════════════════════════════════
+class Anim{
+  constructor(frames,fps=10){this.frames=frames;this.fps=fps;this.t=0;this.idx=0;}
+  update(dt){
+    this.t+=dt;
+    if(this.t>=1/this.fps){this.t=0;this.idx=(this.idx+1)%this.frames.length;}
+  }
+  reset(){this.t=0;this.idx=0;}
+  get frame(){return this.frames[this.idx];}
+}
+
+// ═══════════════════════════════════════════════
+//  プレイヤー
+// ═══════════════════════════════════════════════
+class Player{
+  constructor(){
+    this.x=80;this.y=400;
+    this.w=56;this.h=80;
+    this.vx=0;this.vy=0;
+    this.onGround=false;
+    this.jumps=0;
+    this.mode=PM.HUMAN;
+    this.gp=MAX_GP;
+    this.facing=1; // 1=right,-1=left
+    this.state='idle'; // idle,walk,run,jump,attack,bow,damage,fallen,car
+    this.stateTimer=0;
+    this.invTimer=0; // 無敵時間
+    this.inCar=false;
+    this.carVx=0;
+    this.arrows=[];
+    this.changeTimer=0; // 変身エフェクト
+
+    // アニメ定義
+    this.anims={
+      human:{
+        idle: new Anim(SP.human.idle,3),
+        walk: new Anim(SP.human.walk,10),
+        run:  new Anim(SP.human.run,14),
+        jump: new Anim(SP.human.jump,6),
+        bow:  new Anim(SP.h2.bow,12),
+        damage:new Anim(SP.human.damage,8),
+        fallen:new Anim(SP.human.fallen,4),
+        carDrive:new Anim(SP.h2.carDrive,8),
+      },
+      gorilla:{
+        idle: new Anim(SP.gorilla.idle,3),
+        walk: new Anim(SP.gorilla.walk,10),
+        run:  new Anim(SP.gorilla.run,14),
+        jump: new Anim(SP.gorilla.jump,6),
+        jump2:new Anim(SP.gorilla.jump2,6),
+        punch:new Anim(SP.gorilla.punch,10),
+        damage:new Anim(SP.gorilla.damage,8),
+        fallen:new Anim(SP.gorilla.fallen,4),
+      }
+    };
+  }
+
+  get speed(){return this.mode===PM.HUMAN?SPD_H:SPD_G;}
+  get modeKey(){return this.mode===PM.HUMAN?'human':'gorilla';}
+
+  changeMode(){
+    this.mode = this.mode===PM.HUMAN?PM.GORILLA:PM.HUMAN;
+    this.changeTimer=0.4;
+    this.state='idle';
+    this.jumps=0;
+  }
+
+  takeDamage(amt=1){
+    if(this.invTimer>0||this.state==='fallen')return;
+    this.gp=Math.max(0,this.gp-amt);
+    this.invTimer=1.5;
+    this.stateTimer=0.4;
+    this.state='damage';
+    this.vx=this.facing*-3;
+    if(this.gp<=0){this.state='fallen';this.stateTimer=2;}
+  }
+
+  update(dt,platforms,items,enemies,stage){
+    if(this.changeTimer>0){
+      this.changeTimer-=dt;
+      return; // 変身中は動かない
+    }
+    if(this.invTimer>0) this.invTimer-=dt;
+
+    if(this.inCar){
+      this._updateCar(dt,platforms,stage);
+      return;
+    }
+
+    if(this.state==='fallen'){
+      this.stateTimer-=dt;
+      if(this.stateTimer<=0 && this.gp>0){this.state='idle';}
+      this._applyPhysics(dt,platforms);
+      return;
+    }
+    if(this.state==='damage'){
+      this.stateTimer-=dt;
+      if(this.stateTimer<=0) this.state='idle';
+      this._applyPhysics(dt,platforms);
+      return;
+    }
+
+    // 攻撃中
+    if(this.state==='attack'||this.state==='punch'){
+      this.stateTimer-=dt;
+      if(this.stateTimer<=0) this.state='idle';
+      this._applyPhysics(dt,platforms);
+      this._animUpdate(dt);
+      return;
+    }
+    if(this.state==='bow'){
+      this.stateTimer-=dt;
+      if(this.stateTimer<=0) this.state='idle';
+      this._applyPhysics(dt,platforms);
+      this._animUpdate(dt);
+      return;
+    }
+
+    // 移動
+    if(isLeft()){this.vx=-this.speed;this.facing=-1;}
+    else if(isRight()){this.vx=this.speed;this.facing=1;}
+    else this.vx*=0.8;
+
+    // ジャンプ
+    if(consumeJump()){
+      if(this.onGround){
+        this.vy=JV; this.jumps=1; this.onGround=false;
+      } else if(this.mode===PM.GORILLA && this.jumps===1){
+        this.vy=JV2; this.jumps=2; // 二段ジャンプ
+      }
+    }
+
+    // 攻撃
+    if(consumeAtk()){
+      if(this.mode===PM.HUMAN){
+        this.state='bow'; this.stateTimer=0.5;
+        // 矢を発射
+        this.arrows.push(new Arrow(this.x+this.w*0.5,this.y+this.h*0.4,this.facing));
+      } else {
+        this.state='punch'; this.stateTimer=0.35;
+        // パンチで敵にダメージ
+        this._doPunch(enemies,stage);
+      }
+    }
+
+    // チェンジ
+    if(consumeChg()){this.changeMode();}
+
+    this._applyPhysics(dt,platforms);
+
+    // アイテム取得
+    for(let i=items.length-1;i>=0;i--){
+      if(rectOverlap(this,items[i])){
+        items[i].collect(this);
+        items.splice(i,1);
+      }
+    }
+
+    // 状態決定
+    if(this.state!=='bow'&&this.state!=='punch'){
+      if(!this.onGround) this.state='jump';
+      else if(Math.abs(this.vx)>2) this.state='run';
+      else if(Math.abs(this.vx)>0.1) this.state='walk';
+      else this.state='idle';
+    }
+
+    this._animUpdate(dt);
+  }
+
+  _doPunch(enemies,stage){
+    const reach=this.w*1.5;
+    const px=this.facing>0?this.x+this.w:this.x-reach;
+    for(const e of enemies){
+      if(!e.alive) continue;
+      if(rectOverlapXY(px,this.y,reach,this.h, e.x,e.y,e.w,e.h)){
+        e.hit(this.mode===PM.GORILLA?2:1,'punch');
+      }
+    }
+    // ひび割れた壁を破壊
+    if(stage) stage.tryBreakWall(px,this.y,reach,this.h,this.mode);
+  }
+
+  _updateCar(dt,platforms,stage){
+    if(isLeft()){this.carVx=Math.max(this.carVx-0.5,-9);}
+    else if(isRight()){this.carVx=Math.min(this.carVx+0.5,9);}
+    else this.carVx*=0.92;
+    this.facing=this.carVx>=0?1:-1;
+
+    // 大ジャンプ（ベンツ）
+    if(consumeJump()&&this.onGround){this.vy=-16;this.onGround=false;}
+
+    this.vx=this.carVx;
+    this._applyPhysics(dt,platforms);
+    this.state='car';
+    const anim=this.anims.human.carDrive;
+    anim.update(dt);
+  }
+
+  _applyPhysics(dt,platforms){
+    this.vy+=GRAV;
+    this.x+=this.vx;
+    this.y+=this.vy;
+
+    this.onGround=false;
+    for(const p of platforms){
+      if(!p.solid) continue;
+      const ox=Math.min(this.x+this.w,p.x+p.w)-Math.max(this.x,p.x);
+      const oy=Math.min(this.y+this.h,p.y+p.h)-Math.max(this.y,p.y);
+      if(ox>0&&oy>0){
+        if(ox<oy){
+          if(this.x<p.x) this.x=p.x-this.w;
+          else this.x=p.x+p.w;
+          this.vx=0;
+        } else {
+          if(this.y<p.y){
+            this.y=p.y-this.h;
+            this.vy=0;
+            this.onGround=true;
+            this.jumps=0;
+          } else {
+            this.y=p.y+p.h;
+            this.vy=0;
+          }
+        }
+      }
+    }
+    // 画面外（落下）
+    if(this.y>CH+100) this.takeDamage(this.gp);
+  }
+
+  _animUpdate(dt){
+    const mAnims=this.anims[this.modeKey];
+    let key='idle';
+    if(this.state==='walk') key='walk';
+    else if(this.state==='run') key='run';
+    else if(this.state==='jump') key=(this.mode===PM.GORILLA&&this.jumps===2)?'jump2':'jump';
+    else if(this.state==='bow') key='bow';
+    else if(this.state==='punch') key='punch';
+    else if(this.state==='damage') key='damage';
+    else if(this.state==='fallen') key='fallen';
+    else if(this.state==='car') key='idle';
+    const a=mAnims[key];
+    if(a) a.update(dt);
+  }
+
+  getCurrentFrame(){
+    if(this.inCar||this.state==='car') return null; // 車は別描画
+    const mAnims=this.anims[this.modeKey];
+    let key='idle';
+    if(this.state==='walk') key='walk';
+    else if(this.state==='run') key='run';
+    else if(this.state==='jump') key=(this.mode===PM.GORILLA&&this.jumps===2)?'jump2':'jump';
+    else if(this.state==='bow') key='bow';
+    else if(this.state==='punch') key='punch';
+    else if(this.state==='damage') key='damage';
+    else if(this.state==='fallen') key='fallen';
+    const a=mAnims[key];
+    return a?a.frame:null;
+  }
+
+  draw(ctx,camX){
+    const dx=this.x-camX;
+    const frame=this.getCurrentFrame();
+
+    // 無敵中は点滅
+    if(this.invTimer>0&&Math.floor(this.invTimer*10)%2===0) return;
+    // 変身エフェクト
+    if(this.changeTimer>0){
+      ctx.save();
+      ctx.globalAlpha=0.5+0.5*Math.sin(this.changeTimer*40);
+    }
+
+    const sheet = (this.state==='bow')?imgs.human2:
+                  (this.mode===PM.GORILLA)?imgs.gorilla:imgs.human;
+
+    if(frame&&sheet){
+      ctx.save();
+      if(this.facing<0){
+        ctx.translate(dx+this.w,this.y);
+        ctx.scale(-1,1);
+        ctx.drawImage(sheet,frame.sx,frame.sy,frame.sw,frame.sh, 0,-this.h+this.h,this.w,this.h);
+      } else {
+        ctx.drawImage(sheet,frame.sx,frame.sy,frame.sw,frame.sh, dx,this.y,this.w,this.h);
+      }
+      ctx.restore();
+    } else {
+      // フォールバック：図形描画
+      ctx.fillStyle=this.mode===PM.GORILLA?'#222':'#1a3a6c';
+      ctx.fillRect(dx,this.y,this.w,this.h);
+      ctx.fillStyle='#fff';
+      ctx.font='20px sans-serif';
+      ctx.fillText(this.mode===PM.GORILLA?'🦍':'👤',dx+8,this.y+45);
+    }
+
+    if(this.changeTimer>0) ctx.restore();
+
+    // 車描画
+    if(this.inCar||this.state==='car'){
+      const cf=this.anims.human.carDrive.frame;
+      if(cf&&imgs.human2){
+        const cw=180,ch=90;
+        ctx.save();
+        if(this.facing<0){
+          ctx.translate(dx+this.w/2+cw/2,this.y+this.h-ch);
+          ctx.scale(-1,1);
+          ctx.drawImage(imgs.human2,cf.sx,cf.sy,cf.sw,cf.sh,0,0,cw,ch);
+        } else {
+          ctx.drawImage(imgs.human2,cf.sx,cf.sy,cf.sw,cf.sh,dx-cw/2+this.w/2,this.y+this.h-ch,cw,ch);
+        }
+        ctx.restore();
+      } else {
+        ctx.fillStyle='#eee';
+        ctx.fillRect(dx-60,this.y+this.h-50,160,50);
+        ctx.fillStyle='#888';
+        ctx.font='30px sans-serif';
+        ctx.fillText('🚗',dx-50,this.y+this.h-10);
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  矢（弓矢）
+// ═══════════════════════════════════════════════
+class Arrow{
+  constructor(x,y,dir){
+    this.x=x;this.y=y;
+    this.vx=dir*12;this.vy=-1;
+    this.w=20;this.h=6;
+    this.alive=true;
+  }
+  update(dt,enemies,platforms,stage){
+    this.x+=this.vx;
+    this.y+=this.vy;
+    if(this.x<-100||this.x>8000) {this.alive=false;return;}
+    for(const e of enemies){
+      if(!e.alive) continue;
+      if(rectOverlap(this,e)){
+        if(e.type==='spike'){/* 弓矢は無効 */ this.alive=false;}
+        else{e.hit(1,'arrow');this.alive=false;}
+        return;
+      }
+    }
+    for(const p of platforms){
+      if(p.solid&&rectOverlap(this,p)){this.alive=false;return;}
+    }
+  }
+  draw(ctx,camX){
+    const dx=this.x-camX;
+    ctx.fillStyle='#a06010';
+    ctx.fillRect(dx,this.y,this.w,this.h);
+    ctx.fillStyle='#ff4';
+    ctx.fillRect(dx+this.w-4,this.y-2,8,this.h+4);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  敵
+// ═══════════════════════════════════════════════
+class Enemy{
+  constructor(type,x,y){
+    this.type=type;
+    this.x=x;this.y=y;
+    this.vx=0;this.vy=0;
+    this.facing=-1;
+    this.alive=true;
+    this.hp=type==='boss'?20:type==='spike'?3:2;
+    this.stateTimer=0;
+    this.state='patrol';
+    this.onGround=false;
+    this.w=type==='boss'?80:40;
+    this.h=type==='boss'?90:44;
+    this.hopTimer=type==='fly'?0:Math.random()*0.5;
+    this.alertTimer=0;
+    this.alert=false; // ！マーク
+    this.spawnX=x; // 巡回の基準位置
+    this.projectiles=[]; // ボスの飛び道具
+    this.bossPhase=0;
+    this.bossTimer=2;
+    this.peelY=0; // バナナの皮落下用
+  }
+
+  hit(dmg,src){
+    if(src==='arrow'&&this.type==='spike') return; // スパイクに矢は無効
+    this.hp-=dmg;
+    this.stateTimer=0.2;
+    if(this.hp<=0){this.alive=false;return;}
+    // ノックバック
+    this.vx*=-1;
+  }
+
+  update(dt,player,platforms){
+    if(!this.alive) return;
+    const px=player.x+player.w/2;
+    const ex=this.x+this.w/2;
+    const dist=Math.abs(px-ex);
+
+    if(this.type==='patrol'){
+      this._updatePatrol(dt,player,platforms,dist);
+    } else if(this.type==='fly'){
+      this._updateFly(dt,player,dist);
+    } else if(this.type==='spike'){
+      this._updateSpike(dt,player,dist);
+    } else if(this.type==='boss'){
+      this._updateBoss(dt,player,platforms);
+    }
+  }
+
+  _updatePatrol(dt,player,platforms,dist){
+    this.hopTimer-=dt;
+    // 警戒
+    if(dist<320&&!this.alert){this.alert=true;this.alertTimer=0.6;}
+    if(this.alertTimer>0){this.alertTimer-=dt;this.vx=0;this.vy+=GRAV;return;}
+    this.alert=false;
+
+    // 追跡 or 巡回
+    if(dist<320){
+      const px=player.x+player.w/2;
+      this.vx=(px>this.x+this.w/2)?2.5:-2.5;
+      this.facing=this.vx>0?1:-1;
+    } else {
+      // 往復巡回
+      if(this.x<this.spawnX-120) this.vx=1.5;
+      else if(this.x>this.spawnX+120) this.vx=-1.5;
+      this.facing=this.vx>0?1:-1;
+    }
+    // ピョンピョン
+    if(this.hopTimer<=0&&this.onGround){
+      this.vy=-7;this.hopTimer=0.6;
+    }
+    this._physics(dt,platforms);
+  }
+
+  _updateFly(dt,player,dist){
+    // 上下浮遊
+    if(this._baseY===undefined) this._baseY=this.y;
+    this.hopTimer+=dt;
+    this.y=this._baseY+(Math.sin(this.hopTimer*2)*20);
+    const px=player.x+player.w/2;
+    this.vx=(px>this.x+this.w/2)?1.2:-1.2;
+    this.x+=this.vx;
+    this.facing=this.vx>0?1:-1;
+    // バナナの皮を落とす
+    this.stateTimer-=dt;
+    if(this.stateTimer<=0&&dist<400){
+      this.stateTimer=2.5;
+      // 皮アイテムを生成（gameで処理）
+      this._dropPeel=true;
+    }
+  }
+
+  _updateSpike(dt,player,dist){
+    // 動かない
+    this.vx=0;this.vy=0;
+  }
+
+  _updateBoss(dt,player,platforms){
+    this.bossTimer-=dt;
+    const px=player.x+player.w/2;
+    const bx=this.x+this.w/2;
+
+    if(this.bossPhase===0){ // 待機・近づく
+      if(Math.abs(px-bx)>150) this.vx=(px>bx)?2:-2;
+      else this.vx=0;
+      this._physics(dt,platforms);
+      if(this.bossTimer<=0){
+        const r=Math.random();
+        if(r<0.4) this.bossPhase=1; // ヒップドロップ
+        else if(r<0.7) this.bossPhase=3; // にんじん投げ
+        else this.bossPhase=5; // ハートビーム
+        this.bossTimer=1.5;
+      }
+    } else if(this.bossPhase===1){ // ジャンプ予備動作
+      this.vx=0;
+      this._physics(dt,platforms);
+      if(this.bossTimer<=0){
+        this.vy=-18; // 大ジャンプ
+        this.bossPhase=2; this.bossTimer=2;
+      }
+    } else if(this.bossPhase===2){ // ヒップドロップ落下
+      this.vy+=GRAV*1.5;
+      this.x+=this.vx;
+      this.y+=this.vy;
+      this._platformCollide(platforms);
+      if(this.onGround){
+        // 着地衝撃
+        this.projectiles.push({x:this.x,y:this.y+this.h-10,vx:-6,vy:0,w:20,h:10,type:'shock'});
+        this.projectiles.push({x:this.x+this.w,y:this.y+this.h-10,vx:6,vy:0,w:20,h:10,type:'shock'});
+        this.bossPhase=0; this.bossTimer=1.5;
+      }
+    } else if(this.bossPhase===3){ // にんじん投げ準備
+      this.vx=0;this._physics(dt,platforms);
+      if(this.bossTimer<=0){
+        const dx=px>bx?1:-1;
+        this.projectiles.push({x:bx,y:this.y+30,vx:dx*6,vy:-3,w:18,h:14,type:'carrot'});
+        this.bossPhase=0; this.bossTimer=2;
+      }
+    } else if(this.bossPhase===5){ // ハートビーム
+      this.vx=0;this._physics(dt,platforms);
+      if(this.bossTimer<=0){
+        const dx=px>bx?1:-1;
+        this.projectiles.push({x:bx,y:this.y+40,vx:dx*7,vy:0,w:24,h:20,type:'heart'});
+        this.bossPhase=0; this.bossTimer=2.5;
+      }
+    }
+
+    // 飛び道具更新
+    for(let i=this.projectiles.length-1;i>=0;i--){
+      const p=this.projectiles[i];
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.type!=='shock') p.vy+=0.2;
+      if(p.x<-200||p.x>8000||p.y>CH+100){this.projectiles.splice(i,1);}
+    }
+  }
+
+  _physics(dt,platforms){
+    this.vy+=GRAV;
+    this.x+=this.vx;
+    this.y+=this.vy;
+    this._platformCollide(platforms);
+  }
+
+  _platformCollide(platforms){
+    this.onGround=false;
+    for(const p of platforms){
+      if(!p.solid) continue;
+      const ox=Math.min(this.x+this.w,p.x+p.w)-Math.max(this.x,p.x);
+      const oy=Math.min(this.y+this.h,p.y+p.h)-Math.max(this.y,p.y);
+      if(ox>0&&oy>0){
+        if(ox<oy){
+          if(this.x<p.x) this.x=p.x-this.w; else this.x=p.x+p.w;
+          this.vx=0;
+        } else {
+          if(this.y<p.y){this.y=p.y-this.h;this.vy=0;this.onGround=true;}
+          else{this.y=p.y+p.h;this.vy=0;}
+        }
+      }
+    }
+  }
+
+  draw(ctx,camX){
+    if(!this.alive) return;
+    const dx=this.x-camX;
+    if(dx<-100||dx>CW+100) return;
+
+    if(this.type==='patrol') this._drawPatrol(ctx,dx);
+    else if(this.type==='fly') this._drawFly(ctx,dx);
+    else if(this.type==='spike') this._drawSpike(ctx,dx);
+    else if(this.type==='boss') this._drawBoss(ctx,dx,camX);
+
+    // ！アラート
+    if(this.alert&&this.alertTimer>0){
+      ctx.fillStyle='#f00';
+      ctx.font='bold 22px sans-serif';
+      ctx.fillText('!',dx+this.w/2-5,this.y-8);
+    }
+  }
+
+  _drawPatrol(ctx,dx){
+    // 白うさぎ ドット風
+    ctx.fillStyle='#ddd';
+    ctx.fillRect(dx+4,this.y,32,30); // 胴体
+    ctx.fillStyle='#eee';
+    ctx.fillRect(dx+8,this.y-22,24,22); // 頭
+    ctx.fillStyle='#ddd';
+    // 耳
+    ctx.fillRect(dx+9,this.y-38,7,18);
+    ctx.fillRect(dx+24,this.y-38,7,18);
+    ctx.fillStyle='#ffaaaa';
+    ctx.fillRect(dx+11,this.y-36,3,14); // 耳内
+    ctx.fillRect(dx+26,this.y-36,3,14);
+    ctx.fillStyle='#f55';
+    ctx.fillRect(dx+12,this.y-14,5,5); // 目
+    ctx.fillRect(dx+23,this.y-14,5,5);
+    ctx.fillStyle='#eee';
+    ctx.fillRect(dx,this.y+28,14,14); // 足
+    ctx.fillRect(dx+22,this.y+28,14,14);
+  }
+
+  _drawFly(ctx,dx){
+    const dy=this.y;
+    ctx.fillStyle='#ddd';
+    ctx.fillRect(dx+4,dy,32,28);
+    ctx.fillStyle='#eee';
+    ctx.fillRect(dx+8,dy-20,24,20);
+    // 羽
+    ctx.fillStyle='rgba(200,220,255,0.7)';
+    ctx.fillRect(dx-12,dy,12,16);
+    ctx.fillRect(dx+40,dy,12,16);
+    ctx.fillStyle='#ddd';
+    ctx.fillRect(dx+9,dy-34,7,16); // 耳（羽ばたき）
+    ctx.fillRect(dx+24,dy-34,7,16);
+    ctx.fillStyle='#f55';
+    ctx.fillRect(dx+12,dy-14,5,5);
+    ctx.fillRect(dx+23,dy-14,5,5);
+    // バナナ持ってる
+    ctx.fillStyle='#ff0';
+    ctx.beginPath();
+    ctx.arc(dx+20,dy+10,8,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  _drawSpike(ctx,dx){
+    // トゲトゲケース
+    ctx.fillStyle='#555';
+    ctx.fillRect(dx,this.y,40,40);
+    // トゲ
+    ctx.fillStyle='#777';
+    for(let i=0;i<5;i++){
+      ctx.beginPath();
+      ctx.moveTo(dx+i*9,this.y);
+      ctx.lineTo(dx+i*9+4,this.y-12);
+      ctx.lineTo(dx+i*9+8,this.y);
+      ctx.fill();
+    }
+    for(let i=0;i<5;i++){
+      ctx.beginPath();
+      ctx.moveTo(dx+i*9,this.y+40);
+      ctx.lineTo(dx+i*9+4,this.y+52);
+      ctx.lineTo(dx+i*9+8,this.y+40);
+      ctx.fill();
+    }
+    // 目だけ見える
+    ctx.fillStyle='#f55';
+    ctx.fillRect(dx+8,this.y+12,8,8);
+    ctx.fillRect(dx+24,this.y+12,8,8);
+  }
+
+  _drawBoss(ctx,dx,camX){
+    // 大うさぎ大王
+    ctx.fillStyle='#fff';
+    ctx.fillRect(dx+5,this.y+30,70,55); // 胴体
+    ctx.fillRect(dx+10,this.y,60,34); // 頭
+    // 耳
+    ctx.fillStyle='#fff';
+    ctx.fillRect(dx+12,this.y-50,16,52);
+    ctx.fillRect(dx+50,this.y-50,16,52);
+    ctx.fillStyle='#ffcccc';
+    ctx.fillRect(dx+15,this.y-46,10,44);
+    ctx.fillRect(dx+53,this.y-46,10,44);
+    // 王冠
+    ctx.fillStyle='#ff0';
+    ctx.fillRect(dx+15,this.y-5,50,10);
+    ctx.fillRect(dx+15,this.y-15,8,12);
+    ctx.fillRect(dx+36,this.y-18,8,15);
+    ctx.fillRect(dx+57,this.y-15,8,12);
+    // 目
+    ctx.fillStyle='#f00';
+    ctx.fillRect(dx+18,this.y+8,10,10);
+    ctx.fillRect(dx+52,this.y+8,10,10);
+    ctx.fillStyle='#000';
+    ctx.fillRect(dx+21,this.y+10,4,6);
+    ctx.fillRect(dx+55,this.y+10,4,6);
+    // HPバー
+    const bw=80,bx=dx;
+    ctx.fillStyle='#300';ctx.fillRect(bx,this.y-70,bw,10);
+    ctx.fillStyle='#f44';ctx.fillRect(bx,this.y-70,bw*(this.hp/20),10);
+
+    // 飛び道具描画
+    for(const p of this.projectiles){
+      const px=p.x-camX;
+      if(p.type==='carrot'){
+        ctx.fillStyle='#f80';
+        ctx.fillRect(px,p.y,p.w,p.h);
+        ctx.fillStyle='#0a0';
+        ctx.fillRect(px+4,p.y-8,10,10);
+      } else if(p.type==='heart'){
+        ctx.fillStyle='#f06';
+        ctx.font='24px sans-serif';
+        ctx.fillText('❤',px,p.y+20);
+      } else if(p.type==='shock'){
+        ctx.fillStyle='rgba(255,200,0,0.7)';
+        ctx.fillRect(px,p.y,p.w,p.h);
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  バナナアイテム
+// ═══════════════════════════════════════════════
+class Banana{
+  constructor(x,y){this.x=x;this.y=y;this.w=20;this.h=20;this.alive=true;}
+  collect(player){player.gp=Math.min(MAX_GP,player.gp+1);this.alive=false;}
+  draw(ctx,camX){
+    if(!this.alive) return;
+    const dx=this.x-camX;
+    ctx.fillStyle='#ff0';
+    ctx.font='20px sans-serif';
+    ctx.fillText('🍌',dx,this.y+18);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  ステージ
+// ═══════════════════════════════════════════════
+class Platform{
+  constructor(x,y,w,h,type='solid',color='#4a8'){
+    this.x=x;this.y=y;this.w=w;this.h=h;
+    this.type=type;
+    this.solid=(type==='solid'||type==='cracked');
+    this.color=color;
+    this.broken=false;
+    this.label=type==='cracked'?'crack':'';
+  }
+}
+
+class Stage{
+  constructor(){
+    this.platforms=[];
+    this.enemies=[];
+    this.items=[];
+    this.bananas=[];
+    this.hospitalX=0;
+    this.hospitalUsed=false;
+    this.shutterX=0;
+    this.bossSpawnX=0;
+    this.worldW=7000;
+    this._build();
+  }
+
+  _build(){
+    const P=(x,y,w,h,t,c)=>new Platform(x,y,w,h,t,c);
+    // 地面
+    this.platforms.push(P(0,480,7000,60,'solid','#4a8'));
+    // 装飾地面ブロック
+    for(let x=0;x<7000;x+=48){
+      this.platforms.push(P(x,480,48,12,'solid','#3a7'));
+    }
+
+    // ───── セクション1: スタートエリア ─────
+    // 足場
+    this.platforms.push(P(400,380,144,16,'solid','#8b6'));
+    this.platforms.push(P(650,300,144,16,'solid','#8b6'));
+    this.platforms.push(P(900,380,144,16,'solid','#8b6'));
+    // 敵
+    this.enemies.push(new Enemy('patrol',300,440));
+    this.enemies.push(new Enemy('patrol',600,440));
+    // バナナ
+    this.bananas.push(new Banana(200,450));
+    this.bananas.push(new Banana(500,450));
+
+    // ───── セクション2: 空中敵エリア ─────
+    this.platforms.push(P(1100,350,192,16,'solid','#8b6'));
+    this.platforms.push(P(1400,420,144,16,'solid','#8b6'));
+    const fly1=new Enemy('fly',1200,200);fly1._baseY=200;
+    const fly2=new Enemy('fly',1500,180);fly2._baseY=180;
+    this.enemies.push(fly1,fly2);
+    this.bananas.push(new Banana(1150,320));
+
+    // ───── セクション3: 崖 ─────
+    // 高い崖（ゴリラの二段ジャンプが必要）
+    this.platforms.push(P(1700,300,96,300,'solid','#964'));
+    this.platforms.push(P(1800,200,240,16,'solid','#8b6'));
+    this.platforms.push(P(2000,300,48,16,'solid','#8b6'));
+
+    // ひび割れた壁
+    const cracked=P(2100,300,32,180,'cracked','#653');
+    this.platforms.push(cracked);
+    this.platforms.push(P(2140,300,200,180,'solid','#964'));
+    this.platforms.push(P(2300,420,200,60,'solid','#8b6'));
+    this.enemies.push(new Enemy('patrol',1850,165));
+    this.enemies.push(new Enemy('spike',2050,436));
+    this.bananas.push(new Banana(1850,165));
+
+    // ───── 動物病院 ─────
+    this.hospitalX=2650;
+    this.platforms.push(P(2600,340,200,140,'solid','#99f'));
+    this.platforms.push(P(2650,250,120,20,'solid','#99f')); // 屋根
+
+    // ───── セクション4: 病院後 ─────
+    this.platforms.push(P(2850,420,192,16,'solid','#8b6'));
+    this.platforms.push(P(3050,350,144,16,'solid','#8b6'));
+    this.enemies.push(new Enemy('patrol',2900,440));
+    this.enemies.push(new Enemy('spike',3100,315));
+    this.enemies.push(new Enemy('fly',3200,200));
+    const fly3=new Enemy('fly',3200,200);fly3._baseY=200;this.enemies.push(fly3);
+    this.bananas.push(new Banana(2900,440));
+    this.bananas.push(new Banana(3050,315));
+
+    // ───── シャッター ─────
+    this.shutterX=3400;
+    this.platforms.push(P(3400,300,24,180,'solid','#888'));
+
+    // ───── ボスエリア ─────
+    this.bossSpawnX=3700;
+    this.platforms.push(P(3450,480,2000,60,'solid','#4a8'));
+    // バナナの山（ボスの足場）
+    for(let i=0;i<5;i++){
+      this.platforms.push(P(3600+i*30,450-i*20,60,20,'solid','#ff0'));
+    }
+    const boss=new Enemy('boss',3750,360);
+    this.enemies.push(boss);
+  }
+
+  tryBreakWall(px,py,pw,ph,mode){
+    if(mode!==PM.GORILLA) return false;
+    for(let i=0;i<this.platforms.length;i++){
+      const p=this.platforms[i];
+      if(p.type==='cracked'&&!p.broken){
+        if(rectOverlapXY(px,py,pw,ph,p.x,p.y,p.w,p.h)){
+          p.broken=true;p.solid=false;return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  draw(ctx,camX){
+    for(const p of this.platforms){
+      if(p.broken) continue;
+      const dx=p.x-camX;
+      if(dx+p.w<0||dx>CW) continue;
+      ctx.fillStyle=p.type==='cracked'?'#a75':p.color;
+      ctx.fillRect(dx,p.y,p.w,p.h);
+      if(p.type==='cracked'){
+        ctx.strokeStyle='#000';ctx.lineWidth=2;
+        ctx.beginPath();
+        ctx.moveTo(dx+8,p.y);ctx.lineTo(dx+16,p.y+p.h);
+        ctx.moveTo(dx+18,p.y);ctx.lineTo(dx+24,p.y+p.h);
+        ctx.stroke();
+      }
+    }
+    // 動物病院
+    this._drawHospital(ctx,camX);
+    // シャッター
+    this._drawShutter(ctx,camX);
+  }
+
+  _drawHospital(ctx,camX){
+    const dx=this.hospitalX-camX;
+    if(dx+200<0||dx>CW) return;
+    // 建物
+    ctx.fillStyle='#aaf';
+    ctx.fillRect(dx,340,200,140);
+    // 屋根
+    ctx.fillStyle='#88f';
+    ctx.fillRect(dx-10,250,220,95);
+    // 十字
+    ctx.fillStyle='#f44';
+    ctx.fillRect(dx+80,270,40,70);
+    ctx.fillRect(dx+60,290,80,30);
+    // ドア
+    ctx.fillStyle='#fff';
+    ctx.fillRect(dx+82,400,36,60);
+    // 看板
+    ctx.fillStyle='#ff8';
+    ctx.fillRect(dx+10,310,60,30);
+    ctx.fillStyle='#000';
+    ctx.font='12px sans-serif';
+    ctx.fillText('動物病院',dx+6,330);
+  }
+
+  _drawShutter(ctx,camX){
+    const dx=this.shutterX-camX;
+    if(Math.abs(dx)>300) return;
+    ctx.fillStyle='#666';
+    ctx.fillRect(dx,300,28,200);
+    // シャッター模様
+    ctx.strokeStyle='#888';ctx.lineWidth=2;
+    for(let y=305;y<500;y+=15){
+      ctx.beginPath();ctx.moveTo(dx,y);ctx.lineTo(dx+28,y);ctx.stroke();
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  ユーティリティ
+// ═══════════════════════════════════════════════
+function rectOverlap(a,b){
+  return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
+}
+function rectOverlapXY(ax,ay,aw,ah,bx,by,bw,bh){
+  return ax<bx+bw && ax+aw>bx && ay<by+bh && ay+ah>by;
+}
+
+// ═══════════════════════════════════════════════
+//  メインゲーム
+// ═══════════════════════════════════════════════
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+
+let gameState=GS.TITLE;
+let player,stage;
+let camX=0;
+let lastTime=0;
+let titleBlink=0;
+let transTimer=0;
+let bossActive=false;
+let hospitalMsg='';
+let hospitalMsgTimer=0;
+let clearTimer=0;
+let peelDrop=[];
+
+// ── レターボックス スケーリング ──
+let scale=1;
+function resizeCanvas(){
+  const sw=window.innerWidth, sh=window.innerHeight;
+  scale=Math.min(sw/CW, sh/CH);
+  const cw=Math.floor(CW*scale), ch=Math.floor(CH*scale);
+  const lx=Math.floor((sw-cw)/2), ty=Math.floor((sh-ch)/2);
+  canvas.style.left=lx+'px';
+  canvas.style.top=ty+'px';
+  canvas.style.width=cw+'px';
+  canvas.style.height=ch+'px';
+  // コントロールもキャンバスに重ねる
+  const ctrl=document.getElementById('ctrl');
+  if(ctrl){
+    ctrl.style.left=lx+'px';
+    ctrl.style.top=ty+'px';
+    ctrl.style.width=cw+'px';
+    ctrl.style.height=ch+'px';
+  }
+}
+window.addEventListener('resize',resizeCanvas);
+window.addEventListener('orientationchange',()=>setTimeout(resizeCanvas,300));
+resizeCanvas();
+
+// 画像読み込み
+async function init(){
+  // 画面向き確認
+  checkOrientation();
+  // 横向きロックを試みる（対応ブラウザのみ）
+  if(screen.orientation&&screen.orientation.lock){
+    screen.orientation.lock('landscape').catch(()=>{});
+  }
+  await Promise.all([
+    loadImage('title','title.png'),
+    loadImage('human','human.png'),
+    loadImage('gorilla','gorilla.png'),
+    loadImage('human2','human2.png'),
+  ]);
+  gameState=GS.TITLE;
+  requestAnimationFrame(loop);
+}
+
+// タイトル画面でのタップ/クリック
+canvas.addEventListener('pointerdown',e=>{
+  if(gameState===GS.TITLE) startGame();
+  if(gameState===GS.CLEAR||gameState===GS.OVER){
+    gameState=GS.TITLE;
+  }
+});
+document.addEventListener('keydown',e=>{
+  if((e.code==='Enter'||e.code==='Space')&&gameState===GS.TITLE) startGame();
+  if((e.code==='Enter')&&(gameState===GS.CLEAR||gameState===GS.OVER)) gameState=GS.TITLE;
+});
+
+function startGame(){
+  player=new Player();
+  stage=new Stage();
+  camX=0;
+  bossActive=false;
+  peelDrop=[];
+  gameState=GS.PLAYING;
+  const ctrl=document.getElementById('ctrl');
+  ctrl.style.display='block';
+  resizeCanvas(); // コントロールの位置を再計算
+}
+
+// ─── メインループ ───
+function loop(ts){
+  const dt=Math.min((ts-lastTime)/1000,0.05);
+  lastTime=ts;
+
+  ctx.clearRect(0,0,CW,CH);
+
+  if(gameState===GS.TITLE) drawTitle(dt);
+  else if(gameState===GS.PLAYING) updatePlay(dt);
+  else if(gameState===GS.TRANSITION) updateTransition(dt);
+  else if(gameState===GS.BOSS) updatePlay(dt); // ボス戦は同じループ
+  else if(gameState===GS.HOSPITAL) updateHospital(dt);
+  else if(gameState===GS.CLEAR) drawClear(dt);
+  else if(gameState===GS.OVER) drawOver(dt);
+
+  requestAnimationFrame(loop);
+}
+
+// ─── タイトル ───
+function drawTitle(dt){
+  if(imgs.title){
+    ctx.drawImage(rawImgs.title,0,0,CW,CH);
+  } else {
+    ctx.fillStyle='#001133';
+    ctx.fillRect(0,0,CW,CH);
+    ctx.fillStyle='#fff';
+    ctx.font='bold 64px sans-serif';
+    ctx.fillText('仮面ゴリラー',CW/2-180,200);
+  }
+  // START点滅
+  titleBlink+=dt;
+  if(Math.floor(titleBlink*2)%2===0){
+    ctx.fillStyle='#fff';
+    ctx.font='bold 28px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('▶ タップしてスタート',CW/2,CH-50);
+    ctx.textAlign='left';
+  }
+}
+
+// ─── ゲームプレイ更新 ───
+function updatePlay(dt){
+  if(!player||!stage) return;
+
+  // 動物病院チェック
+  const hx=stage.hospitalX-camX;
+  if(!stage.hospitalUsed&&player.x>stage.hospitalX-60&&player.x<stage.hospitalX+220){
+    if(consumeAtk()||consumeJump()){ // ドアに近づいてボタン → 入る
+      // 実際は自動で入る演出
+    }
+    // 自動進入チェック（プレイヤーが病院ドア付近に入ったら）
+    if(player.x>stage.hospitalX+60&&player.x<stage.hospitalX+160&&player.y>=395){
+      gameState=GS.HOSPITAL;
+      stage.hospitalUsed=true;
+      hospitalMsg=player.mode===PM.GORILLA?
+        'あら、たくみじゃない！ゴリラポイントを回復しておくわね♪':
+        'うちは人間はみれないんです、ごめんなさい！';
+      hospitalMsgTimer=3;
+      if(player.mode===PM.GORILLA) player.gp=MAX_GP;
+      return;
+    }
+  }
+
+  // シャッターチェック
+  if(gameState!==GS.BOSS&&player.x+player.w>stage.shutterX-10&&!bossActive){
+    bossActive=true;
+    gameState=GS.TRANSITION;
+    transTimer=0.8;
+    return;
+  }
+
+  // ボスの飛び道具とプレイヤーの当たり判定
+  for(const e of stage.enemies){
+    if(e.type==='boss'&&e.alive){
+      for(const p of e.projectiles){
+        if(rectOverlapXY(player.x,player.y,player.w,player.h, p.x,p.y,p.w,p.h)){
+          player.takeDamage(1);
+        }
+      }
+      // ボス撃破チェック
+      if(!e.alive){gameState=GS.CLEAR;clearTimer=3;return;}
+    }
+  }
+
+  // プレイヤー更新
+  player.update(dt,stage.platforms,stage.bananas,stage.enemies,stage);
+
+  // 矢更新
+  for(let i=player.arrows.length-1;i>=0;i--){
+    player.arrows[i].update(dt,stage.enemies,stage.platforms,stage);
+    if(!player.arrows[i].alive) player.arrows.splice(i,1);
+  }
+
+  // 敵更新
+  for(const e of stage.enemies){
+    if(!e.alive) continue;
+    e.update(dt,player,stage.platforms);
+
+    // バナナ皮落下処理
+    if(e._dropPeel){
+      e._dropPeel=false;
+      peelDrop.push({x:e.x+e.w/2,y:e.y+e.h,w:20,h:10,vy:1,alive:true});
+    }
+
+    // 敵とプレイヤー接触ダメージ
+    if(player.invTimer<=0&&e.alive&&e.type!=='boss'){
+      if(rectOverlap(player,e)){
+        player.takeDamage(1);
+      }
+    }
+  }
+
+  // バナナ皮落下
+  for(let i=peelDrop.length-1;i>=0;i--){
+    const p=peelDrop[i];
+    p.y+=p.vy;p.vy+=0.3;
+    if(p.y>CH){p.alive=false;peelDrop.splice(i,1);continue;}
+    if(rectOverlapXY(player.x,player.y,player.w,player.h,p.x,p.y,p.w,p.h)){
+      player.vx+=player.facing*-3;
+      peelDrop.splice(i,1);
+    }
+  }
+
+  // カメラ追従
+  const targetCamX=player.x-CW*0.3;
+  camX+=(targetCamX-camX)*0.12;
+  camX=Math.max(0,Math.min(camX,stage.worldW-CW));
+
+  // ゲームオーバー判定
+  if(player.gp<=0&&player.state==='fallen'&&player.stateTimer<=0){
+    gameState=GS.OVER;
+    document.getElementById('ctrl').style.display='none';
+    return;
+  }
+
+  drawScene();
+}
+
+// ─── ゲーム描画 ───
+function drawScene(){
+  // 背景（空）
+  const grad=ctx.createLinearGradient(0,0,0,CH);
+  grad.addColorStop(0,'#112244');
+  grad.addColorStop(1,'#2244aa');
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,CW,CH);
+
+  // 月
+  ctx.fillStyle='rgba(255,220,180,0.4)';
+  ctx.beginPath();ctx.arc(750,80,60,0,Math.PI*2);ctx.fill();
+
+  // ステージ
+  stage.draw(ctx,camX);
+
+  // バナナ
+  for(const b of stage.bananas) b.draw(ctx,camX);
+
+  // バナナ皮
+  for(const p of peelDrop){
+    const dx=p.x-camX;
+    ctx.fillStyle='#aaff00';
+    ctx.fillRect(dx-p.w/2,p.y,p.w,p.h);
+  }
+
+  // 敵
+  for(const e of stage.enemies) e.draw(ctx,camX);
+
+  // 矢
+  for(const a of player.arrows) a.draw(ctx,camX);
+
+  // プレイヤー
+  player.draw(ctx,camX);
+
+  // 変身エフェクト
+  if(player.changeTimer>0){
+    ctx.fillStyle=`rgba(255,255,0,${player.changeTimer*1.5})`;
+    ctx.beginPath();
+    ctx.arc(player.x-camX+player.w/2,player.y+player.h/2,40,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  // UI
+  drawHUD();
+
+  // 病院メッセージ
+  if(gameState===GS.HOSPITAL||hospitalMsgTimer>0){
+    drawHospitalMsg();
+  }
+}
+
+// ─── HUD ───
+function drawHUD(){
+  // GPバー（バナナアイコン）
+  ctx.fillStyle='rgba(0,0,0,0.5)';
+  ctx.fillRect(8,8,180,40);
+  ctx.fillStyle='#fff';
+  ctx.font='14px sans-serif';
+  ctx.fillText('GP',12,32);
+  for(let i=0;i<MAX_GP;i++){
+    ctx.fillStyle=i<player.gp?'#ffee00':'#444';
+    ctx.font='24px sans-serif';
+    ctx.fillText('🍌',40+i*44,36);
+  }
+  // モード表示
+  ctx.fillStyle='rgba(0,0,0,0.5)';
+  ctx.fillRect(8,52,140,32);
+  ctx.fillStyle=player.mode===PM.GORILLA?'#4af':'#fa4';
+  ctx.font='bold 18px sans-serif';
+  ctx.fillText(player.mode===PM.GORILLA?'🦍 ゴリラモード':'👤 人間モード',14,72);
+
+  // キーボード操作説明（PC向け）
+  const isMobile=('ontouchstart' in window);
+  if(!isMobile){
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.font='11px sans-serif';
+    ctx.fillText('変身:C  攻撃:X  ジャンプ:↑/Z',CW-230,20);
+  }
+}
+
+// ─── 病院 ───
+function updateHospital(dt){
+  hospitalMsgTimer-=dt;
+  drawScene();
+  // メッセージボックス
+  ctx.fillStyle='rgba(0,0,60,0.9)';
+  ctx.fillRect(80,CH-180,CW-160,130);
+  ctx.strokeStyle='#88f';ctx.lineWidth=3;
+  ctx.strokeRect(80,CH-180,CW-160,130);
+  ctx.fillStyle='#fff';
+  ctx.font='22px sans-serif';
+  const lines=hospitalMsg.match(/.{1,22}/g)||[hospitalMsg];
+  lines.forEach((l,i)=>ctx.fillText(l,110,CH-140+i*35));
+  ctx.fillStyle='rgba(255,255,255,0.6)';
+  ctx.font='14px sans-serif';
+  ctx.fillText('▼ 続けるにはボタンを押してください',150,CH-60);
+
+  if(hospitalMsgTimer<=0||consumeAtk()||consumeJump()){
+    gameState=GS.PLAYING;
+    hospitalMsgTimer=0;
+  }
+}
+
+function drawHospitalMsg(){
+  if(hospitalMsgTimer<=0) return;
+  hospitalMsgTimer=Math.max(0,hospitalMsgTimer-0.016);
+}
+
+// ─── シャッタートランジション ───
+function updateTransition(dt){
+  transTimer-=dt;
+  drawScene();
+  // シャッタースライド演出
+  const prog=Math.max(0,transTimer/0.8);
+  const slideW=CW*(1-prog);
+  ctx.fillStyle='#222';
+  ctx.fillRect(0,0,slideW,CH);
+  ctx.fillRect(CW-slideW,0,slideW,CH);
+  ctx.fillStyle='#fff';
+  ctx.font='bold 32px sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText('BOSS STAGE',CW/2,CH/2);
+  ctx.textAlign='left';
+  if(transTimer<=0){
+    gameState=GS.BOSS;
+    camX=stage.shutterX-100;
+  }
+}
+
+// ─── クリア ───
+function drawClear(dt){
+  clearTimer-=dt;
+  drawScene();
+  ctx.fillStyle='rgba(0,0,0,0.5)';
+  ctx.fillRect(0,0,CW,CH);
+  ctx.fillStyle='#ff0';
+  ctx.font='bold 72px sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText('CLEAR!',CW/2,CH/2-20);
+  ctx.fillStyle='#fff';
+  ctx.font='28px sans-serif';
+  ctx.fillText('うさぎ大王を倒した！',CW/2,CH/2+50);
+  ctx.font='18px sans-serif';
+  ctx.fillText('タップして戻る',CW/2,CH/2+100);
+  ctx.textAlign='left';
+}
+
+// ─── ゲームオーバー ───
+function drawOver(dt){
+  ctx.fillStyle='#000';
+  ctx.fillRect(0,0,CW,CH);
+  ctx.fillStyle='#f44';
+  ctx.font='bold 64px sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText('GAME OVER',CW/2,CH/2-10);
+  ctx.fillStyle='#fff';
+  ctx.font='22px sans-serif';
+  ctx.fillText('タップして戻る',CW/2,CH/2+60);
+  ctx.textAlign='left';
+}
+
+// ─── 開始 ───
+init();
+</script>
+</body>
+</html>

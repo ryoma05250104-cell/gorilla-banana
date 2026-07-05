@@ -673,7 +673,15 @@ function overlapR(ax,ay,aw,ah,bx,by,bw,bh){return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&
 /* ── ゲーム管理 ── */
 let gs=GS.TITLE,player,stage,camX=0,peels=[];
 let hospMsg='',hospTimer=0,transTimer=0,titleT=0,lastT=0;
-// ロックマン式シャッター
+
+// ── ロックマン式: 画面単位スクロール ──
+let screenAnchor=0;   // 現在の画面の左端 (world座標)
+let scrSliding=false; // スライド中か
+let scrSlideDir=0;    // 1=右, -1=左
+let scrSlideT=0;
+const SCR_SLIDE_DUR=0.28; // スライド時間(秒)
+
+// ロックマン式シャッター（ボス部屋専用）
 const STRIPS=8, STRIP_H=CH/STRIPS;
 const TRANS_CLOSE=0.45, TRANS_HOLD=0.15, TRANS_OPEN=0.4;
 const TRANS_TOTAL=TRANS_CLOSE+TRANS_HOLD+TRANS_OPEN;
@@ -686,7 +694,12 @@ async function init(){
   requestAnimationFrame(loop);
 }
 
-function startGame(){player=new Player();stage=new Stage();camX=0;peels=[];gs=GS.PLAY;}
+function startGame(){
+  player=new Player();stage=new Stage();
+  camX=0;peels=[];
+  screenAnchor=0;scrSliding=false;scrSlideT=0;scrSlideDir=0;
+  gs=GS.PLAY;
+}
 
 cv.addEventListener('pointerdown',()=>{
   if(gs===GS.TITLE)startGame();
@@ -755,7 +768,70 @@ function drawScene(){
   }
 }
 
+/* ── 画面端チェック（ロックマン方式） ── */
+function checkScreenEdge(){
+  if(scrSliding||gs===GS.BOSS)return;
+  const localX=player.x-screenAnchor;
+  // 右端
+  if(localX+player.w>=CW-6){
+    const nextAnchor=screenAnchor+CW;
+    // ボス部屋シャッター判定
+    if(gs!==GS.BOSS&&screenAnchor+CW>stage.shutterX){
+      gs=GS.TRANS;transTimer=0;transCamDone=false;return;
+    }
+    // 次の画面へ
+    if(nextAnchor<stage.worldW){
+      scrSliding=true;scrSlideDir=1;scrSlideT=0;
+    } else {
+      player.x=screenAnchor+CW-player.w-6;player.vx=0;
+    }
+  }
+  // 左端
+  else if(localX<=6&&screenAnchor>0){
+    scrSliding=true;scrSlideDir=-1;scrSlideT=0;
+  } else if(localX<0){
+    player.x=screenAnchor+6;player.vx=0;
+  }
+}
+
+/* ── カメラ更新 ── */
+function updateCamera(dt){
+  if(gs===GS.BOSS){
+    // ボス部屋はある程度自由スクロール
+    const bossLeft=stage.shutterX+60;
+    camX+=(player.x-CW*.38-camX)*.1;
+    camX=Math.max(bossLeft,Math.min(camX,stage.worldW-CW));
+    return;
+  }
+  if(scrSliding){
+    scrSlideT+=dt;
+    const p=Math.min(1,scrSlideT/SCR_SLIDE_DUR);
+    camX=screenAnchor+scrSlideDir*CW*p;
+    // プレイヤーを画面とともに運ぶ
+    player.vx=0;player.vy=0;
+    if(scrSlideDir===1)player.x=camX+14;
+    else player.x=camX+CW-player.w-14;
+    if(scrSlideT>=SCR_SLIDE_DUR){
+      screenAnchor+=scrSlideDir*CW;
+      camX=screenAnchor;
+      scrSliding=false;scrSlideT=0;
+      // 到着後の位置確定
+      if(scrSlideDir===1)player.x=camX+14;
+      else player.x=camX+CW-player.w-14;
+    }
+  } else {
+    camX=screenAnchor;
+  }
+}
+
 function updatePlay(dt){
+  // スライド中は物理を止めて描画のみ
+  if(scrSliding){
+    updateCamera(dt);
+    drawScene();
+    return;
+  }
+
   // 病院判定
   if(!stage.hospUsed){
     const hx=stage.hospX,hw=stage.hospW;
@@ -766,8 +842,7 @@ function updatePlay(dt){
       hospTimer=4;gs=GS.HOSP;return;
     }
   }
-  // シャッター
-  if(gs!==GS.BOSS&&player.x+player.w>stage.shutterX){gs=GS.TRANS;transTimer=0;transCamDone=false;return;}
+
   // 皮
   for(let i=peels.length-1;i>=0;i--){peels[i].update(stage.plats);if(!peels[i].alive)peels.splice(i,1);}
   // プレイヤー
@@ -785,9 +860,14 @@ function updatePlay(dt){
     }
     if(e.type!=='boss'&&e.alive&&player.inv<=0&&overlap(player,e))player.damage(1);
   }
-  // カメラ
-  camX+=(player.x-CW*.32-camX)*.12;
-  camX=Math.max(0,Math.min(camX,stage.worldW-CW));
+
+  // 画面端チェック → スクロールまたはシャッター
+  checkScreenEdge();
+  if(gs!==GS.PLAY&&gs!==GS.BOSS)return;
+
+  // カメラ更新
+  updateCamera(dt);
+
   if(player.gp<=0&&player.state==='fall'&&player.stT<=0){gs=GS.OVER;return;}
   drawScene();
 }
@@ -809,7 +889,7 @@ function updateTrans(dt){
 
   // カメラスナップはシャッターが完全に閉じた瞬間
   if(transTimer>=TRANS_CLOSE&&!transCamDone){
-    camX=stage.shutterX+80;transCamDone=true;
+    camX=stage.shutterX+80;screenAnchor=stage.shutterX+80;transCamDone=true;
   }
   drawScene();
   _drawShutterStrips(transTimer);

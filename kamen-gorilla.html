@@ -364,7 +364,10 @@ class Player{
             this.state='punch';
             this.stT=ad.durs.reduce((a,b)=>a+b,0);
             this._gAtkType=atype;this._gAtkKeys=ad.keys;
-            this._gAtkDurs=ad.durs;this._gAtkF=0;this._gAtkT=0;this._gAtkHit=false;
+            this._gAtkDurs=ad.durs;this._gAtkF=0;this._gAtkT=0;
+            // ダメージは即時適用（遅延なし）
+            this._gAtkHit=true;
+            this._gDoAtk(enemies,stage,ad);
             if(atype==='gdash')this.vx=this.dir*8;
           }
         }
@@ -396,8 +399,6 @@ class Player{
         this._gAtkT+=dt;
         const dur=this._gAtkDurs[this._gAtkF]||0.15;
         if(this._gAtkT>=dur&&this._gAtkF<this._gAtkKeys.length-1){this._gAtkF++;this._gAtkT=0;}
-        const ad=G_ATK[this._gAtkType];
-        if(ad&&!this._gAtkHit&&this._gAtkF>=ad.hitF){this._gAtkHit=true;this._gDoAtk(enemies,stage,ad);}
       }
     }
   }

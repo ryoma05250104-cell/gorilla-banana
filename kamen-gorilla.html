@@ -135,7 +135,16 @@ function loadHumanAnim(){
   let done=0;
   list.forEach(([key,src])=>{
     const im=new Image();
-    im.onload=()=>{HIMGS[key]=im;if(++done===list.length)hiReady=true;};
+    im.onload=()=>{
+      try{
+        const oc=document.createElement('canvas');oc.width=im.width;oc.height=im.height;
+        const ox=oc.getContext('2d');ox.drawImage(im,0,0);
+        const id=ox.getImageData(0,0,oc.width,oc.height),d=id.data;
+        for(let i=0;i<d.length;i+=4)if(d[i]>230&&d[i+1]>230&&d[i+2]>230)d[i+3]=0;
+        ox.putImageData(id,0,0);HIMGS[key]=oc;
+      }catch(e){HIMGS[key]=im;}
+      if(++done===list.length)hiReady=true;
+    };
     im.onerror=()=>{if(++done===list.length)hiReady=true;};
     im.src=src;
   });
@@ -372,10 +381,9 @@ class Player{
           const cImgs=[null,HIMGS.car1,HIMGS.car2,HIMGS.car3];
           const cimg=cImgs[this.carEnterPhase]||HIMGS.car3;
           if(cimg){
-            const scale=Math.min(200/cimg.width,120/cimg.height);
-            const dw=Math.round(cimg.width*scale),dh=Math.round(cimg.height*scale);
-            const ix=dx+this.w/2-dw/2,iy=this.y+this.h-dh;
-            ctx.drawImage(cimg,ix,iy,dw,dh);
+            const DH=120,DW=Math.round(DH*cimg.width/cimg.height);
+            const ix=dx+this.w/2-DW/2,iy=this.y+this.h-DH;
+            ctx.drawImage(cimg,ix,iy,DW,DH);
             return;
           }
         }

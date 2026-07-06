@@ -94,49 +94,37 @@ function loadImg(name,src){
   });
 }
 
-/* ── 人間モード個別フレーム ── */
-const HFRS={idle:null,walk:null,run:null,jump:null};
-let hfrsReady=false;
-function loadHumanFrames(){
-  const list=[['idle','assets/player/idle.png'],['walk','assets/player/walk.png'],
-              ['run','assets/player/run.png'],['jump','assets/player/jump.png']];
-  let done=0;
-  list.forEach(([key,src])=>{
-    const im=new Image();
-    im.onload=()=>{
-      try{
-        const oc=document.createElement('canvas');oc.width=im.width;oc.height=im.height;
-        const ox=oc.getContext('2d');ox.drawImage(im,0,0);
-        const id=ox.getImageData(0,0,oc.width,oc.height),d=id.data;
-        for(let i=0;i<d.length;i+=4)if(d[i]>230&&d[i+1]>230&&d[i+2]>230)d[i+3]=0;
-        ox.putImageData(id,0,0);HFRS[key]=oc;
-      }catch(e){HFRS[key]=im;}
-      if(++done===list.length)hfrsReady=true;
-    };
-    im.onerror=()=>{if(++done===list.length)hfrsReady=true;};
-    im.src=src;
-  });
-}
-
-/* ── アニメ用画像（弓矢・車乗り込み） ── */
-const HIMGS={bow1:null,bow2:null,bow3:null,bow4:null,arrow:null,car1:null,car2:null,car3:null};
-let hiReady=false;
-function loadHumanAnim(){
+/* ── プレイヤー画像 (idle/walk/run/jump=白背景除去あり, bow/car=透過済み) ── */
+const PIMGS={idle:null,walk:null,run:null,jump:null,bow2:null,bow3:null,car1:null,car2:null,car3:null};
+let pimgsReady=false;
+function loadPlayerImgs(){
   const list=[
-    ['bow1','assets/player/human/bow_1_draw.png'],
-    ['bow2','assets/player/human/bow_2_aim.png'],
-    ['bow3','assets/player/human/bow_3_fulldraw.png'],
-    ['bow4','assets/player/human/bow_4_recoil.png'],
-    ['arrow','assets/player/human/arrow_flying.png'],
-    ['car1','assets/player/human/car_1_stand_beside.png'],
-    ['car2','assets/player/human/car_2_getting_in.png'],
-    ['car3','assets/player/human/car_3_seated.png'],
+    ['idle','assets/player/idle.png',1],
+    ['walk','assets/player/walk.png',1],
+    ['run','assets/player/run.png',1],
+    ['jump','assets/player/jump.png',1],
+    ['bow2','assets/player/human/bow_2_aim.png',0],
+    ['bow3','assets/player/human/bow_3_fulldraw.png',0],
+    ['car1','assets/player/human/car_1_stand_beside.png',0],
+    ['car2','assets/player/human/car_2_getting_in.png',0],
+    ['car3','assets/player/human/car_3_seated.png',0],
   ];
   let done=0;
-  list.forEach(([key,src])=>{
+  list.forEach(([key,src,rmBg])=>{
     const im=new Image();
-    im.onload=()=>{HIMGS[key]=im;if(++done===list.length)hiReady=true;};
-    im.onerror=()=>{if(++done===list.length)hiReady=true;};
+    im.onload=()=>{
+      if(rmBg){
+        try{
+          const oc=document.createElement('canvas');oc.width=im.width;oc.height=im.height;
+          const ox=oc.getContext('2d');ox.drawImage(im,0,0);
+          const id=ox.getImageData(0,0,oc.width,oc.height),d=id.data;
+          for(let i=0;i<d.length;i+=4)if(d[i]>230&&d[i+1]>230&&d[i+2]>230)d[i+3]=0;
+          ox.putImageData(id,0,0);PIMGS[key]=oc;
+        }catch(e){PIMGS[key]=im;}
+      }else{PIMGS[key]=im;}
+      if(++done===list.length)pimgsReady=true;
+    };
+    im.onerror=()=>{if(++done===list.length)pimgsReady=true;};
     im.src=src;
   });
 }
@@ -337,8 +325,8 @@ class Player{
       ctx.restore();
     }
     if(this.inCar){
-      // 走行中：car_2（前方）/ car_3（後方）を交互に表示
-      const cdr=hiReady?(HIMGS.car2||HIMGS.car3):null;
+      // 走行中
+      const cdr=pimgsReady?(PIMGS.car2||PIMGS.car3):null;
       if(cdr){
         const DH=120,DW=Math.round(DH*cdr.width/cdr.height);
         const ix=dx+this.w/2-DW/2,iy=this.y+this.h-DH;
@@ -348,54 +336,39 @@ class Player{
         const f=this.aH.carD.f,dw=200,dh=120,cy=this.y+this.h-dh;
         if(!drawSpr(IMGS.human2,f,dx-30,cy,dw,dh,this.dir<0)){
           ctx.fillStyle='#e8e8e8';ctx.fillRect(dx-30,cy,dw,dh);
-          ctx.font='40px sans-serif';ctx.fillText('🚗',dx+10,cy+70);
         }
       }
     } else {
       const st=this.state;
-      // ── 人間モード個別フレーム ──
-      if(this.mode===0){
-        // 弓矢攻撃アニメ（bow2=引き, bow3=満弦, phase2=idle）
-        if(st==='bow'&&hiReady){
-          const bowImgs=[HIMGS.bow2,HIMGS.bow3,null];
-          const bimg=bowImgs[Math.min(this.bowPhase,2)]||(hfrsReady?HFRS.idle:null);
-          if(bimg){
-            const DH=120,DW=Math.round(DH*bimg.width/bimg.height);
-            const ix=dx+this.w/2-DW/2,iy=this.y+this.h-DH;
-            if(this.dir<0){ctx.save();ctx.translate(ix+DW,iy);ctx.scale(-1,1);ctx.drawImage(bimg,0,0,DW,DH);ctx.restore();}
-            else ctx.drawImage(bimg,ix,iy,DW,DH);
-            return;
-          }
+      // ── 人間モード: PIMGS で全状態を統一描画 ──
+      if(this.mode===0&&pimgsReady){
+        let img;
+        if(st==='bow'){
+          img=this.bowPhase>=1?(PIMGS.bow3||PIMGS.bow2):PIMGS.bow2;
+          img=img||PIMGS.idle;
+        } else if(st==='car_enter'){
+          const ci=[PIMGS.car1,PIMGS.car1,PIMGS.car2,PIMGS.car3];
+          img=ci[Math.min(this.carEnterPhase,3)]||PIMGS.car3||PIMGS.idle;
+        } else if(st==='jump'||st==='jump2'){
+          img=PIMGS.jump||PIMGS.idle;
+        } else if(st==='run'){
+          img=PIMGS.run||PIMGS.walk||PIMGS.idle;
+        } else if(st==='walk'){
+          img=PIMGS.walk||PIMGS.idle;
+        } else {
+          img=PIMGS.idle;
         }
-        // 車乗り込みアニメ（car1=ドア際, car2=乗り込み中, car3=着座）
-        if(st==='car_enter'&&hiReady){
-          const cImgs=[null,HIMGS.car1,HIMGS.car2,HIMGS.car3];
-          const cimg=cImgs[this.carEnterPhase]||HIMGS.car3;
-          if(cimg){
-            const DH=120,DW=Math.round(DH*cimg.width/cimg.height);
-            const ix=dx+this.w/2-DW/2,iy=this.y+this.h-DH;
-            ctx.drawImage(cimg,ix,iy,DW,DH);
-            return;
+        if(img){
+          const DH=120,DW=Math.round(DH*img.width/img.height);
+          const ix=dx+this.w/2-DW/2,iy=this.y+this.h-DH;
+          if(this.dir<0){ctx.save();ctx.translate(ix+DW,iy);ctx.scale(-1,1);ctx.drawImage(img,0,0,DW,DH);ctx.restore();}
+          else ctx.drawImage(img,ix,iy,DW,DH);
+          if(st==='punch'&&this.stT<.18){
+            const ex=this.dir>0?dx+this.w+4:dx-34;
+            ctx.fillStyle='rgba(255,200,0,.8)';
+            ctx.beginPath();ctx.arc(ex+15,this.y+this.h*.44,22,0,Math.PI*2);ctx.fill();
           }
-        }
-        // 通常移動フレーム（idle/walk/run/jump）
-        if(hfrsReady&&st!=='bow'&&st!=='car_enter'){
-          let img=HFRS.idle;
-          if(st==='jump'||st==='jump2') img=HFRS.jump||HFRS.idle;
-          else if(st==='run')  img=HFRS.run||HFRS.walk||HFRS.idle;
-          else if(st==='walk') img=HFRS.walk||HFRS.idle;
-          if(img){
-            const DH=120,DW=Math.round(DH*img.width/img.height);
-            const ix=dx+this.w/2-DW/2,iy=this.y+this.h-DH;
-            if(this.dir<0){ctx.save();ctx.translate(ix+DW,iy);ctx.scale(-1,1);ctx.drawImage(img,0,0,DW,DH);ctx.restore();}
-            else ctx.drawImage(img,ix,iy,DW,DH);
-            if(st==='punch'&&this.stT<.18){
-              const ex=this.dir>0?dx+this.w+4:dx-34;
-              ctx.fillStyle='rgba(255,200,0,.8)';
-              ctx.beginPath();ctx.arc(ex+15,this.y+this.h*.44,22,0,Math.PI*2);ctx.fill();
-            }
-            return;
-          }
+          return;
         }
       }
       // ゴリラモード or bow: スプライトシート
@@ -815,7 +788,7 @@ let transCamDone=false;
 
 async function init(){
   resize();
-  loadHumanFrames();loadHumanAnim();
+  loadPlayerImgs();
   if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(()=>{});
   await Promise.all([loadImg('title','title.png'),loadImg('human','human.png'),loadImg('gorilla','gorilla.png'),loadImg('human2','human2.png')]);
   showCtrl(false);

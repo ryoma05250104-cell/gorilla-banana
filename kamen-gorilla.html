@@ -135,16 +135,7 @@ function loadHumanAnim(){
   let done=0;
   list.forEach(([key,src])=>{
     const im=new Image();
-    im.onload=()=>{
-      try{
-        const oc=document.createElement('canvas');oc.width=im.width;oc.height=im.height;
-        const ox=oc.getContext('2d');ox.drawImage(im,0,0);
-        const id=ox.getImageData(0,0,oc.width,oc.height),d=id.data;
-        for(let i=0;i<d.length;i+=4)if(d[i]>230&&d[i+1]>230&&d[i+2]>230)d[i+3]=0;
-        ox.putImageData(id,0,0);HIMGS[key]=oc;
-      }catch(e){HIMGS[key]=im;}
-      if(++done===list.length)hiReady=true;
-    };
+    im.onload=()=>{HIMGS[key]=im;if(++done===list.length)hiReady=true;};
     im.onerror=()=>{if(++done===list.length)hiReady=true;};
     im.src=src;
   });
@@ -346,13 +337,13 @@ class Player{
       ctx.restore();
     }
     if(this.inCar){
-      // 走行中：arrow_flying.png の3フレーム(各220×220)をサイクル
-      if(hiReady&&HIMGS.arrow){
-        const fi=Math.floor(performance.now()/220)%3;
-        const fw=HIMGS.arrow.width/3,fh=HIMGS.arrow.height;
-        const dw=210,dh=Math.round(dw*fh/fw);
-        const ix=dx+this.w/2-dw/2,iy=this.y+this.h-dh;
-        ctx.drawImage(HIMGS.arrow,fi*fw,0,fw,fh,ix,iy,dw,dh);
+      // 走行中：car_2（前方）/ car_3（後方）を交互に表示
+      const cdr=hiReady?(HIMGS.car2||HIMGS.car3):null;
+      if(cdr){
+        const DH=120,DW=Math.round(DH*cdr.width/cdr.height);
+        const ix=dx+this.w/2-DW/2,iy=this.y+this.h-DH;
+        if(this.dir<0){ctx.save();ctx.translate(ix+DW,iy);ctx.scale(-1,1);ctx.drawImage(cdr,0,0,DW,DH);ctx.restore();}
+        else ctx.drawImage(cdr,ix,iy,DW,DH);
       } else {
         const f=this.aH.carD.f,dw=200,dh=120,cy=this.y+this.h-dh;
         if(!drawSpr(IMGS.human2,f,dx-30,cy,dw,dh,this.dir<0)){

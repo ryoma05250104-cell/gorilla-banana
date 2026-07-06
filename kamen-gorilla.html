@@ -17,7 +17,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:no
 <div id="ctrl"></div>
 <script>
 'use strict';
-const CW=960,CH=540,GRAV=0.55,MAX_GP=3;
+const CW=960,CH=540,GRAV=0.55,MAX_GP=6;
 const SPD_H=4.5,SPD_G=4.0,JV=-13.5,JV2=-11;
 const GS={TITLE:0,PLAY:1,TRANS:2,BOSS:3,HOSP:4,CLEAR:5,OVER:6};
 
@@ -51,6 +51,11 @@ function buildCtrl(){
     d.addEventListener('touchstart',e=>{e.preventDefault();BTN[prop]=1;},{passive:false});
     d.addEventListener('touchend',  e=>{e.preventDefault();BTN[prop]=0;},{passive:false});
     d.addEventListener('touchcancel',()=>{BTN[prop]=0;});
+    d.addEventListener('touchmove', e=>{
+      e.preventDefault();
+      const t=e.touches[0],r=d.getBoundingClientRect();
+      BTN[prop]=(t.clientX>=r.left&&t.clientX<=r.right&&t.clientY>=r.top&&t.clientY<=r.bottom)?1:0;
+    },{passive:false});
     ctrl.appendChild(d);
   }
   const b=Math.round(14*s),ls=Math.round(10*s),rs=Math.round(10*s);
@@ -59,7 +64,7 @@ function buildCtrl(){
   mk('R','▶',{bottom:b+'px',left:(ls+Math.round(100*s))+'px',width:sz(88),height:sz(88),background:'rgba(255,255,255,.13)',fontSize:'30px'});
   mk('jump','↑',{bottom:b+'px',right:rs+'px',width:sz(92),height:sz(92),background:'rgba(40,200,60,.55)',fontSize:'32px'});
   mk('chg','変',{bottom:(b+Math.round(104*s))+'px',right:(rs+Math.round(100*s))+'px',width:sz(76),height:sz(76),background:'rgba(60,60,220,.55)',fontSize:'16px'});
-  mk('atk','攻',{bottom:b+'px',right:(rs+Math.round(104*s))+'px',width:sz(76),height:sz(76),background:'rgba(220,40,40,.55)',fontSize:'16px'});
+  mk('atk','攻',{bottom:b+'px',right:(rs+Math.round(104*s))+'px',width:sz(100),height:sz(100),background:'rgba(220,40,40,.65)',fontSize:'22px'});
 }
 
 /* ── キーボード ── */

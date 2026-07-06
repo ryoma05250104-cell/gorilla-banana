@@ -118,6 +118,29 @@ function loadHumanFrames(){
   });
 }
 
+/* ── アニメ用画像（弓矢・車乗り込み） ── */
+const HIMGS={bow1:null,bow2:null,bow3:null,bow4:null,arrow:null,car1:null,car2:null,car3:null};
+let hiReady=false;
+function loadHumanAnim(){
+  const list=[
+    ['bow1','assets/player/human/bow_1_draw.png'],
+    ['bow2','assets/player/human/bow_2_aim.png'],
+    ['bow3','assets/player/human/bow_3_fulldraw.png'],
+    ['bow4','assets/player/human/bow_4_recoil.png'],
+    ['arrow','assets/player/human/arrow_flying.png'],
+    ['car1','assets/player/human/car_1_stand_beside.png'],
+    ['car2','assets/player/human/car_2_getting_in.png'],
+    ['car3','assets/player/human/car_3_seated.png'],
+  ];
+  let done=0;
+  list.forEach(([key,src])=>{
+    const im=new Image();
+    im.onload=()=>{HIMGS[key]=im;if(++done===list.length)hiReady=true;};
+    im.onerror=()=>{if(++done===list.length)hiReady=true;};
+    im.src=src;
+  });
+}
+
 /* ── スプライト座標
   human.png / gorilla.png (1536×1024, 白背景)
   行1 y=40 sh=155: あるく×3  はしる×4  ジャンプ×2
@@ -175,6 +198,8 @@ class Player{
     this.mode=0;this.gp=MAX_GP;this.dir=1;
     this.state='idle';this.stT=0;this.inv=0;
     this.arrows=[];this.chgT=0;this.inCar=false;this.carVx=0;
+    this.bowPhase=0;this.bowArrowFired=false;
+    this.carEnterPhase=0;
     this._anims();
   }
   _anims(){
@@ -202,11 +227,32 @@ class Player{
     if(this.inv>0)this.inv-=dt;
     const dead=this.state==='fall',stunned=this.state==='dmg'||dead;
     const atk=this.state==='bow'||this.state==='punch';
-    if(this.stT>0){this.stT-=dt;if(this.stT<=0&&!dead)this.state='idle';}
+    const carEntering=this.state==='car_enter';
+    if(this.stT>0){
+      this.stT-=dt;
+      if(this.stT<=0&&!dead){
+        if(this.state==='car_enter'){this.inCar=true;this.carVx=2;this.carEnterPhase=0;}
+        this.state='idle';
+      }
+    }
+    // 弓フェーズ更新（矢は bow_3 で発射）
+    if(this.state==='bow'){
+      const t=this.stT;
+      this.bowPhase=t>0.48?0:t>0.32?1:t>0.16?2:3;
+      if(this.bowPhase>=2&&!this.bowArrowFired){
+        this.bowArrowFired=true;
+        this.arrows.push(new Arrow(this.x+(this.dir>0?this.w+4:-4),this.y+this.h*.38,this.dir));
+      }
+    }
+    // 車乗り込みフェーズ
+    if(this.state==='car_enter'){
+      this.carEnterPhase=this.stT>1.0?1:this.stT>0.5?2:3;
+    }
 
     if(!stunned&&!dead){
       if(this.inCar){this._carUpd(dt,plats,stage);return;}
-      if(!atk){
+      if(carEntering){this.vx*=0.85;}
+      else if(!atk){
         if(isL()){this.vx=-this.spd;this.dir=-1;}
         else if(isR()){this.vx=this.spd;this.dir=1;}
         else this.vx*=0.72;
@@ -215,14 +261,16 @@ class Player{
           else if(this.mode===1&&this.jc===1){this.vy=JV2;this.jc=2;}
         }
         if(pollAtk()){
-          if(this.mode===0){this.state='bow';this.stT=0.5;this.arrows.push(new Arrow(this.x+(this.dir>0?this.w+4:-4),this.y+this.h*.38,this.dir));}
+          if(this.mode===0){this.state='bow';this.stT=0.65;this.bowPhase=0;this.bowArrowFired=false;}
           else{this.state='punch';this.stT=0.38;this._punch(enemies,stage);}
         }
         if(pollChg()){this.mode=this.mode===0?1:0;this.chgT=0.3;this.state='idle';this.vx=0;}
-        // ベンツ
+        // ベンツ乗り込み演出
         if(stage&&stage.benz&&!stage.benz.taken&&this.mode===0&&this.onG){
           const bz=stage.benz;
-          if(Math.abs(this.x+this.w/2-bz.cx)<90&&(pollJump()||isR())){bz.taken=true;this.inCar=true;this.carVx=2;}
+          if(Math.abs(this.x+this.w/2-bz.cx)<90&&(pollJump()||isR())){
+            bz.taken=true;this.state='car_enter';this.stT=1.5;this.carEnterPhase=1;this.vx=0;
+          }
         }
       } else {
         if(isL())this.vx=-this.spd*.4;
@@ -233,7 +281,7 @@ class Player{
 
     this._phys(dt,plats);
     for(let i=items.length-1;i>=0;i--)if(overlap(this,items[i])){items[i].take(this);items.splice(i,1);}
-    if(!stunned&&!dead&&!atk&&!this.inCar){
+    if(!stunned&&!dead&&!atk&&!this.inCar&&!carEntering){
       if(!this.onG)this.state=(this.mode===1&&this.jc===2)?'jump2':'jump';
       else if(Math.abs(this.vx)>3)this.state='run';
       else if(Math.abs(this.vx)>.3)this.state='walk';
@@ -294,23 +342,49 @@ class Player{
       }
     } else {
       const st=this.state;
-      // 人間モード：個別フレーム画像で大きく表示
-      if(this.mode===0 && hfrsReady && st!=='bow'){
-        let img=HFRS.idle;
-        if(st==='jump'||st==='jump2') img=HFRS.jump||HFRS.idle;
-        else if(st==='run')  img=HFRS.run||HFRS.walk||HFRS.idle;
-        else if(st==='walk') img=HFRS.walk||HFRS.idle;
-        if(img){
-          const DH=120,DW=Math.round(DH*img.width/img.height);
-          const ix=dx+this.w/2-DW/2, iy=this.y+this.h-DH;
-          if(this.dir<0){ctx.save();ctx.translate(ix+DW,iy);ctx.scale(-1,1);ctx.drawImage(img,0,0,DW,DH);ctx.restore();}
-          else ctx.drawImage(img,ix,iy,DW,DH);
-          if(st==='punch'&&this.stT<.18){
-            const ex=this.dir>0?dx+this.w+4:dx-34;
-            ctx.fillStyle='rgba(255,200,0,.8)';
-            ctx.beginPath();ctx.arc(ex+15,this.y+this.h*.44,22,0,Math.PI*2);ctx.fill();
+      // ── 人間モード個別フレーム ──
+      if(this.mode===0){
+        // 弓矢攻撃アニメ
+        if(st==='bow'&&hiReady){
+          const bimg=[HIMGS.bow1,HIMGS.bow2,HIMGS.bow3,HIMGS.bow4][this.bowPhase]||HIMGS.bow1;
+          if(bimg){
+            const DH=120,DW=Math.round(DH*bimg.width/bimg.height);
+            const ix=dx+this.w/2-DW/2,iy=this.y+this.h-DH;
+            if(this.dir<0){ctx.save();ctx.translate(ix+DW,iy);ctx.scale(-1,1);ctx.drawImage(bimg,0,0,DW,DH);ctx.restore();}
+            else ctx.drawImage(bimg,ix,iy,DW,DH);
+            return;
           }
-          return;
+        }
+        // 車乗り込みアニメ
+        if(st==='car_enter'&&hiReady){
+          const cimg=[null,HIMGS.car1,HIMGS.car2,HIMGS.car3][this.carEnterPhase]||HIMGS.car3;
+          if(cimg){
+            const DW=Math.round(cimg.width*1.0),DH=Math.round(cimg.height*1.0);
+            const scale=Math.min(180/DW,90/DH);
+            const dw=Math.round(DW*scale),dh=Math.round(DH*scale);
+            const ix=dx+this.w/2-dw/2,iy=this.y+this.h-dh;
+            ctx.drawImage(cimg,ix,iy,dw,dh);
+            return;
+          }
+        }
+        // 通常移動フレーム（idle/walk/run/jump）
+        if(hfrsReady&&st!=='bow'&&st!=='car_enter'){
+          let img=HFRS.idle;
+          if(st==='jump'||st==='jump2') img=HFRS.jump||HFRS.idle;
+          else if(st==='run')  img=HFRS.run||HFRS.walk||HFRS.idle;
+          else if(st==='walk') img=HFRS.walk||HFRS.idle;
+          if(img){
+            const DH=120,DW=Math.round(DH*img.width/img.height);
+            const ix=dx+this.w/2-DW/2,iy=this.y+this.h-DH;
+            if(this.dir<0){ctx.save();ctx.translate(ix+DW,iy);ctx.scale(-1,1);ctx.drawImage(img,0,0,DW,DH);ctx.restore();}
+            else ctx.drawImage(img,ix,iy,DW,DH);
+            if(st==='punch'&&this.stT<.18){
+              const ex=this.dir>0?dx+this.w+4:dx-34;
+              ctx.fillStyle='rgba(255,200,0,.8)';
+              ctx.beginPath();ctx.arc(ex+15,this.y+this.h*.44,22,0,Math.PI*2);ctx.fill();
+            }
+            return;
+          }
         }
       }
       // ゴリラモード or bow: スプライトシート
@@ -362,10 +436,14 @@ class Arrow{
     if(!this.alive)return;
     const dx=this.x-cx,ang=Math.atan2(this.vy,this.vx);
     ctx.save();ctx.translate(dx+this.w/2,this.y+this.h/2);ctx.rotate(ang);
-    const f=SP.H.bow&&IMGS.human2?null:null; // スプライト矢は省略
-    ctx.fillStyle='#a06020';ctx.fillRect(-this.w/2,-3,this.w,6);
-    ctx.fillStyle='#ffee00';ctx.beginPath();
-    ctx.moveTo(this.w/2,0);ctx.lineTo(this.w/2+10,-5);ctx.lineTo(this.w/2+10,5);ctx.fill();
+    if(HIMGS.arrow){
+      const aw=44,ah=Math.round(44*HIMGS.arrow.height/HIMGS.arrow.width);
+      ctx.drawImage(HIMGS.arrow,-aw/2,-ah/2,aw,ah);
+    } else {
+      ctx.fillStyle='#a06020';ctx.fillRect(-this.w/2,-3,this.w,6);
+      ctx.fillStyle='#ffee00';ctx.beginPath();
+      ctx.moveTo(this.w/2,0);ctx.lineTo(this.w/2+10,-5);ctx.lineTo(this.w/2+10,5);ctx.fill();
+    }
     ctx.restore();
   }
 }
@@ -731,7 +809,7 @@ let transCamDone=false;
 
 async function init(){
   resize();
-  loadHumanFrames();
+  loadHumanFrames();loadHumanAnim();
   if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(()=>{});
   await Promise.all([loadImg('title','title.png'),loadImg('human','human.png'),loadImg('gorilla','gorilla.png'),loadImg('human2','human2.png')]);
   showCtrl(false);

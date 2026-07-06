@@ -217,7 +217,7 @@ class Player{
   get spd(){return this.mode===0?SPD_H:SPD_G;}
 
   damage(n=1){
-    if(this.inv>0||this.state==='fall')return;
+    if(this.inCar||this.inv>0||this.state==='fall')return;
     this.gp=Math.max(0,this.gp-n);
     this.inv=1.8;this.stT=0.4;this.state='dmg';this.vx=-this.dir*3.5;
     if(this.gp<=0){this.state='fall';this.stT=3;}

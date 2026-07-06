@@ -117,7 +117,23 @@ function loadPlayerImgs(){
         const oc=document.createElement('canvas');oc.width=im.width;oc.height=im.height;
         const ox=oc.getContext('2d');ox.drawImage(im,0,0);
         const id=ox.getImageData(0,0,oc.width,oc.height),d=id.data;
-        for(let i=0;i<d.length;i+=4)if(d[i]>230&&d[i+1]>230&&d[i+2]>230)d[i+3]=0;
+        const W=oc.width,H=oc.height;
+        // 端から繋がった白背景だけ除去（BFS）
+        const vis=new Uint8Array(W*H);
+        const q=[];
+        for(let x=0;x<W;x++){q.push(x,W*(H-1)+x);}
+        for(let y=1;y<H-1;y++){q.push(y*W,y*W+W-1);}
+        let qi=0;
+        while(qi<q.length){
+          const idx=q[qi++];if(vis[idx])continue;vis[idx]=1;
+          const p=idx*4;
+          if(d[p]>230&&d[p+1]>230&&d[p+2]>230){
+            d[p+3]=0;
+            const x=idx%W,y=(idx/W)|0;
+            if(x>0)q.push(idx-1);if(x<W-1)q.push(idx+1);
+            if(y>0)q.push(idx-W);if(y<H-1)q.push(idx+W);
+          }
+        }
         ox.putImageData(id,0,0);PIMGS[key]=oc;
       }catch(e){PIMGS[key]=im;}
       if(++done===list.length)pimgsReady=true;

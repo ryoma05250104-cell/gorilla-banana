@@ -94,34 +94,32 @@ function loadImg(name,src){
   });
 }
 
-/* ── プレイヤー画像 (idle/walk/run/jump=白背景除去あり, bow/car=透過済み) ── */
+/* ── プレイヤー画像（全て白背景除去）── */
 const PIMGS={idle:null,walk:null,run:null,jump:null,bow2:null,bow3:null,car1:null,car2:null,car3:null};
 let pimgsReady=false;
 function loadPlayerImgs(){
   const list=[
-    ['idle','assets/player/idle.png',1],
-    ['walk','assets/player/walk.png',1],
-    ['run','assets/player/run.png',1],
-    ['jump','assets/player/jump.png',1],
-    ['bow2','assets/player/human/bow_2_aim.png',0],
-    ['bow3','assets/player/human/bow_3_fulldraw.png',0],
-    ['car1','assets/player/human/car_1_stand_beside.png',0],
-    ['car2','assets/player/human/car_2_getting_in.png',0],
-    ['car3','assets/player/human/car_3_seated.png',0],
+    ['idle','assets/player/idle.png'],
+    ['walk','assets/player/walk.png'],
+    ['run','assets/player/run.png'],
+    ['jump','assets/player/jump.png'],
+    ['bow2','assets/player/human/bow_2_aim.png'],
+    ['bow3','assets/player/human/bow_3_fulldraw.png'],
+    ['car1','assets/player/human/car_1_stand_beside.png'],
+    ['car2','assets/player/human/car_2_getting_in.png'],
+    ['car3','assets/player/human/car_3_seated.png'],
   ];
   let done=0;
-  list.forEach(([key,src,rmBg])=>{
+  list.forEach(([key,src])=>{
     const im=new Image();
     im.onload=()=>{
-      if(rmBg){
-        try{
-          const oc=document.createElement('canvas');oc.width=im.width;oc.height=im.height;
-          const ox=oc.getContext('2d');ox.drawImage(im,0,0);
-          const id=ox.getImageData(0,0,oc.width,oc.height),d=id.data;
-          for(let i=0;i<d.length;i+=4)if(d[i]>230&&d[i+1]>230&&d[i+2]>230)d[i+3]=0;
-          ox.putImageData(id,0,0);PIMGS[key]=oc;
-        }catch(e){PIMGS[key]=im;}
-      }else{PIMGS[key]=im;}
+      try{
+        const oc=document.createElement('canvas');oc.width=im.width;oc.height=im.height;
+        const ox=oc.getContext('2d');ox.drawImage(im,0,0);
+        const id=ox.getImageData(0,0,oc.width,oc.height),d=id.data;
+        for(let i=0;i<d.length;i+=4)if(d[i]>230&&d[i+1]>230&&d[i+2]>230)d[i+3]=0;
+        ox.putImageData(id,0,0);PIMGS[key]=oc;
+      }catch(e){PIMGS[key]=im;}
       if(++done===list.length)pimgsReady=true;
     };
     im.onerror=()=>{if(++done===list.length)pimgsReady=true;};

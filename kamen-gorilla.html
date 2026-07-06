@@ -235,14 +235,10 @@ class Player{
         this.state='idle';
       }
     }
-    // 弓フェーズ更新（0=引き, 1=満弦+発射, 2=残影）
+    // 弓フェーズ更新（0=引き, 1=満弦, 2=残影）※矢は発動時に即発射
     if(this.state==='bow'){
       const t=this.stT;
       this.bowPhase=t>0.35?0:t>0.15?1:2;
-      if(this.bowPhase>=1&&!this.bowArrowFired){
-        this.bowArrowFired=true;
-        this.arrows.push(new Arrow(this.x+(this.dir>0?this.w+4:-4),this.y+this.h*.38,this.dir));
-      }
     }
     // 車乗り込みフェーズ
     if(this.state==='car_enter'){
@@ -260,17 +256,24 @@ class Player{
           if(this.onG){this.vy=JV;this.jc=1;this.onG=false;}
           else if(this.mode===1&&this.jc===1){this.vy=JV2;this.jc=2;}
         }
-        if(pollAtk()){
-          if(this.mode===0){this.state='bow';this.stT=0.55;this.bowPhase=0;this.bowArrowFired=false;}
-          else{this.state='punch';this.stT=0.38;this._punch(enemies,stage);}
-        }
         if(pollChg()){this.mode=this.mode===0?1:0;this.chgT=0.3;this.state='idle';this.vx=0;}
-        // ベンツ乗り込み演出
+        // ベンツ乗り込み（右移動 or 攻撃ボタンで発動）
+        let _cet=false;
         if(stage&&stage.benz&&!stage.benz.taken&&this.mode===0&&this.onG){
           const bz=stage.benz;
-          if(Math.abs(this.x+this.w/2-bz.cx)<90&&(pollJump()||isR())){
+          if(Math.abs(this.x+this.w/2-bz.cx)<90&&(isR()||BTN.atk||KEY['KeyX']||KEY['Space'])){
+            pollAtk();// ATKが押されていたら消費
             bz.taken=true;this.state='car_enter';this.stT=1.5;this.carEnterPhase=1;this.vx=0;
+            _cet=true;
           }
+        }
+        if(!_cet&&pollAtk()){
+          if(this.mode===0){
+            // 矢を即発射してから弓アニメ開始
+            this.arrows.push(new Arrow(this.x+(this.dir>0?this.w+4:-4),this.y+this.h*.38,this.dir));
+            this.state='bow';this.stT=0.55;this.bowPhase=0;this.bowArrowFired=true;
+          }
+          else{this.state='punch';this.stT=0.38;this._punch(enemies,stage);}
         }
       } else {
         if(isL())this.vx=-this.spd*.4;
@@ -364,10 +367,10 @@ class Player{
             return;
           }
         }
-        // 車乗り込みアニメ（bow4=ドア際, car1=乗り込み中, car2=着座）
+        // 車乗り込みアニメ（car1=ドア際, car2=乗り込み中, car3=着座）
         if(st==='car_enter'&&hiReady){
-          const cImgs=[null,HIMGS.bow4,HIMGS.car1,HIMGS.car2];
-          const cimg=cImgs[this.carEnterPhase]||HIMGS.car2;
+          const cImgs=[null,HIMGS.car1,HIMGS.car2,HIMGS.car3];
+          const cimg=cImgs[this.carEnterPhase]||HIMGS.car3;
           if(cimg){
             const scale=Math.min(200/cimg.width,120/cimg.height);
             const dw=Math.round(cimg.width*scale),dh=Math.round(cimg.height*scale);

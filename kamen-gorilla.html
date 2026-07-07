@@ -95,7 +95,7 @@ function loadImg(name,src){
   });
 }
 
-/* ── 車外観画像（白背景BFS除去） ── */
+/* ── 車外観画像（角色BFS除去） ── */
 let carDriveImg=null;
 function loadCarImg(){
   const im=new Image();
@@ -105,13 +105,15 @@ function loadCarImg(){
       const ox=oc.getContext('2d');ox.drawImage(im,0,0);
       const id=ox.getImageData(0,0,oc.width,oc.height),d=id.data;
       const W=oc.width,H=oc.height,vis=new Uint8Array(W*H),q=[];
+      // 左上隅の色を背景色として採取
+      const bgR=d[0],bgG=d[1],bgB=d[2],tol=12;
       for(let x=0;x<W;x++){q.push(x,W*(H-1)+x);}
       for(let y=1;y<H-1;y++){q.push(y*W,y*W+W-1);}
       let qi=0;
       while(qi<q.length){
         const idx=q[qi++];if(vis[idx])continue;vis[idx]=1;
         const p=idx*4;
-        if(d[p]>230&&d[p+1]>230&&d[p+2]>230){
+        if(Math.abs(d[p]-bgR)<=tol&&Math.abs(d[p+1]-bgG)<=tol&&Math.abs(d[p+2]-bgB)<=tol){
           d[p+3]=0;
           const x=idx%W,y=(idx/W)|0;
           if(x>0)q.push(idx-1);if(x<W-1)q.push(idx+1);

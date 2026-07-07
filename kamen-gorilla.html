@@ -1021,7 +1021,10 @@ function _tapStart(){
   if(gs===GS.CLEAR||gs===GS.OVER){gs=GS.TITLE;showCtrl(false);}
 }
 cv.addEventListener('pointerdown',_tapStart);
-cv.addEventListener('touchstart',e=>{e.preventDefault();_tapStart();},{passive:false});
+// スマホ：タイトル・クリア・ゲームオーバー時のみタップでスタート
+document.addEventListener('touchstart',e=>{
+  if(gs===GS.TITLE||gs===GS.CLEAR||gs===GS.OVER){e.preventDefault();_tapStart();}
+},{passive:false});
 document.addEventListener('keydown',e=>{
   if((e.code==='Enter'||e.code==='Space')&&(gs===GS.TITLE))startGame();
   if((e.code==='Enter')&&(gs===GS.CLEAR||gs===GS.OVER))gs=GS.TITLE;

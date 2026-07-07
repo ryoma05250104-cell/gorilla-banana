@@ -851,35 +851,26 @@ class Stage{
   _build(){
     const block=(x,y,w)=>({x,y,w,h:16,col:'#c87030',solid:true,cracked:false,broken:false,isBlock:true});
     const crystal=(x,y,w,h)=>({x,y,w,h,col:'#e890d8',solid:true,cracked:false,broken:false,isCrystal:true});
-    // 地面（マリオ風）
+    // 地面
     this.plats.push({x:0,y:480,w:4160,h:80,col:'#5a3010',solid:true,cracked:false,broken:false,isGround:true});
-    // ═ スクリーン0 ═  マリオ風ブロック配置
-    this.plats.push(block(280,432,96));   // 低い（1段）
-    this.plats.push(block(480,384,64));   // 中（2段）
-    this.plats.push(block(640,432,128));  // 低い
-    this.plats.push(block(820,352,64));   // 高め（3段）
-    this.bananas.push(new Banana(160,450));this.bananas.push(new Banana(320,402));
-    this.bananas.push(new Banana(520,354));this.bananas.push(new Banana(860,322));
-    this.enemies.push(new Enemy('patrol',400,436));this.enemies.push(new Enemy('patrol',700,436));
+    // ═ スクリーン0：地面は広くあけてジャンプ踏み台2枚 ═
+    this.plats.push(block(360,400,96));   // ジャンプで乗れる高さ
+    this.plats.push(block(720,370,80));   // もう少し高い
+    this.bananas.push(new Banana(400,370));this.bananas.push(new Banana(760,340));
+    this.enemies.push(new Enemy('patrol',520,436));this.enemies.push(new Enemy('patrol',860,436));
     // ═ スクリーン1 ═
-    this.plats.push(block(1020,432,64));
-    this.plats.push(block(1140,384,96));
-    this.plats.push(block(1320,432,64));
-    this.plats.push(block(1460,352,96));
-    this.bananas.push(new Banana(1060,402));this.bananas.push(new Banana(1190,354));
-    this.bananas.push(new Banana(1360,402));this.bananas.push(new Banana(1500,322));
-    this.enemies.push(new Enemy('patrol',1080,436));this.enemies.push(new Enemy('spike',1260,436));
+    this.plats.push(block(1080,390,96));
+    this.plats.push(block(1500,365,80));
+    this.bananas.push(new Banana(1120,360));this.bananas.push(new Banana(1540,335));
+    this.enemies.push(new Enemy('patrol',1200,436));this.enemies.push(new Enemy('spike',1380,436));
     // 亀裂壁（ゴリラパンチで壊す）
     const cw=mkP(1760,290,32,192,'#a04020',true,true);
     this.crackWall=cw;this.plats.push(cw);
     // ═ スクリーン2 ═
-    this.plats.push(block(1960,384,96));
-    this.plats.push(block(2120,432,64));
-    this.plats.push(block(2280,352,128));
-    this.plats.push(block(2520,432,96));
-    this.bananas.push(new Banana(2000,354));this.bananas.push(new Banana(2160,402));
-    this.bananas.push(new Banana(2320,322));this.bananas.push(new Banana(2560,402));
-    this.enemies.push(new Enemy('patrol',2060,436));this.enemies.push(new Enemy('fly',2350,260));
+    this.plats.push(block(2060,395,96));
+    this.plats.push(block(2480,370,80));
+    this.bananas.push(new Banana(2100,365));this.bananas.push(new Banana(2520,340));
+    this.enemies.push(new Enemy('patrol',2200,436));this.enemies.push(new Enemy('fly',2380,260));
     this.enemies.push(new Enemy('patrol',2620,436));
     // ═ ボスエリア：クリスタル山 ═
     this.plats.push({x:2880,y:480,w:1280,h:80,col:'#3a0860',solid:true,cracked:false,broken:false,isGround:true,isBossGround:true});

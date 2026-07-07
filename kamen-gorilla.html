@@ -95,8 +95,34 @@ function loadImg(name,src){
   });
 }
 
-/* ── 車外観画像（白背景除去なし） ── */
+/* ── 車外観画像（白背景BFS除去） ── */
 let carDriveImg=null;
+function loadCarImg(){
+  const im=new Image();
+  im.onload=()=>{
+    try{
+      const oc=document.createElement('canvas');oc.width=im.width;oc.height=im.height;
+      const ox=oc.getContext('2d');ox.drawImage(im,0,0);
+      const id=ox.getImageData(0,0,oc.width,oc.height),d=id.data;
+      const W=oc.width,H=oc.height,vis=new Uint8Array(W*H),q=[];
+      for(let x=0;x<W;x++){q.push(x,W*(H-1)+x);}
+      for(let y=1;y<H-1;y++){q.push(y*W,y*W+W-1);}
+      let qi=0;
+      while(qi<q.length){
+        const idx=q[qi++];if(vis[idx])continue;vis[idx]=1;
+        const p=idx*4;
+        if(d[p]>230&&d[p+1]>230&&d[p+2]>230){
+          d[p+3]=0;
+          const x=idx%W,y=(idx/W)|0;
+          if(x>0)q.push(idx-1);if(x<W-1)q.push(idx+1);
+          if(y>0)q.push(idx-W);if(y<H-1)q.push(idx+W);
+        }
+      }
+      ox.putImageData(id,0,0);carDriveImg=oc;
+    }catch(e){carDriveImg=im;}
+  };
+  im.src='assets/car_drive.jpg';
+}
 
 /* ── プレイヤー画像（全て白背景除去）── */
 const PIMGS={idle:null,walk:null,run:null,jump:null,bow2:null,bow3:null,car1:null,car2:null,car3:null};
@@ -823,7 +849,7 @@ class Benz{
   draw(cx){
     const dx=this.x-cx;
     if(dx+this.w<-60||dx>CW+60)return;
-    if(carDriveImg&&carDriveImg.complete&&carDriveImg.naturalWidth>0){
+    if(carDriveImg&&carDriveImg.width>0){
       const iw=220,ih=Math.round(220*carDriveImg.naturalHeight/carDriveImg.naturalWidth);
       ctx.drawImage(carDriveImg,dx+this.w/2-iw/2,this.y+this.h-ih+8,iw,ih);
     } else {
@@ -999,7 +1025,7 @@ async function init(){
   loadAtkImgs();
   try{if(screen.orientation&&screen.orientation.lock){const p=screen.orientation.lock('landscape');if(p&&p.catch)p.catch(()=>{});}}catch(e){}
   await Promise.all([loadImg('title','title.png'),loadImg('human','human.png'),loadImg('gorilla','gorilla.png'),loadImg('human2','human2.png')]);
-  carDriveImg=new Image();carDriveImg.src='assets/car_drive.jpg';
+  loadCarImg();
   showCtrl(false);
   requestAnimationFrame(loop);
 }

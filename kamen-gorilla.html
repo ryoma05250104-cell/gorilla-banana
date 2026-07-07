@@ -15,6 +15,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:no
 <body>
 <canvas id="cv" width="960" height="540"></canvas>
 <div id="ctrl"></div>
+<div id="startBtn" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:20;background:transparent;display:none;"></div>
 <script>
 'use strict';
 const CW=960,CH=540,GRAV=0.55,MAX_GP=6;
@@ -1000,13 +1001,16 @@ async function init(){
   loadPlayerImgs();
   loadGorillaImgs();
   loadAtkImgs();
-  if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(()=>{});
+  try{if(screen.orientation&&screen.orientation.lock){const p=screen.orientation.lock('landscape');if(p&&p.catch)p.catch(()=>{});}}catch(e){}
   await Promise.all([loadImg('title','title.png'),loadImg('human','human.png'),loadImg('gorilla','gorilla.png'),loadImg('human2','human2.png')]);
   showCtrl(false);
   requestAnimationFrame(loop);
 }
 
-function showCtrl(v){document.getElementById('ctrl').style.visibility=v?'visible':'hidden';}
+function showCtrl(v){
+  document.getElementById('ctrl').style.visibility=v?'visible':'hidden';
+  document.getElementById('startBtn').style.display=v?'none':'block';
+}
 
 function startGame(){
   player=new Player();stage=new Stage();
@@ -1021,10 +1025,10 @@ function _tapStart(){
   if(gs===GS.CLEAR||gs===GS.OVER){gs=GS.TITLE;showCtrl(false);}
 }
 cv.addEventListener('pointerdown',_tapStart);
-// スマホ：タイトル・クリア・ゲームオーバー時のみタップでスタート
-document.addEventListener('touchstart',e=>{
-  if(gs===GS.TITLE||gs===GS.CLEAR||gs===GS.OVER){e.preventDefault();_tapStart();}
-},{passive:false});
+// スマホ用：透明オーバーレイでタップを確実に検知
+const _sb=document.getElementById('startBtn');
+_sb.addEventListener('touchstart',e=>{e.preventDefault();_tapStart();},{passive:false});
+_sb.addEventListener('click',_tapStart);
 document.addEventListener('keydown',e=>{
   if((e.code==='Enter'||e.code==='Space')&&(gs===GS.TITLE))startGame();
   if((e.code==='Enter')&&(gs===GS.CLEAR||gs===GS.OVER))gs=GS.TITLE;

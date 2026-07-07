@@ -890,9 +890,9 @@ class Stage{
       this.plats.push(crystal(cx-l.w/2,l.y,l.w,Math.max(18,482-l.y)));
     }
     this.plats.push(crystal(cx-40,190,80,22));
-    // 脇足場（クラウド）
-    this.plats.push(cloud(cx-310,340,90,14,'#ffa8e0'));
-    this.plats.push(cloud(cx+220,340,90,14,'#ffa8e0'));
+    // 脇足場
+    this.plats.push(block(cx-310,340,90));
+    this.plats.push(block(cx+220,340,90));
     // ボス
     const boss=new Enemy('boss',cx-40,100);this.boss=boss;this.enemies.push(boss);
     // バナナ

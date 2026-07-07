@@ -10,13 +10,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:no
 #cv{position:fixed;image-rendering:pixelated;cursor:none;}
 #ctrl{position:fixed;pointer-events:none;}
 .btn{position:absolute;pointer-events:all;border-radius:50%;border:3px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;font-family:sans-serif;-webkit-tap-highlight-color:transparent;touch-action:none;}
-#rot{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#111;z-index:9999;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:26px;font-family:sans-serif;text-align:center;gap:16px;}
 </style>
 </head>
 <body>
 <canvas id="cv" width="960" height="540"></canvas>
 <div id="ctrl"></div>
-<div id="rot"><div style="font-size:64px">🔄</div><div>横向きにしてください</div><div style="font-size:16px;opacity:.6">Please rotate your device</div></div>
 <script>
 'use strict';
 const CW=960,CH=540,GRAV=0.55,MAX_GP=6;
@@ -37,13 +35,10 @@ function resize(){
   document.getElementById('ctrl').style.cssText=`position:fixed;left:${lx}px;top:${ty}px;width:${cw}px;height:${ch}px;pointer-events:none;`;
   buildCtrl();
 }
-const _rotDiv=document.getElementById('rot');
-function checkOrient(){_rotDiv.style.display=window.innerHeight>window.innerWidth?'flex':'none';}
-window.addEventListener('resize',()=>{resize();checkOrient();});
-window.addEventListener('orientationchange',()=>setTimeout(()=>{resize();checkOrient();},300));
-checkOrient();
+window.addEventListener('resize',resize);
+window.addEventListener('orientationchange',()=>setTimeout(resize,300));
 
-/* ── タッチボタン（グローバルマルチタッチ対応） ── */
+/* ── タッチボタン ── */
 const BTN={L:0,R:0,jump:0,atk:0,chg:0};
 function buildCtrl(){
   const ctrl=document.getElementById('ctrl');
@@ -51,8 +46,11 @@ function buildCtrl(){
   const s=Math.min(scale,1.8);
   function mk(prop,label,style){
     const d=document.createElement('div');
-    d.className='btn';d.textContent=label;d._prop=prop;
+    d.className='btn';d.textContent=label;
     Object.assign(d.style,style);
+    d.addEventListener('touchstart',e=>{e.preventDefault();BTN[prop]=1;},{passive:false});
+    d.addEventListener('touchend',  e=>{e.preventDefault();BTN[prop]=0;},{passive:false});
+    d.addEventListener('touchcancel',()=>{BTN[prop]=0;});
     ctrl.appendChild(d);
   }
   const b=Math.round(20*s),ls=Math.round(14*s),rs=Math.round(14*s);
@@ -63,44 +61,6 @@ function buildCtrl(){
   mk('chg','変',{bottom:(b+Math.round(132*s))+'px',right:(rs+Math.round(132*s))+'px',width:sz(90),height:sz(90),background:'rgba(60,60,220,.6)',fontSize:'20px'});
   mk('atk','攻',{bottom:b+'px',right:(rs+Math.round(132*s))+'px',width:sz(120),height:sz(120),background:'rgba(220,40,40,.7)',fontSize:'28px'});
 }
-// グローバルマルチタッチ処理（複数指同時押し対応）
-const _tchMap=new Map();
-function _getBtnAt(x,y){
-  const ctrl=document.getElementById('ctrl');
-  if(!ctrl)return null;
-  for(const d of ctrl.querySelectorAll('.btn')){
-    const r=d.getBoundingClientRect();
-    if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom)return d._prop;
-  }
-  return null;
-}
-document.addEventListener('touchstart',e=>{
-  e.preventDefault();
-  for(const t of e.changedTouches){
-    const p=_getBtnAt(t.clientX,t.clientY);
-    if(p){BTN[p]=1;_tchMap.set(t.identifier,p);}
-  }
-},{passive:false});
-document.addEventListener('touchend',e=>{
-  e.preventDefault();
-  for(const t of e.changedTouches){
-    const p=_tchMap.get(t.identifier);
-    if(p){BTN[p]=0;_tchMap.delete(t.identifier);}
-  }
-},{passive:false});
-document.addEventListener('touchmove',e=>{
-  e.preventDefault();
-  for(const t of e.changedTouches){
-    const op=_tchMap.get(t.identifier),np=_getBtnAt(t.clientX,t.clientY);
-    if(op!==np){
-      if(op)BTN[op]=0;
-      if(np){BTN[np]=1;_tchMap.set(t.identifier,np);}else _tchMap.delete(t.identifier);
-    }
-  }
-},{passive:false});
-document.addEventListener('touchcancel',e=>{
-  for(const t of e.changedTouches){const p=_tchMap.get(t.identifier);if(p){BTN[p]=0;_tchMap.delete(t.identifier);}}
-});
 
 /* ── キーボード ── */
 const KEY={};

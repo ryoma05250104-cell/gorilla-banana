@@ -32,7 +32,8 @@ function resize(){
   const cw=CW*scale|0,ch=CH*scale|0;
   const lx=(W-cw)/2|0,ty=(H-ch)/2|0;
   cv.style.cssText=`position:fixed;left:${lx}px;top:${ty}px;width:${cw}px;height:${ch}px;`;
-  document.getElementById('ctrl').style.cssText=`position:fixed;left:${lx}px;top:${ty}px;width:${cw}px;height:${ch}px;pointer-events:none;`;
+  const ctrl=document.getElementById('ctrl');
+  ctrl.style.cssText=`position:fixed;left:${lx}px;top:${ty}px;width:${cw}px;height:${ch}px;pointer-events:none;visibility:${_ctrlVisible?'visible':'hidden'};`;
   buildCtrl();
 }
 window.addEventListener('resize',resize);
@@ -1006,8 +1007,10 @@ async function init(){
   requestAnimationFrame(loop);
 }
 
+let _ctrlVisible=false;
 function showCtrl(v){
-  document.getElementById('ctrl').style.display=v?'block':'none';
+  _ctrlVisible=v;
+  document.getElementById('ctrl').style.visibility=v?'visible':'hidden';
 }
 
 function startGame(){
@@ -1022,8 +1025,10 @@ function _tapStart(){
   if(gs===GS.TITLE){startGame();return;}
   if(gs===GS.CLEAR||gs===GS.OVER){gs=GS.TITLE;showCtrl(false);}
 }
-cv.addEventListener('pointerdown',_tapStart);
-// スマホ：キャプチャフェーズで最優先にタッチを検知
+// PC・スマホ両対応：キャプチャフェーズで全タップ・クリックを最優先検知
+window.addEventListener('pointerdown',()=>{
+  if(gs===GS.TITLE||gs===GS.CLEAR||gs===GS.OVER)_tapStart();
+},{capture:true});
 window.addEventListener('touchstart',e=>{
   if(gs===GS.TITLE||gs===GS.CLEAR||gs===GS.OVER){e.preventDefault();_tapStart();}
 },{capture:true,passive:false});

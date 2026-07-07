@@ -60,8 +60,8 @@ function buildCtrl(){
   }
   const b=Math.round(14*s),ls=Math.round(10*s),rs=Math.round(10*s);
   const sz=v=>Math.round(v*s)+'px';
-  mk('L','◀',{bottom:b+'px',left:ls+'px',width:sz(88),height:sz(88),background:'rgba(255,255,255,.13)',fontSize:'30px'});
-  mk('R','▶',{bottom:b+'px',left:(ls+Math.round(100*s))+'px',width:sz(88),height:sz(88),background:'rgba(255,255,255,.13)',fontSize:'30px'});
+  mk('L','◀',{bottom:b+'px',left:ls+'px',width:sz(112),height:sz(112),background:'rgba(255,255,255,.13)',fontSize:'36px'});
+  mk('R','▶',{bottom:b+'px',left:(ls+Math.round(122*s))+'px',width:sz(112),height:sz(112),background:'rgba(255,255,255,.13)',fontSize:'36px'});
   mk('jump','↑',{bottom:b+'px',right:rs+'px',width:sz(92),height:sz(92),background:'rgba(40,200,60,.55)',fontSize:'32px'});
   mk('chg','変',{bottom:(b+Math.round(104*s))+'px',right:(rs+Math.round(100*s))+'px',width:sz(76),height:sz(76),background:'rgba(60,60,220,.55)',fontSize:'16px'});
   mk('atk','攻',{bottom:b+'px',right:(rs+Math.round(104*s))+'px',width:sz(100),height:sz(100),background:'rgba(220,40,40,.65)',fontSize:'22px'});
@@ -210,10 +210,10 @@ function loadAtkImgs(){
 }
 // 攻撃データ: keys=フレームキー列, durs=各フレーム秒, hitF=ダメージ発動フレーム, dmg=ダメージ量
 const G_ATK={
-  gpunch:{keys:['punch_charge','punch_crouch_spark','punch_lunge'],        durs:[0.15,0.15,0.2], hitF:1,dmg:2,reach:75},
-  gwalk: {keys:['punch_straight_streak','punch_standing_spark'],           durs:[0.1,0.15],      hitF:0,dmg:2,reach:70},
-  gdash: {keys:['dash_jump','dash_punch_1','dash_punch_2','dash_punch_hit_spark'],durs:[0.08,0.1,0.12,0.15],hitF:2,dmg:3,reach:90},
-  gkick: {keys:['kick_flying_spark','kick_spark'],                         durs:[0.18,0.18],     hitF:0,dmg:2,reach:70},
+  gpunch:{keys:['punch_charge','punch_crouch_spark','punch_lunge'],        durs:[0.15,0.15,0.2], hitF:1,dmg:2,reach:110},
+  gwalk: {keys:['punch_straight_streak','punch_standing_spark'],           durs:[0.1,0.15],      hitF:0,dmg:2,reach:100},
+  gdash: {keys:['dash_jump','dash_punch_1','dash_punch_2','dash_punch_hit_spark'],durs:[0.08,0.1,0.12,0.15],hitF:2,dmg:3,reach:160},
+  gkick: {keys:['kick_flying_spark','kick_spark'],                         durs:[0.18,0.18],     hitF:0,dmg:2,reach:110},
   gspin: {keys:['spin_attack','spin_attack_end'],                          durs:[0.2,0.25],      hitF:0,dmg:3,area:true},
   gground:{keys:['punch_charge','ground_pound'],                           durs:[0.12,0.35],     hitF:1,dmg:4,groundArea:true},
 };
@@ -283,6 +283,7 @@ class Player{
     this._gDmgF=0;
     this._gAtkType='';this._gAtkF=0;this._gAtkT=0;
     this._gAtkKeys=null;this._gAtkDurs=null;this._gAtkHit=false;
+    this._carHitCd=0;
     this._anims();
   }
   _anims(){
@@ -298,7 +299,7 @@ class Player{
   get spd(){return this.mode===0?SPD_H:SPD_G;}
 
   damage(n=1){
-    if(this.inCar||this.inv>0||this.state==='fall')return;
+    if(this.inCar||this.state==='car_enter'||this.inv>0||this.state==='fall')return;
     this.gp=Math.max(0,this.gp-n);
     this.inv=1.8;this.stT=0.4;this.state='dmg';this.vx=-this.dir*3.5;
     if(this.gp<=0){this.state='fall';this.stT=3;}
@@ -329,12 +330,13 @@ class Player{
     }
 
     if(!stunned&&!dead){
-      if(this.inCar){this._carUpd(dt,plats,stage);return;}
+      if(this.inCar){this._carUpd(dt,plats,stage,enemies);return;}
       if(carEntering){this.vx*=0.85;}
       else if(!atk){
         if(isL()){this.vx=-this.spd;this.dir=-1;}
         else if(isR()){this.vx=this.spd;this.dir=1;}
         else this.vx*=0.72;
+        const wasOnG=this.onG; // ジャンプ前の接地状態を保存（同時押し対策）
         if(pollJump()){
           if(this.onG){this.vy=JV;this.jc=1;this.onG=false;}
           else if(this.mode===1&&this.jc===1){this.vy=JV2;this.jc=2;}
@@ -357,11 +359,11 @@ class Player{
             this.state='bow';this.stT=0.55;this.bowPhase=0;this.bowArrowFired=true;
           }
           else{
-            // ゴリラ攻撃: 速度・空中状態で技を分岐
+            // ゴリラ攻撃: wasOnGを使い、同フレームのジャンプで空中判定にならないよう対策
             let atype;
-            if(!this.onG&&this.vy>3)       atype='gground';
-            else if(!this.onG&&this.state==='jump2') atype='gspin';
-            else if(!this.onG)             atype='gkick';
+            if(!wasOnG&&this.vy>3)         atype='gground';
+            else if(!wasOnG&&this.jc===2)  atype='gspin';
+            else if(!wasOnG)               atype='gkick';
             else if(Math.abs(this.vx)>3)   atype='gdash';
             else if(Math.abs(this.vx)>0.3) atype='gwalk';
             else                           atype='gpunch';
@@ -408,7 +410,7 @@ class Player{
     }
   }
 
-  _carUpd(dt,plats,stage){
+  _carUpd(dt,plats,stage,enemies){
     if(isL())this.carVx=Math.max(this.carVx-.5,-10);
     else if(isR())this.carVx=Math.min(this.carVx+.5,10);
     else this.carVx*=.88;
@@ -417,6 +419,19 @@ class Player{
     if(pollChg()){this.inCar=false;this.mode=1;this.chgT=.2;return;}
     this.vx=this.carVx;this._phys(dt,plats);
     this.aH.carD.tick(dt);
+    // 敵を轢く（車の視覚サイズに合わせた当たり判定、速度2以上）
+    if(this._carHitCd>0){this._carHitCd-=dt;return;}
+    if(enemies&&Math.abs(this.carVx)>2){
+      const rW=180,rH=100,rX=this.x+this.w/2-90,rY=this.y+this.h-rH;
+      for(const e of enemies){
+        if(e.alive&&overlapR(rX,rY,rW,rH,e.x,e.y,e.w,e.h)){
+          e.hit(Math.max(2,Math.round(Math.abs(this.carVx)/2.5)),'punch');
+          this._carHitCd=0.4;
+          this.carVx*=0.55;
+          break;
+        }
+      }
+    }
   }
 
   _punch(enemies,stage){
@@ -426,9 +441,15 @@ class Player{
   }
   _gDoAtk(enemies,stage,ad){
     let px,py,pw,ph;
-    if(ad.groundArea){px=this.x-60;py=this.y+this.h-20;pw=this.w+120;ph=25;}
-    else if(ad.area){px=this.x-50;py=this.y-20;pw=this.w+100;ph=this.h+30;}
-    else{const r=ad.reach||75;px=this.dir>0?this.x+this.w:this.x-r;py=this.y;pw=r;ph=this.h;}
+    if(ad.groundArea){px=this.x-70;py=this.y+this.h-20;pw=this.w+140;ph=30;}
+    else if(ad.area){px=this.x-70;py=this.y-20;pw=this.w+140;ph=this.h+40;}
+    else{
+      const r=ad.reach||110;
+      // プレイヤー中心よりやや前から判定開始（端スタートより当たりやすい）
+      const ox=this.w*0.35|0;
+      px=this.dir>0?this.x+ox:this.x+this.w-ox-r;
+      py=this.y-10;pw=r;ph=this.h+20;
+    }
     const dmg=ad.dmg||2;
     for(const e of enemies)if(e.alive&&overlapR(px,py,pw,ph,e.x,e.y,e.w,e.h))e.hit(dmg,'punch');
     if(stage)stage.tryBreak(px,py,pw,ph);
@@ -454,11 +475,12 @@ class Player{
     const dx=this.x-cx;
     if(this.inv>0&&Math.floor(this.inv*8)%2)return;
     if(this.chgT>0){
-      ctx.save();ctx.globalAlpha=Math.min(1,this.chgT*3);
-      const g=ctx.createRadialGradient(dx+this.w/2,this.y+this.h/2,0,dx+this.w/2,this.y+this.h/2,60);
-      g.addColorStop(0,'rgba(255,255,0,.9)');g.addColorStop(1,'transparent');
-      ctx.fillStyle=g;ctx.beginPath();ctx.arc(dx+this.w/2,this.y+this.h/2,60,0,Math.PI*2);ctx.fill();
+      ctx.save();ctx.globalAlpha=Math.min(1,this.chgT*4);
+      const g=ctx.createRadialGradient(dx+this.w/2,this.y+this.h/2,0,dx+this.w/2,this.y+this.h/2,70);
+      g.addColorStop(0,'rgba(255,255,0,.95)');g.addColorStop(1,'transparent');
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(dx+this.w/2,this.y+this.h/2,70,0,Math.PI*2);ctx.fill();
       ctx.restore();
+      return; // 変身中はキャラ描画スキップ（白背景問題回避）
     }
     if(this.inCar){
       // 走行中
@@ -466,8 +488,19 @@ class Player{
       if(cdr){
         const DH=120,DW=Math.round(DH*cdr.width/cdr.height);
         const ix=dx+this.w/2-DW/2,iy=this.y+this.h-DH;
-        if(this.dir<0){ctx.save();ctx.translate(ix+DW,iy);ctx.scale(-1,1);ctx.drawImage(cdr,0,0,DW,DH);ctx.restore();}
+        // car2は左向き画像なので右移動時にフリップ
+        if(this.dir>0){ctx.save();ctx.translate(ix+DW,iy);ctx.scale(-1,1);ctx.drawImage(cdr,0,0,DW,DH);ctx.restore();}
         else ctx.drawImage(cdr,ix,iy,DW,DH);
+        // スター無敵エフェクト（レインボーグロー）
+        const hue=(Date.now()/60)%360;
+        const scx=ix+DW/2,scy=iy+DH/2;
+        const grd=ctx.createRadialGradient(scx,scy,15,scx,scy,85);
+        grd.addColorStop(0,`hsla(${hue},100%,75%,0.55)`);
+        grd.addColorStop(0.5,`hsla(${(hue+120)%360},100%,65%,0.3)`);
+        grd.addColorStop(1,`hsla(${(hue+240)%360},100%,55%,0)`);
+        ctx.save();ctx.fillStyle=grd;
+        ctx.beginPath();ctx.ellipse(scx,scy,DW*0.65,DH*0.75,0,0,Math.PI*2);ctx.fill();
+        ctx.restore();
       } else {
         const f=this.aH.carD.f,dw=200,dh=120,cy=this.y+this.h-dh;
         if(!drawSpr(IMGS.human2,f,dx-30,cy,dw,dh,this.dir<0)){
@@ -813,67 +846,64 @@ function mkP(x,y,w,h,col='#4a8a4a',solid=true,cracked=false){return{x,y,w,h,col,
 class Stage{
   constructor(){
     this.plats=[];this.enemies=[];this.bananas=[];this.peels=[];
-    this.worldW=6200;this.shutterX=3700;
-    this.hospX=2340;this.hospW=260;this.hospUsed=false;
-    this.benz=new Benz(1500,394);this.crackWall=null;this.boss=null;
+    this.worldW=4160;this.shutterX=2880;
+    this.hospX=1640;this.hospW=260;this.hospUsed=false;
+    this.benz=new Benz(750,394);this.crackWall=null;this.boss=null;
     this._build();
   }
   _build(){
-    // 地面
-    this.plats.push(mkP(0,480,6200,80,'#3a7a3a'));
-    // セクション1
-    this.plats.push(mkP(280,418,110,14,'#5a9a5a'));
-    this.plats.push(mkP(460,362,110,14,'#5a9a5a'));
-    this.plats.push(mkP(640,312,110,14,'#5a9a5a'));
-    this.bananas.push(new Banana(150,450));this.bananas.push(new Banana(315,388));this.bananas.push(new Banana(500,282));
-    this.enemies.push(new Enemy('patrol',430,436));this.enemies.push(new Enemy('patrol',710,436));
-    // セクション2（飛びうさぎ）
-    this.plats.push(mkP(900,424,130,14,'#5a9a5a'));this.plats.push(mkP(1120,358,130,14,'#5a9a5a'));
-    const f1=new Enemy('fly',1000,195);const f2=new Enemy('fly',1260,165);
-    this.enemies.push(f1);this.enemies.push(f2);
-    this.bananas.push(new Banana(940,394));this.bananas.push(new Banana(1170,328));
-    this.enemies.push(new Enemy('patrol',1080,436));
-    // ベンツエリア
-    this.bananas.push(new Banana(1680,450));this.enemies.push(new Enemy('patrol',1800,436));
-    // セクション3（ゴリラ必要）
-    this.plats.push(mkP(2010,402,120,14,'#5a9a5a'));this.plats.push(mkP(2180,342,120,14,'#5a9a5a'));
-    this.enemies.push(new Enemy('spike',2060,436));this.enemies.push(new Enemy('spike',2220,298));
-    const cw=mkP(2360,292,32,190,'#b08060',true,true);
+    const cloud=(x,y,w,h,col)=>({x,y,w,h,col,solid:true,cracked:false,broken:false,isCloud:true});
+    const crystal=(x,y,w,h)=>({x,y,w,h,col:'#e890d8',solid:true,cracked:false,broken:false,isCrystal:true});
+    // 地面（ラベンダー）
+    this.plats.push(mkP(0,480,4160,80,'#b06ab8'));
+    // ═ スクリーン0 ═
+    this.plats.push(cloud(220,400,120,14,'#ffb8e8'));
+    this.plats.push(cloud(440,340,120,14,'#d8b8ff'));
+    this.plats.push(cloud(680,290,120,14,'#b8d8ff'));
+    this.bananas.push(new Banana(150,450));this.bananas.push(new Banana(260,370));
+    this.bananas.push(new Banana(480,310));this.bananas.push(new Banana(720,260));
+    this.enemies.push(new Enemy('patrol',360,436));
+    this.enemies.push(new Enemy('fly',570,200));
+    // ═ スクリーン1 ═
+    this.plats.push(cloud(1040,414,120,14,'#ffe880'));
+    this.plats.push(cloud(1270,354,120,14,'#ffb8e8'));
+    this.plats.push(cloud(1490,294,120,14,'#d8b8ff'));
+    this.bananas.push(new Banana(1080,384));this.bananas.push(new Banana(1310,324));
+    this.bananas.push(new Banana(1530,264));
+    this.enemies.push(new Enemy('patrol',1120,436));
+    this.enemies.push(new Enemy('spike',1310,310));
+    // 亀裂壁（ゴリラパンチで壊す）
+    const cw=mkP(1760,290,32,192,'#c060c8',true,true);
     this.crackWall=cw;this.plats.push(cw);
-    this.bananas.push(new Banana(2090,372));this.bananas.push(new Banana(2210,312));
-    // 病院（非ソリッド）
-    // セクション4
-    this.plats.push(mkP(2720,424,130,14,'#5a9a5a'));this.plats.push(mkP(2930,358,130,14,'#5a9a5a'));
-    const f3=new Enemy('fly',2810,185);this.enemies.push(f3);
-    this.enemies.push(new Enemy('patrol',2980,436));this.enemies.push(new Enemy('spike',3090,314));
-    this.bananas.push(new Banana(2750,394));this.bananas.push(new Banana(2970,328));
-    // シャッター前地面
-    this.plats.push(mkP(3560,480,400,80,'#3a7a3a'));
-    // ═ ボスエリア：バナナの山 ═
-    this.plats.push(mkP(3790,480,2200,80,'#4a6020'));
-    // バナナの山（中心x=4750）
-    const cx=4750;
+    // ═ スクリーン2 ═
+    this.plats.push(cloud(1980,404,120,14,'#b8d8ff'));
+    this.plats.push(cloud(2200,344,120,14,'#ffe880'));
+    this.plats.push(cloud(2440,284,120,14,'#ffb8e8'));
+    this.bananas.push(new Banana(2020,374));this.bananas.push(new Banana(2240,314));
+    this.bananas.push(new Banana(2480,254));
+    this.enemies.push(new Enemy('spike',2060,436));
+    this.enemies.push(new Enemy('patrol',2280,436));
+    this.enemies.push(new Enemy('fly',2460,185));
+    // ═ ボスエリア：クリスタル山 ═
+    this.plats.push(mkP(2880,480,1280,80,'#8830a8'));
+    const cx=3520;
     const layers=[
-      {w:840,y:446},{w:680,y:410},{w:540,y:374},
-      {w:400,y:338},{w:270,y:302},{w:160,y:266},{w:80,y:230}
+      {w:720,y:448},{w:560,y:410},{w:420,y:372},
+      {w:300,y:334},{w:200,y:296},{w:120,y:258},{w:60,y:222}
     ];
     for(const l of layers){
-      const lh=Math.max(18,482-l.y);
-      this.plats.push({x:cx-l.w/2,y:l.y,w:l.w,h:lh,col:'#e8c800',solid:true,cracked:false,broken:false,isBanana:true});
+      this.plats.push(crystal(cx-l.w/2,l.y,l.w,Math.max(18,482-l.y)));
     }
-    // 頂上
-    this.plats.push({x:cx-44,y:194,w:88,h:20,col:'#ffd700',solid:true,cracked:false,broken:false,isBanana:true});
-    // 脇足場
-    this.plats.push(mkP(cx-320,340,100,14,'#e8c800'));
-    this.plats.push(mkP(cx+220,340,100,14,'#e8c800'));
-    // ボス（頂上に待機）
-    const boss=new Enemy('boss',cx-40,100);
-    this.boss=boss;this.enemies.push(boss);
-    // バナナ（ボスエリア）
-    for(let i=0;i<6;i++)this.bananas.push(new Banana(3860+i*80,450));
-    // バナナの山にもバナナ
-    this.bananas.push(new Banana(cx-200,418));this.bananas.push(new Banana(cx+100,418));
-    this.bananas.push(new Banana(cx-100,346));this.bananas.push(new Banana(cx+50,310));
+    this.plats.push(crystal(cx-40,190,80,22));
+    // 脇足場（クラウド）
+    this.plats.push(cloud(cx-310,340,90,14,'#ffa8e0'));
+    this.plats.push(cloud(cx+220,340,90,14,'#ffa8e0'));
+    // ボス
+    const boss=new Enemy('boss',cx-40,100);this.boss=boss;this.enemies.push(boss);
+    // バナナ
+    for(let i=0;i<5;i++)this.bananas.push(new Banana(2920+i*80,450));
+    this.bananas.push(new Banana(cx-180,418));this.bananas.push(new Banana(cx+90,418));
+    this.bananas.push(new Banana(cx-80,348));this.bananas.push(new Banana(cx+40,310));
   }
   tryBreak(px,py,pw,ph){
     const cw=this.crackWall;
@@ -884,19 +914,24 @@ class Stage{
     for(const p of this.plats){
       if(p.broken)continue;
       const dx=p.x-cx;if(dx+p.w<-10||dx>CW+10)continue;
-      ctx.fillStyle=p.cracked?'#c09060':p.col;
+      ctx.fillStyle=p.cracked?'#c060c8':p.col;
       ctx.fillRect(dx,p.y,p.w,p.h);
-      // バナナ山のテクスチャ
-      if(p.isBanana){
-        ctx.fillStyle='rgba(0,0,0,.07)';
-        for(let bx=dx;bx<dx+p.w-10;bx+=26){ctx.beginPath();ctx.arc(bx+13,p.y+7,11,0,Math.PI*.9);ctx.fill();}
-        ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(dx,p.y,p.w,3);
+      // クラウド足場テクスチャ
+      if(p.isCloud){
+        ctx.fillStyle='rgba(255,255,255,.55)';ctx.fillRect(dx,p.y,p.w,5);
+        ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(dx,p.y+5,p.w,p.h-5);
+      }
+      // クリスタル山テクスチャ
+      if(p.isCrystal){
+        const sh=Math.abs(Math.sin(Date.now()/900))*0.25;
+        ctx.fillStyle=`rgba(255,200,255,${0.3+sh})`;ctx.fillRect(dx,p.y,p.w,5);
+        ctx.fillStyle='rgba(255,255,255,.22)';ctx.fillRect(dx,p.y+5,p.w,p.h-5);
       }
       if(p.cracked&&!p.broken){
-        ctx.strokeStyle='#000';ctx.lineWidth=2;
+        ctx.strokeStyle='#a020a0';ctx.lineWidth=2;
         ctx.beginPath();ctx.moveTo(dx+8,p.y);ctx.lineTo(dx+18,p.y+p.h);
         ctx.moveTo(dx+18,p.y);ctx.lineTo(dx+26,p.y+p.h);ctx.stroke();
-        ctx.fillStyle='rgba(0,0,0,.7)';ctx.font='bold 10px sans-serif';
+        ctx.fillStyle='rgba(80,0,80,.8)';ctx.font='bold 10px sans-serif';
         ctx.textAlign='center';ctx.fillText('ゴリラパンチ',dx+p.w/2,p.y-5);ctx.textAlign='left';
       }
     }
@@ -908,23 +943,31 @@ class Stage{
   _drawHosp(cx){
     const dx=this.hospX-cx,w=this.hospW,h=165,y=316;
     if(dx+w<-50||dx>CW+50)return;
-    ctx.fillStyle='#aac4ff';ctx.fillRect(dx,y,w,h);
-    ctx.fillStyle='#8aacee';ctx.fillRect(dx-8,y-48,w+16,52);
-    ctx.fillStyle='#ee4444';ctx.fillRect(dx+88,y-40,56,78);ctx.fillRect(dx+70,y-22,94,42);
-    ctx.fillStyle='rgba(200,230,255,.8)';ctx.fillRect(dx+14,y+20,50,50);ctx.fillRect(dx+w-64,y+20,50,50);
-    ctx.fillStyle='#fff';ctx.fillRect(dx+102,y+88,56,78);
-    ctx.fillStyle='#ffee88';ctx.fillRect(dx+8,y+8,100,34);
-    ctx.fillStyle='#000';ctx.font='12px sans-serif';ctx.fillText('動物病院',dx+12,y+29);
+    // 建物（パステルピンク）
+    ctx.fillStyle='#ffc8e8';ctx.fillRect(dx,y,w,h);
+    // 屋根（パープル）
+    ctx.fillStyle='#c070d0';ctx.fillRect(dx-8,y-48,w+16,52);
+    // 魔法の星マーク
+    ctx.fillStyle='#ff80c8';ctx.fillRect(dx+90,y-42,52,76);ctx.fillRect(dx+72,y-24,90,40);
+    // 窓
+    ctx.fillStyle='rgba(180,220,255,.85)';ctx.fillRect(dx+14,y+20,50,50);ctx.fillRect(dx+w-64,y+20,50,50);
+    // ドア
+    ctx.fillStyle='#fff0d8';ctx.fillRect(dx+104,y+90,52,76);
+    // 看板
+    ctx.fillStyle='#ffe060';ctx.fillRect(dx+8,y+8,106,34);
+    ctx.fillStyle='#602080';ctx.font='12px sans-serif';ctx.fillText('妖精のおうち',dx+11,y+29);
     if(!this.hospUsed){
-      ctx.fillStyle='rgba(255,255,255,.9)';ctx.font='bold 12px sans-serif';ctx.textAlign='center';
+      ctx.fillStyle='rgba(255,255,255,.92)';ctx.font='bold 12px sans-serif';ctx.textAlign='center';
       ctx.fillText('入口に触れる→ゴリラで回復',dx+w/2,y-54);ctx.textAlign='left';
     }
   }
   _drawShutter(cx){
     const dx=this.shutterX-cx;if(dx+40<0||dx>CW)return;
-    ctx.fillStyle='#555';ctx.fillRect(dx,290,30,192);
-    ctx.strokeStyle='#888';ctx.lineWidth=2;
-    for(let y=298;y<482;y+=18){ctx.beginPath();ctx.moveTo(dx,y);ctx.lineTo(dx+30,y);ctx.stroke();}
+    ctx.fillStyle='#7030a0';ctx.fillRect(dx,290,30,192);
+    ctx.strokeStyle='#d090ff';ctx.lineWidth=2;
+    for(let sy=298;sy<482;sy+=18){ctx.beginPath();ctx.moveTo(dx,sy);ctx.lineTo(dx+30,sy);ctx.stroke();}
+    ctx.fillStyle='rgba(220,160,255,.9)';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+    ctx.fillText('★',dx+15,278);ctx.textAlign='left';
   }
 }
 
@@ -1007,13 +1050,25 @@ function drawTitle(dt){
 
 function drawBG(){
   const bg=ctx.createLinearGradient(0,0,0,CH);
-  if(gs===GS.BOSS){bg.addColorStop(0,'#1a0a00');bg.addColorStop(.6,'#3a1800');bg.addColorStop(1,'#2a4a10');}
-  else{bg.addColorStop(0,'#0a1528');bg.addColorStop(.65,'#183060');bg.addColorStop(1,'#204a18');}
+  if(gs===GS.BOSS){
+    bg.addColorStop(0,'#1c0838');bg.addColorStop(.55,'#48107a');bg.addColorStop(1,'#8a28b8');
+  } else {
+    bg.addColorStop(0,'#80c4ff');bg.addColorStop(.55,'#ddc8ff');bg.addColorStop(1,'#c0eecc');
+  }
   ctx.fillStyle=bg;ctx.fillRect(0,0,CW,CH);
-  ctx.fillStyle=gs===GS.BOSS?'rgba(255,100,0,.4)':'rgba(255,240,200,.32)';
-  ctx.beginPath();ctx.arc(820,68,58,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,.45)';
-  [[60,45],[180,82],[740,32],[880,76],[940,42],[110,22],[560,65]].forEach(([sx,sy])=>ctx.fillRect(sx,sy,2,2));
+  // 太陽 or 月
+  if(gs===GS.BOSS){
+    ctx.fillStyle='rgba(240,180,255,.35)';ctx.beginPath();ctx.arc(830,72,60,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,210,255,.18)';ctx.beginPath();ctx.arc(830,72,90,0,Math.PI*2);ctx.fill();
+  } else {
+    ctx.fillStyle='rgba(255,240,100,.75)';ctx.beginPath();ctx.arc(820,70,46,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,200,.3)';ctx.beginPath();ctx.arc(820,70,72,0,Math.PI*2);ctx.fill();
+  }
+  // 雲
+  ctx.fillStyle=gs===GS.BOSS?'rgba(200,120,255,.2)':'rgba(255,255,255,.68)';
+  [[100,76,52,20],[280,54,44,17],[660,80,58,22],[800,56,40,15],[130,36,34,13],[490,65,50,19]].forEach(([x,y,rx,ry])=>{
+    ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill();
+  });
 }
 
 function drawScene(){
@@ -1127,7 +1182,9 @@ function updatePlay(dt){
       for(const p of e.proj)if(overlapR(player.x,player.y,player.w,player.h,p.x,p.y,p.w,p.h))player.damage(1);
       if(!e.alive){gs=GS.CLEAR;return;}
     }
-    if(e.type!=='boss'&&e.alive&&player.inv<=0&&overlap(player,e))player.damage(1);
+    if(e.type!=='boss'&&e.alive&&player.inv<=0&&!player.inCar&&player.state!=='car_enter'){
+      if(overlap(player,e))player.damage(1);
+    }
   }
 
   // 画面端チェック → スクロールまたはシャッター

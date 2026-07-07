@@ -853,23 +853,23 @@ class Stage{
     const crystal=(x,y,w,h)=>({x,y,w,h,col:'#e890d8',solid:true,cracked:false,broken:false,isCrystal:true});
     // 地面
     this.plats.push({x:0,y:480,w:4160,h:80,col:'#5a3010',solid:true,cracked:false,broken:false,isGround:true});
-    // ═ スクリーン0：地面は広くあけてジャンプ踏み台2枚 ═
-    this.plats.push(block(360,400,96));   // ジャンプで乗れる高さ
-    this.plats.push(block(720,370,80));   // もう少し高い
-    this.bananas.push(new Banana(400,370));this.bananas.push(new Banana(760,340));
+    // ═ スクリーン0 ═
+    this.plats.push(block(360,360,96));
+    this.plats.push(block(720,335,80));
+    this.bananas.push(new Banana(400,330));this.bananas.push(new Banana(760,305));
     this.enemies.push(new Enemy('patrol',520,436));this.enemies.push(new Enemy('patrol',860,436));
     // ═ スクリーン1 ═
-    this.plats.push(block(1080,390,96));
-    this.plats.push(block(1500,365,80));
-    this.bananas.push(new Banana(1120,360));this.bananas.push(new Banana(1540,335));
+    this.plats.push(block(1080,355,96));
+    this.plats.push(block(1500,330,80));
+    this.bananas.push(new Banana(1120,325));this.bananas.push(new Banana(1540,300));
     this.enemies.push(new Enemy('patrol',1200,436));this.enemies.push(new Enemy('spike',1380,436));
     // 亀裂壁（ゴリラパンチで壊す）
     const cw=mkP(1760,290,32,192,'#a04020',true,true);
     this.crackWall=cw;this.plats.push(cw);
     // ═ スクリーン2 ═
-    this.plats.push(block(2060,395,96));
-    this.plats.push(block(2480,370,80));
-    this.bananas.push(new Banana(2100,365));this.bananas.push(new Banana(2520,340));
+    this.plats.push(block(2060,358,96));
+    this.plats.push(block(2480,335,80));
+    this.bananas.push(new Banana(2100,328));this.bananas.push(new Banana(2520,305));
     this.enemies.push(new Enemy('patrol',2200,436));this.enemies.push(new Enemy('fly',2380,260));
     this.enemies.push(new Enemy('patrol',2620,436));
     // ═ ボスエリア：クリスタル山 ═

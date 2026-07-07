@@ -857,33 +857,22 @@ class Stage{
     // 地面（ラベンダー）
     this.plats.push(mkP(0,480,4160,80,'#b06ab8'));
     // ═ スクリーン0 ═
-    this.plats.push(cloud(220,400,120,14,'#ffb8e8'));
-    this.plats.push(cloud(440,340,120,14,'#d8b8ff'));
-    this.plats.push(cloud(680,290,120,14,'#b8d8ff'));
-    this.bananas.push(new Banana(150,450));this.bananas.push(new Banana(260,370));
-    this.bananas.push(new Banana(480,310));this.bananas.push(new Banana(720,260));
-    this.enemies.push(new Enemy('patrol',360,436));
-    this.enemies.push(new Enemy('fly',570,200));
+    this.plats.push(cloud(400,435,150,14,'#ffb8e8'));
+    this.bananas.push(new Banana(160,450));this.bananas.push(new Banana(440,405));
+    this.enemies.push(new Enemy('patrol',580,436));
     // ═ スクリーン1 ═
-    this.plats.push(cloud(1040,414,120,14,'#ffe880'));
-    this.plats.push(cloud(1270,354,120,14,'#ffb8e8'));
-    this.plats.push(cloud(1490,294,120,14,'#d8b8ff'));
-    this.bananas.push(new Banana(1080,384));this.bananas.push(new Banana(1310,324));
-    this.bananas.push(new Banana(1530,264));
-    this.enemies.push(new Enemy('patrol',1120,436));
-    this.enemies.push(new Enemy('spike',1310,310));
+    this.plats.push(cloud(1300,435,150,14,'#ffe880'));
+    this.bananas.push(new Banana(1100,450));this.bananas.push(new Banana(1340,405));
+    this.enemies.push(new Enemy('patrol',1060,436));
+    this.enemies.push(new Enemy('patrol',1500,436));
     // 亀裂壁（ゴリラパンチで壊す）
     const cw=mkP(1760,290,32,192,'#c060c8',true,true);
     this.crackWall=cw;this.plats.push(cw);
     // ═ スクリーン2 ═
-    this.plats.push(cloud(1980,404,120,14,'#b8d8ff'));
-    this.plats.push(cloud(2200,344,120,14,'#ffe880'));
-    this.plats.push(cloud(2440,284,120,14,'#ffb8e8'));
-    this.bananas.push(new Banana(2020,374));this.bananas.push(new Banana(2240,314));
-    this.bananas.push(new Banana(2480,254));
-    this.enemies.push(new Enemy('spike',2060,436));
-    this.enemies.push(new Enemy('patrol',2280,436));
-    this.enemies.push(new Enemy('fly',2460,185));
+    this.plats.push(cloud(2200,435,150,14,'#b8d8ff'));
+    this.bananas.push(new Banana(1980,450));this.bananas.push(new Banana(2240,405));
+    this.enemies.push(new Enemy('fly',2100,300));
+    this.enemies.push(new Enemy('patrol',2500,436));
     // ═ ボスエリア：クリスタル山 ═
     this.plats.push(mkP(2880,480,1280,80,'#8830a8'));
     const cx=3520;

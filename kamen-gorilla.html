@@ -95,6 +95,9 @@ function loadImg(name,src){
   });
 }
 
+/* ── 車外観画像（白背景除去なし） ── */
+let carDriveImg=null;
+
 /* ── プレイヤー画像（全て白背景除去）── */
 const PIMGS={idle:null,walk:null,run:null,jump:null,bow2:null,bow3:null,car1:null,car2:null,car3:null};
 let pimgsReady=false;
@@ -820,19 +823,12 @@ class Benz{
   draw(cx){
     const dx=this.x-cx;
     if(dx+this.w<-60||dx>CW+60)return;
-    ctx.fillStyle='#f4f4f4';ctx.fillRect(dx,this.y+22,this.w,this.h-22);
-    ctx.fillStyle='#e8e8e8';ctx.fillRect(dx+18,this.y,this.w-36,28);
-    ctx.fillStyle='rgba(140,200,255,.7)';ctx.fillRect(dx+26,this.y+2,this.w-52,23);
-    ctx.strokeStyle='#aaa';ctx.lineWidth=2;
-    ctx.beginPath();ctx.arc(dx+this.w/2,this.y+8,10,0,Math.PI*2);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(dx+this.w/2,this.y-2);ctx.lineTo(dx+this.w/2,this.y+18);
-    ctx.moveTo(dx+this.w/2-9,this.y+13);ctx.lineTo(dx+this.w/2+9,this.y+13);ctx.stroke();
-    ctx.fillStyle='#222';
-    ctx.beginPath();ctx.arc(dx+30,this.y+this.h,17,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(dx+this.w-30,this.y+this.h,17,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#aaa';
-    ctx.beginPath();ctx.arc(dx+30,this.y+this.h,7,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(dx+this.w-30,this.y+this.h,7,0,Math.PI*2);ctx.fill();
+    if(carDriveImg&&carDriveImg.complete&&carDriveImg.naturalWidth>0){
+      const iw=220,ih=Math.round(220*carDriveImg.naturalHeight/carDriveImg.naturalWidth);
+      ctx.drawImage(carDriveImg,dx+this.w/2-iw/2,this.y+this.h-ih+8,iw,ih);
+    } else {
+      ctx.fillStyle='#f4f4f4';ctx.fillRect(dx,this.y+22,this.w,this.h-22);
+    }
     if(!this.taken){ctx.fillStyle='rgba(255,255,255,.9)';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.fillText('白いベンツ',dx+this.w/2,this.y-6);ctx.textAlign='left';}
   }
 }
@@ -1003,6 +999,7 @@ async function init(){
   loadAtkImgs();
   try{if(screen.orientation&&screen.orientation.lock){const p=screen.orientation.lock('landscape');if(p&&p.catch)p.catch(()=>{});}}catch(e){}
   await Promise.all([loadImg('title','title.png'),loadImg('human','human.png'),loadImg('gorilla','gorilla.png'),loadImg('human2','human2.png')]);
+  carDriveImg=new Image();carDriveImg.src='assets/car_drive.jpg';
   showCtrl(false);
   requestAnimationFrame(loop);
 }

@@ -826,6 +826,7 @@ class Benz{
   constructor(x,y){this.x=x;this.y=y;this.w=168;this.h=86;this.taken=false;}
   get cx(){return this.x+this.w/2;}
   draw(cx){
+    if(this.taken)return;
     const dx=this.x-cx;
     if(dx+this.w<-60||dx>CW+60)return;
     if(carDriveImg&&carDriveImg.complete){
@@ -834,7 +835,6 @@ class Benz{
     } else {
       ctx.fillStyle='#f4f4f4';ctx.fillRect(dx,this.y+22,this.w,this.h-22);
     }
-    if(!this.taken){ctx.fillStyle='rgba(255,255,255,.9)';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.fillText('白いベンツ',dx+this.w/2,this.y-6);ctx.textAlign='left';}
   }
 }
 

@@ -1016,10 +1016,12 @@ function startGame(){
   showCtrl(true);
 }
 
-cv.addEventListener('pointerdown',()=>{
+function _tapStart(){
   if(gs===GS.TITLE){startGame();return;}
   if(gs===GS.CLEAR||gs===GS.OVER){gs=GS.TITLE;showCtrl(false);}
-});
+}
+cv.addEventListener('pointerdown',_tapStart);
+cv.addEventListener('touchstart',e=>{e.preventDefault();_tapStart();},{passive:false});
 document.addEventListener('keydown',e=>{
   if((e.code==='Enter'||e.code==='Space')&&(gs===GS.TITLE))startGame();
   if((e.code==='Enter')&&(gs===GS.CLEAR||gs===GS.OVER))gs=GS.TITLE;

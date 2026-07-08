@@ -843,55 +843,104 @@ function mkP(x,y,w,h,col='#4a8a4a',solid=true,cracked=false){return{x,y,w,h,col,
 class Stage{
   constructor(){
     this.plats=[];this.enemies=[];this.bananas=[];this.peels=[];
-    this.worldW=4160;this.shutterX=2880;
-    this.hospX=1640;this.hospW=260;this.hospUsed=false;
-    this.benz=new Benz(750,394);this.crackWall=null;this.boss=null;
+    this.worldW=19200;this.shutterX=17280;
+    this.hospX=9600;this.hospW=260;this.hospUsed=false;
+    this.benz=new Benz(3200,394);this.crackWall=null;this.boss=null;
     this._build();
   }
   _build(){
-    const block=(x,y,w)=>({x,y,w,h:16,col:'#c87030',solid:true,cracked:false,broken:false,isBlock:true});
-    const crystal=(x,y,w,h)=>({x,y,w,h,col:'#e890d8',solid:true,cracked:false,broken:false,isCrystal:true});
-    // 地面
-    this.plats.push({x:0,y:480,w:4160,h:80,col:'#5a3010',solid:true,cracked:false,broken:false,isGround:true});
-    // ═ スクリーン0 ═
-    this.plats.push(block(360,360,96));
-    this.plats.push(block(720,335,80));
-    this.bananas.push(new Banana(400,330));this.bananas.push(new Banana(760,305));
-    this.enemies.push(new Enemy('patrol',520,436));this.enemies.push(new Enemy('patrol',860,436));
-    // ═ スクリーン1 ═
-    this.plats.push(block(1080,355,96));
-    this.plats.push(block(1500,330,80));
-    this.bananas.push(new Banana(1120,325));this.bananas.push(new Banana(1540,300));
-    this.enemies.push(new Enemy('patrol',1200,436));this.enemies.push(new Enemy('spike',1380,436));
-    // 亀裂壁（ゴリラパンチで壊す）
-    const cw=mkP(1760,290,32,192,'#a04020',true,true);
-    this.crackWall=cw;this.plats.push(cw);
-    // ═ スクリーン2 ═
-    this.plats.push(block(2060,358,96));
-    this.plats.push(block(2480,335,80));
-    this.bananas.push(new Banana(2100,328));this.bananas.push(new Banana(2520,305));
-    this.enemies.push(new Enemy('patrol',2200,436));this.enemies.push(new Enemy('fly',2380,260));
-    this.enemies.push(new Enemy('patrol',2620,436));
-    // ═ ボスエリア：クリスタル山 ═
-    this.plats.push({x:2880,y:480,w:1280,h:80,col:'#3a0860',solid:true,cracked:false,broken:false,isGround:true,isBossGround:true});
-    const cx=3520;
-    const layers=[
-      {w:720,y:448},{w:560,y:410},{w:420,y:372},
-      {w:300,y:334},{w:200,y:296},{w:120,y:258},{w:60,y:222}
-    ];
-    for(const l of layers){
-      this.plats.push(crystal(cx-l.w/2,l.y,l.w,Math.max(18,482-l.y)));
-    }
-    this.plats.push(crystal(cx-40,190,80,22));
-    // 脇足場
-    this.plats.push(block(cx-310,340,90));
-    this.plats.push(block(cx+220,340,90));
-    // ボス
+    const bl=(x,y,w)=>({x,y,w,h:16,col:'#c87030',solid:true,cracked:false,broken:false,isBlock:true});
+    const cr=(x,y,w,h)=>({x,y,w,h,col:'#e890d8',solid:true,cracked:false,broken:false,isCrystal:true});
+    const pp=v=>{this.plats.push(v);};
+    const bb=(x,y)=>{this.bananas.push(new Banana(x,y));};
+    const ee=(t,x,y)=>{this.enemies.push(new Enemy(t,x,y));};
+    // 地面（全20スクリーン）
+    pp({x:0,y:480,w:19200,h:80,col:'#5a3010',solid:true,cracked:false,broken:false,isGround:true});
+    // S0
+    pp(bl(350,360,96));pp(bl(740,335,80));
+    bb(390,330);bb(780,305);
+    ee('patrol',520,436);ee('patrol',860,436);
+    // S1
+    pp(bl(1100,355,96));pp(bl(1520,330,80));
+    bb(1140,325);bb(1560,300);
+    ee('patrol',1200,436);ee('spike',1400,436);
+    // S2
+    pp(bl(2060,360,96));pp(bl(2460,335,80));
+    bb(2100,330);bb(2500,305);
+    ee('patrol',2200,436);ee('patrol',2580,436);
+    // S3：ベンツ登場（x=3200）・広い平地
+    pp(bl(3700,350,80));
+    bb(3740,320);bb(3100,450);bb(3400,450);
+    ee('patrol',3000,436);ee('fly',3600,270);
+    // S4
+    pp(bl(3960,360,96));pp(bl(4380,335,80));
+    bb(4000,330);bb(4420,305);
+    ee('patrol',4100,436);ee('patrol',4500,436);
+    // S5
+    pp(bl(4920,355,96));pp(bl(5340,330,80));
+    bb(4960,325);bb(5380,300);
+    ee('patrol',5050,436);ee('spike',5280,436);
+    // S6
+    pp(bl(5880,360,80));pp(bl(6260,335,96));
+    bb(5920,330);bb(6300,305);
+    ee('patrol',6000,436);ee('fly',6350,270);
+    // S7
+    pp(bl(6840,355,96));pp(bl(7260,330,80));
+    bb(6880,325);bb(7300,300);
+    ee('spike',6960,436);ee('patrol',7380,436);
+    // S8
+    pp(bl(7800,360,96));pp(bl(8200,335,80));
+    bb(7840,330);bb(8240,305);
+    ee('patrol',7920,436);ee('patrol',8320,436);
+    // S9：亀裂壁→病院手前
+    pp(bl(8760,355,80));
+    bb(8800,325);
+    ee('patrol',8880,436);ee('spike',9100,436);
+    const cw=mkP(9500,290,32,192,'#a04020',true,true);
+    this.crackWall=cw;pp(cw);
+    // S10：動物病院エリア（hospX=9600）
+    for(let i=0;i<6;i++)bb(9650+i*80,450);
+    pp(bl(10060,360,80));pp(bl(10380,335,96));
+    bb(10100,330);bb(10420,305);
+    ee('patrol',10150,436);
+    // S11
+    pp(bl(10680,355,96));pp(bl(11080,330,80));
+    bb(10720,325);bb(11120,300);
+    ee('patrol',10800,436);ee('spike',11020,436);
+    // S12
+    pp(bl(11640,360,80));pp(bl(12020,335,96));
+    bb(11680,330);bb(12060,305);
+    ee('patrol',11760,436);ee('fly',12100,270);
+    // S13
+    pp(bl(12600,355,96));pp(bl(13000,330,80));
+    bb(12640,325);bb(13040,300);
+    ee('spike',12720,436);ee('patrol',13100,436);
+    // S14
+    pp(bl(13560,360,80));pp(bl(13940,335,96));
+    bb(13600,330);bb(13980,305);
+    ee('patrol',13680,436);ee('patrol',14060,436);
+    // S15
+    pp(bl(14520,355,96));pp(bl(14920,330,80));
+    bb(14560,325);bb(14960,300);
+    ee('patrol',14640,436);ee('spike',14870,436);ee('fly',15000,270);
+    // S16
+    pp(bl(15480,360,80));pp(bl(15860,335,96));
+    bb(15520,330);bb(15900,305);
+    ee('spike',15600,436);ee('patrol',15980,436);
+    // S17
+    pp(bl(16440,355,96));pp(bl(16840,330,80));
+    bb(16480,325);bb(16880,300);
+    ee('patrol',16560,436);ee('patrol',16960,436);ee('fly',16800,270);
+    // S18-19：ボスエリア（shutterX=17280）
+    pp({x:17280,y:480,w:1920,h:80,col:'#3a0860',solid:true,cracked:false,broken:false,isGround:true,isBossGround:true});
+    const cx=18240;
+    for(const l of [{w:720,y:448},{w:560,y:410},{w:420,y:372},{w:300,y:334},{w:200,y:296},{w:120,y:258},{w:60,y:222}])
+      pp(cr(cx-l.w/2,l.y,l.w,Math.max(18,482-l.y)));
+    pp(cr(cx-40,190,80,22));
+    pp(bl(cx-310,340,90));pp(bl(cx+220,340,90));
     const boss=new Enemy('boss',cx-40,100);this.boss=boss;this.enemies.push(boss);
-    // バナナ
-    for(let i=0;i<5;i++)this.bananas.push(new Banana(2920+i*80,450));
-    this.bananas.push(new Banana(cx-180,418));this.bananas.push(new Banana(cx+90,418));
-    this.bananas.push(new Banana(cx-80,348));this.bananas.push(new Banana(cx+40,310));
+    for(let i=0;i<5;i++)bb(17320+i*80,450);
+    bb(cx-180,418);bb(cx+90,418);bb(cx-80,348);bb(cx+40,310);
   }
   tryBreak(px,py,pw,ph){
     const cw=this.crackWall;

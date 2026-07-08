@@ -1038,7 +1038,7 @@ function overlapR(ax,ay,aw,ah,bx,by,bw,bh){return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&
 
 /* ── ゲーム管理 ── */
 let gs=GS.TITLE,player,stage,camX=0,peels=[];
-let hospMsg='',hospTimer=0,transTimer=0,titleT=0,lastT=0;
+let hospMsg='',hospTimer=0,hospCooldown=0,transTimer=0,titleT=0,lastT=0;
 
 // ── ロックマン式: 画面単位スクロール ──
 let screenAnchor=0;   // 現在の画面の左端 (world座標)
@@ -1228,10 +1228,11 @@ function updatePlay(dt){
   }
 
   // 病院判定
-  if(!stage.hospUsed){
+  if(hospCooldown>0)hospCooldown-=dt;
+  if(hospCooldown<=0){
     const hx=stage.hospX,hw=stage.hospW;
     if(player.x+player.w>hx+hw*.3&&player.x<hx+hw*.9&&player.y+player.h>455){
-      stage.hospUsed=true;
+      hospCooldown=3;
       if(player.mode===1){hospMsg='なつこさん：あら、たくみじゃない！\nGP（ゴリラポイント）を回復しておくわね。';player.gp=MAX_GP;}
       else hospMsg='なつこさん：ごめんなさい、\nうちは人間はみれないの。さようなら。';
       hospTimer=4;gs=GS.HOSP;return;

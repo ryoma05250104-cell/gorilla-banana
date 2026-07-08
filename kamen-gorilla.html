@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>仮面ゴリラー</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
+*{margin:0;padding:0;box-sizing:border-box;cursor:none!important;}
 html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:none;user-select:none;-webkit-user-select:none;cursor:none;}
 #cv{position:fixed;image-rendering:pixelated;cursor:none;}
-#ctrl{position:fixed;pointer-events:none;}
+#ctrl{position:fixed;pointer-events:none;cursor:none;}
 .btn{position:absolute;pointer-events:all;border-radius:50%;border:3px solid rgba(255,255,255,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;color:#fff;font-family:sans-serif;-webkit-tap-highlight-color:transparent;touch-action:none;cursor:none;line-height:1.2;text-align:center;}
 </style>
 </head>
@@ -33,7 +33,7 @@ function resize(){
   const lx=(W-cw)/2|0,ty=(H-ch)/2|0;
   cv.style.cssText=`position:fixed;left:${lx}px;top:${ty}px;width:${cw}px;height:${ch}px;`;
   const ctrl=document.getElementById('ctrl');
-  ctrl.style.cssText=`position:fixed;left:${lx}px;top:${ty}px;width:${cw}px;height:${ch}px;pointer-events:none;visibility:${_ctrlVisible?'visible':'hidden'};`;
+  ctrl.style.cssText=`position:fixed;left:${lx}px;top:${ty}px;width:${cw}px;height:${ch}px;pointer-events:none;cursor:none;visibility:${_ctrlVisible?'visible':'hidden'};`;
   buildCtrl();
 }
 window.addEventListener('resize',resize);
@@ -610,7 +610,7 @@ class Arrow{
   constructor(x,y,d){this.x=x;this.y=y;this.vx=d*14;this.vy=0;this.w=28;this.h=8;this.alive=true;}
   update(enemies,plats){
     this.x+=this.vx;this.vy+=.15;this.y+=this.vy;
-    if(this.x<-300||this.x>10000){this.alive=false;return;}
+    if(this.x<-300||this.x>25000){this.alive=false;return;}
     for(const e of enemies)if(e.alive&&overlapR(this.x,this.y,this.w,this.h,e.x,e.y,e.w,e.h)){
       if(e.type!=='spike')e.hit(1,'arrow');this.alive=false;return;
     }
@@ -841,7 +841,7 @@ class Benz{
     } else {
       ctx.fillStyle='#f4f4f4';ctx.fillRect(dx,this.y+22,this.w,this.h-22);
     }
-    ctx.fillStyle='rgba(255,255,255,.95)';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+    ctx.fillStyle='rgba(255,255,255,.95)';ctx.font='bold 20px sans-serif';ctx.textAlign='center';
     ctx.fillText('人間でのってね',dx+this.w/2,this.y-10);ctx.textAlign='left';
   }
 }
@@ -851,8 +851,8 @@ function mkP(x,y,w,h,col='#4a8a4a',solid=true,cracked=false){return{x,y,w,h,col,
 class Stage{
   constructor(){
     this.plats=[];this.enemies=[];this.bananas=[];this.peels=[];
-    this.worldW=19200;this.shutterX=17280;
-    this.hospX=9950;this.hospW=260;this.hospUsed=false;
+    this.worldW=15360;this.shutterX=13440;
+    this.hospX=6850;this.hospW=260;this.hospUsed=false;
     this.benz=new Benz(3200,394);this.crackWall=null;this.boss=null;
     this._build();
   }
@@ -862,8 +862,8 @@ class Stage{
     const pp=v=>{this.plats.push(v);};
     const bb=(x,y)=>{this.bananas.push(new Banana(x,y));};
     const ee=(t,x,y)=>{this.enemies.push(new Enemy(t,x,y));};
-    // 地面（全20スクリーン）
-    pp({x:0,y:480,w:19200,h:80,col:'#5a3010',solid:true,cracked:false,broken:false,isGround:true});
+    // 地面（16スクリーン：通常13440 + ボス1920）
+    pp({x:0,y:480,w:13440,h:80,col:'#5a3010',solid:true,cracked:false,broken:false,isGround:true});
     // S0
     pp(bl(350,360,96));pp(bl(740,335,80));
     bb(390,330);bb(780,305);
@@ -888,66 +888,50 @@ class Stage{
     pp(bl(4920,355,96));pp(bl(5340,330,80));
     bb(4960,325);bb(5380,300);
     ee('patrol',5050,436);ee('spike',5280,436);
-    // S6
+    // S6：亀裂壁→病院手前
     pp(bl(5880,360,80));pp(bl(6260,335,96));
     bb(5920,330);bb(6300,305);
     ee('patrol',6000,436);ee('fly',6350,270);
-    // S7
-    pp(bl(6840,355,96));pp(bl(7260,330,80));
-    bb(6880,325);bb(7300,300);
-    ee('spike',6960,436);ee('patrol',7380,436);
+    const cw=mkP(6450,290,32,192,'#a04020',true,true);
+    this.crackWall=cw;pp(cw);
+    // S7：動物病院エリア（hospX=6850〜7110）ブロックは病院の外のみ
+    for(let i=0;i<4;i++)bb(6560+i*80,450);
+    pp(bl(7200,355,80));pp(bl(7450,335,96));
+    bb(7240,325);bb(7490,305);
+    ee('patrol',7320,436);
     // S8
     pp(bl(7800,360,96));pp(bl(8200,335,80));
     bb(7840,330);bb(8240,305);
     ee('patrol',7920,436);ee('patrol',8320,436);
-    // S9：亀裂壁→病院手前
-    pp(bl(8760,355,80));
-    bb(8800,325);
-    ee('patrol',8880,436);ee('spike',9100,436);
-    const cw=mkP(9500,290,32,192,'#a04020',true,true);
-    this.crackWall=cw;pp(cw);
-    // S10：動物病院エリア（hospX=9950〜10210）ブロックは病院の外のみ
-    for(let i=0;i<4;i++)bb(9700+i*80,450);
-    pp(bl(10300,355,80));pp(bl(10500,335,96));
-    bb(10340,325);bb(10540,305);
-    ee('patrol',10420,436);
+    // S9
+    pp(bl(8760,355,96));pp(bl(9160,330,80));
+    bb(8800,325);bb(9200,300);
+    ee('spike',8880,436);ee('patrol',9080,436);ee('fly',9300,270);
+    // S10
+    pp(bl(9720,360,80));pp(bl(10100,335,96));
+    bb(9760,330);bb(10140,305);
+    ee('patrol',9840,436);ee('spike',10060,436);
     // S11
-    pp(bl(10680,355,96));pp(bl(11080,330,80));
-    bb(10720,325);bb(11120,300);
-    ee('patrol',10800,436);ee('spike',11020,436);
+    pp(bl(10680,355,96));pp(bl(11060,330,80));
+    bb(10720,325);bb(11100,300);
+    ee('patrol',10800,436);ee('patrol',11020,436);ee('fly',11200,270);
     // S12
     pp(bl(11640,360,80));pp(bl(12020,335,96));
     bb(11680,330);bb(12060,305);
-    ee('patrol',11760,436);ee('fly',12100,270);
-    // S13
-    pp(bl(12600,355,96));pp(bl(13000,330,80));
-    bb(12640,325);bb(13040,300);
-    ee('spike',12720,436);ee('patrol',13100,436);
-    // S14
-    pp(bl(13560,360,80));pp(bl(13940,335,96));
-    bb(13600,330);bb(13980,305);
-    ee('patrol',13680,436);ee('patrol',14060,436);
-    // S15
-    pp(bl(14520,355,96));pp(bl(14920,330,80));
-    bb(14560,325);bb(14960,300);
-    ee('patrol',14640,436);ee('spike',14870,436);ee('fly',15000,270);
-    // S16
-    pp(bl(15480,360,80));pp(bl(15860,335,96));
-    bb(15520,330);bb(15900,305);
-    ee('spike',15600,436);ee('patrol',15980,436);
-    // S17
-    pp(bl(16440,355,96));pp(bl(16840,330,80));
-    bb(16480,325);bb(16880,300);
-    ee('patrol',16560,436);ee('patrol',16960,436);ee('fly',16800,270);
-    // S18-19：ボスエリア（shutterX=17280）
-    pp({x:17280,y:480,w:1920,h:80,col:'#3a0860',solid:true,cracked:false,broken:false,isGround:true,isBossGround:true});
-    const cx=18240;
+    ee('spike',11760,436);ee('patrol',12100,436);
+    // S13：ボス前
+    pp(bl(12520,355,96));pp(bl(12920,330,80));
+    bb(12560,325);bb(12960,300);
+    ee('spike',12640,436);ee('patrol',12840,436);ee('fly',13050,270);
+    // S14-15：ボスエリア（shutterX=13440）
+    pp({x:13440,y:480,w:1920,h:80,col:'#3a0860',solid:true,cracked:false,broken:false,isGround:true,isBossGround:true});
+    const cx=14400;
     for(const l of [{w:720,y:448},{w:560,y:410},{w:420,y:372},{w:300,y:334},{w:200,y:296},{w:120,y:258},{w:60,y:222}])
       pp(cr(cx-l.w/2,l.y,l.w,Math.max(18,482-l.y)));
     pp(cr(cx-40,190,80,22));
     pp(bl(cx-310,340,90));pp(bl(cx+220,340,90));
     const boss=new Enemy('boss',cx-40,100);this.boss=boss;this.enemies.push(boss);
-    for(let i=0;i<5;i++)bb(17320+i*80,450);
+    for(let i=0;i<5;i++)bb(13480+i*80,450);
     bb(cx-180,418);bb(cx+90,418);bb(cx-80,348);bb(cx+40,310);
   }
   tryBreak(px,py,pw,ph){
@@ -1054,7 +1038,7 @@ function overlapR(ax,ay,aw,ah,bx,by,bw,bh){return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&
 
 /* ── ゲーム管理 ── */
 let gs=GS.TITLE,player,stage,camX=0,peels=[];
-let hospMsg='',hospTimer=0,transTimer=0,titleT=0,lastT=0;
+let hospMsg='',hospTimer=0,hospCooldown=0,transTimer=0,titleT=0,lastT=0;
 
 // ── ロックマン式: 画面単位スクロール ──
 let screenAnchor=0;   // 現在の画面の左端 (world座標)
@@ -1244,10 +1228,11 @@ function updatePlay(dt){
   }
 
   // 病院判定
-  if(!stage.hospUsed){
+  if(hospCooldown>0)hospCooldown-=dt;
+  if(hospCooldown<=0){
     const hx=stage.hospX,hw=stage.hospW;
     if(player.x+player.w>hx+hw*.3&&player.x<hx+hw*.9&&player.y+player.h>455){
-      stage.hospUsed=true;
+      hospCooldown=3;
       if(player.mode===1){hospMsg='なつこさん：あら、たくみじゃない！\nGP（ゴリラポイント）を回復しておくわね。';player.gp=MAX_GP;}
       else hospMsg='なつこさん：ごめんなさい、\nうちは人間はみれないの。さようなら。';
       hospTimer=4;gs=GS.HOSP;return;
@@ -1285,13 +1270,125 @@ function updatePlay(dt){
   drawScene();
 }
 
+function _drawNatsuko(x,y){
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,.12)';ctx.beginPath();ctx.ellipse(x,y+2,20,5,0,0,Math.PI*2);ctx.fill();
+  // legs
+  ctx.fillStyle='#5060b8';ctx.fillRect(x-14,y+12,11,30);ctx.fillRect(x+3,y+12,11,30);
+  // shoes
+  ctx.fillStyle='#282010';ctx.fillRect(x-16,y+40,14,9);ctx.fillRect(x+2,y+40,14,9);
+  // coat body
+  ctx.fillStyle='#f0f0f0';ctx.fillRect(x-20,y-54,40,68);
+  // coat lapels
+  ctx.fillStyle='#ddd';ctx.beginPath();ctx.moveTo(x-8,y-54);ctx.lineTo(x,y-38);ctx.lineTo(x+8,y-54);ctx.fill();
+  // arms
+  ctx.fillStyle='#f0f0f0';ctx.fillRect(x-32,y-48,13,42);ctx.fillRect(x+19,y-48,13,42);
+  // hands
+  ctx.fillStyle='#ffd0a0';ctx.beginPath();ctx.arc(x-26,y-6,7,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(x+26,y-6,7,0,Math.PI*2);ctx.fill();
+  // clipboard in hand
+  ctx.fillStyle='#e8d090';ctx.fillRect(x+16,y-18,18,22);
+  ctx.strokeStyle='#888';ctx.lineWidth=1;
+  for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(x+19,y-13+i*6);ctx.lineTo(x+31,y-13+i*6);ctx.stroke();}
+  // neck
+  ctx.fillStyle='#ffd0a0';ctx.fillRect(x-6,y-64,12,12);
+  // head
+  ctx.beginPath();ctx.arc(x,y-78,23,0,Math.PI*2);ctx.fill();
+  // hair - dark
+  ctx.fillStyle='#1e0f05';
+  ctx.beginPath();ctx.arc(x,y-84,25,Math.PI,2*Math.PI);ctx.fill();
+  ctx.fillRect(x-25,y-84,50,18);
+  ctx.fillRect(x-28,y-79,11,32);ctx.fillRect(x+17,y-79,11,32);
+  // side bun
+  ctx.beginPath();ctx.arc(x+22,y-98,9,0,Math.PI*2);ctx.fill();
+  // nurse cap
+  ctx.fillStyle='#fff';ctx.fillRect(x-16,y-100,32,11);
+  ctx.fillStyle='#e00';ctx.fillRect(x-4,y-102,8,15);ctx.fillRect(x-10,y-97,20,5);
+  // eyes
+  ctx.fillStyle='#1a0808';
+  ctx.beginPath();ctx.ellipse(x-8,y-80,4,5,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+8,y-80,4,5,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x-6,y-82,1.5,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(x+10,y-82,1.5,0,Math.PI*2);ctx.fill();
+  // eyebrows
+  ctx.strokeStyle='#1e0f05';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(x-13,y-88);ctx.lineTo(x-4,y-86);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x+4,y-86);ctx.lineTo(x+13,y-88);ctx.stroke();
+  // nose
+  ctx.fillStyle='#e0a070';ctx.beginPath();ctx.arc(x,y-74,2,0,Math.PI*2);ctx.fill();
+  // smile
+  ctx.strokeStyle='#c05050';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(x,y-68,7,0.15,Math.PI-.15);ctx.stroke();
+  // cheeks
+  ctx.fillStyle='rgba(255,100,100,.22)';
+  ctx.beginPath();ctx.ellipse(x-15,y-72,7,4,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(x+15,y-72,7,4,0,0,Math.PI*2);ctx.fill();
+  // stethoscope
+  ctx.strokeStyle='#606060';ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.arc(x,y-36,15,0.4,Math.PI*.6);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x-13,y-29);ctx.lineTo(x-13,y-4);ctx.stroke();
+  ctx.fillStyle='#888';ctx.beginPath();ctx.arc(x-13,y-3,5,0,Math.PI*2);ctx.fill();
+}
+
+function _drawHospInterior(){
+  // walls
+  const wg=ctx.createLinearGradient(0,0,0,CH);
+  wg.addColorStop(0,'#e8f5e8');wg.addColorStop(1,'#c8e0c8');
+  ctx.fillStyle=wg;ctx.fillRect(0,0,CW,CH);
+  // floor（受付カウンター後ろ）
+  ctx.fillStyle='#c8a878';ctx.fillRect(0,395,CW,CH-395);
+  ctx.strokeStyle='rgba(160,130,90,.35)';ctx.lineWidth=1;
+  for(let tx=0;tx<CW;tx+=60){ctx.beginPath();ctx.moveTo(tx,395);ctx.lineTo(tx,CH);ctx.stroke();}
+  // baseboard
+  ctx.fillStyle='#a0c0a0';ctx.fillRect(0,391,CW,6);
+  // ceiling trim
+  ctx.fillStyle='#9aba9a';ctx.fillRect(0,0,CW,6);
+  // left cabinet
+  ctx.fillStyle='#8b6234';ctx.fillRect(30,190,100,210);
+  ctx.fillStyle='#7a5220';
+  for(let si=0;si<3;si++)ctx.fillRect(34,194+si*66,92,14);
+  ctx.fillStyle='rgba(180,230,180,.45)';
+  for(let si=0;si<3;si++)ctx.fillRect(34,210+si*66,92,44);
+  // window right
+  ctx.fillStyle='#87ceeb';ctx.fillRect(CW-190,50,130,100);
+  ctx.fillStyle='rgba(255,255,255,.35)';ctx.fillRect(CW-187,54,56,44);
+  ctx.strokeStyle='#8b6234';ctx.lineWidth=4;ctx.strokeRect(CW-190,50,130,100);
+  ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(CW-125,50);ctx.lineTo(CW-125,150);
+  ctx.moveTo(CW-190,100);ctx.lineTo(CW-60,100);ctx.stroke();
+  // exam table right
+  ctx.fillStyle='#5a7850';ctx.fillRect(CW-210,340,170,60);
+  ctx.fillStyle='#aaddaa';ctx.fillRect(CW-207,346,164,52);
+  // medical cross on wall
+  ctx.fillStyle='#fff';ctx.fillRect(CW/2-55,22,110,72);
+  ctx.strokeStyle='#2a8a2a';ctx.lineWidth=3;ctx.strokeRect(CW/2-55,22,110,72);
+  ctx.fillStyle='#cc0000';
+  ctx.fillRect(CW/2-7,30,14,56);ctx.fillRect(CW/2-32,48,64,20);
+  // pot plant
+  ctx.fillStyle='#6a4010';ctx.fillRect(160,362,22,38);
+  ctx.fillStyle='#218a14';
+  ctx.beginPath();ctx.arc(171,343,26,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(155,352,17,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(187,352,17,0,Math.PI*2);ctx.fill();
+  // なつこさん（受付カウンター越しに上半身表示）
+  _drawNatsuko(Math.round(CW*.62),320);
+  // 受付カウンター（下半身を隠す）
+  ctx.fillStyle='#7a9060';ctx.fillRect(120,308,CW-240,90);
+  ctx.fillStyle='#9ab880';ctx.fillRect(120,308,CW-240,14);
+  ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(124,312,CW-252,6);
+}
+
 function updateHosp(dt){
-  hospTimer-=dt;drawScene();
-  ctx.fillStyle='rgba(0,0,60,.92)';ctx.fillRect(50,CH-210,CW-100,155);
-  ctx.strokeStyle='#99f';ctx.lineWidth=3;ctx.strokeRect(50,CH-210,CW-100,155);
-  ctx.fillStyle='#fff';ctx.font='22px sans-serif';
-  hospMsg.split('\n').forEach((l,i)=>ctx.fillText(l,72,CH-172+i*40));
-  ctx.fillStyle='rgba(255,255,255,.65)';ctx.font='14px sans-serif';ctx.fillText('▼ ボタンを押して続ける',72,CH-72);
+  hospTimer-=dt;
+  _drawHospInterior();
+  // dialogue box（画面下部）
+  ctx.fillStyle='rgba(0,20,60,.93)';ctx.fillRect(40,CH-150,CW-80,140);
+  ctx.strokeStyle='#88aaff';ctx.lineWidth=3;ctx.strokeRect(40,CH-150,CW-80,140);
+  // portrait
+  ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(42,CH-148,52,52);
+  ctx.font='32px sans-serif';ctx.fillText('👩‍⚕️',46,CH-104);
+  ctx.fillStyle='#fff';ctx.font='bold 20px sans-serif';
+  hospMsg.split('\n').forEach((l,i)=>ctx.fillText(l,102,CH-118+i*42));
+  ctx.fillStyle='rgba(255,255,255,.6)';ctx.font='14px sans-serif';ctx.fillText('▼ ボタンを押して続ける',52,CH-56);
   if(hospTimer<3&&(pollJump()||pollAtk()||pollChg()))gs=GS.PLAY;
 }
 

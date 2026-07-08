@@ -9,7 +9,7 @@
 html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:none;user-select:none;-webkit-user-select:none;cursor:none;}
 #cv{position:fixed;image-rendering:pixelated;cursor:none;}
 #ctrl{position:fixed;pointer-events:none;}
-.btn{position:absolute;pointer-events:all;border-radius:50%;border:3px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;font-family:sans-serif;-webkit-tap-highlight-color:transparent;touch-action:none;}
+.btn{position:absolute;pointer-events:all;border-radius:50%;border:3px solid rgba(255,255,255,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;color:#fff;font-family:sans-serif;-webkit-tap-highlight-color:transparent;touch-action:none;cursor:none;line-height:1.2;text-align:center;}
 </style>
 </head>
 <body>
@@ -47,7 +47,7 @@ function buildCtrl(){
   const s=Math.min(scale,1.8);
   function mk(prop,label,style){
     const d=document.createElement('div');
-    d.className='btn';d.textContent=label;
+    d.className='btn';d.innerHTML=label;
     Object.assign(d.style,style);
     d.addEventListener('touchstart',e=>{e.preventDefault();BTN[prop]=1;},{passive:false});
     d.addEventListener('touchend',  e=>{e.preventDefault();BTN[prop]=0;},{passive:false});
@@ -59,8 +59,8 @@ function buildCtrl(){
   mk('L','◀',{bottom:b+'px',left:ls+'px',width:sz(130),height:sz(130),background:'rgba(255,255,255,.18)',fontSize:'44px'});
   mk('R','▶',{bottom:b+'px',left:(ls+Math.round(144*s))+'px',width:sz(130),height:sz(130),background:'rgba(255,255,255,.18)',fontSize:'44px'});
   mk('jump','ジャンプ',{bottom:b+'px',right:rs+'px',width:sz(120),height:sz(120),background:'rgba(40,200,60,.6)',fontSize:'16px'});
-  mk('chg','へんしん',{bottom:(b+Math.round(132*s))+'px',right:(rs+Math.round(132*s))+'px',width:sz(90),height:sz(90),background:'rgba(60,60,220,.6)',fontSize:'13px'});
-  mk('atk','こうげき',{bottom:b+'px',right:(rs+Math.round(132*s))+'px',width:sz(120),height:sz(120),background:'rgba(220,40,40,.7)',fontSize:'16px'});
+  mk('chg','へん<br>しん',{bottom:(b+Math.round(132*s))+'px',right:(rs+Math.round(132*s))+'px',width:sz(90),height:sz(90),background:'rgba(60,60,220,.6)',fontSize:'14px'});
+  mk('atk','こう<br>げき',{bottom:b+'px',right:(rs+Math.round(132*s))+'px',width:sz(120),height:sz(120),background:'rgba(220,40,40,.7)',fontSize:'17px'});
 }
 
 /* ── キーボード ── */

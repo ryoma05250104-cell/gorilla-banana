@@ -56,8 +56,8 @@ function buildCtrl(){
   }
   const b=Math.round(20*s),ls=Math.round(14*s),rs=Math.round(14*s);
   const sz=v=>Math.round(v*s)+'px';
-  mk('L','◀',{bottom:b+'px',left:ls+'px',width:sz(130),height:sz(130),background:'rgba(255,255,255,.08)',fontSize:'44px'});
-  mk('R','▶',{bottom:b+'px',left:(ls+Math.round(144*s))+'px',width:sz(130),height:sz(130),background:'rgba(255,255,255,.08)',fontSize:'44px'});
+  mk('L','◀',{bottom:b+'px',left:ls+'px',width:sz(130),height:sz(130),background:'rgba(255,255,255,.15)',fontSize:'26px'});
+  mk('R','▶',{bottom:b+'px',left:(ls+Math.round(144*s))+'px',width:sz(130),height:sz(130),background:'rgba(255,255,255,.15)',fontSize:'26px'});
   mk('jump','ジャンプ',{bottom:b+'px',right:rs+'px',width:sz(120),height:sz(120),background:'rgba(40,200,60,.18)',fontSize:'16px'});
   mk('chg','へん<br>しん',{bottom:(b+Math.round(132*s))+'px',right:(rs+Math.round(132*s))+'px',width:sz(90),height:sz(90),background:'rgba(60,60,220,.18)',fontSize:'14px'});
   mk('atk','こう<br>げき',{bottom:b+'px',right:(rs+Math.round(132*s))+'px',width:sz(120),height:sz(120),background:'rgba(220,40,40,.18)',fontSize:'17px'});

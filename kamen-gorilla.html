@@ -904,11 +904,11 @@ class Stage{
     ee('patrol',8880,436);ee('spike',9100,436);
     const cw=mkP(9500,290,32,192,'#a04020',true,true);
     this.crackWall=cw;pp(cw);
-    // S10：動物病院エリア（hospX=9600）
-    for(let i=0;i<6;i++)bb(9650+i*80,450);
-    pp(bl(10060,360,80));pp(bl(10380,335,96));
-    bb(10100,330);bb(10420,305);
-    ee('patrol',10150,436);
+    // S10：動物病院エリア（hospX=9950〜10210）ブロックは病院の外のみ
+    for(let i=0;i<4;i++)bb(9700+i*80,450);
+    pp(bl(10300,355,80));pp(bl(10500,335,96));
+    bb(10340,325);bb(10540,305);
+    ee('patrol',10420,436);
     // S11
     pp(bl(10680,355,96));pp(bl(11080,330,80));
     bb(10720,325);bb(11120,300);
@@ -1246,8 +1246,8 @@ function updatePlay(dt){
     const hx=stage.hospX,hw=stage.hospW;
     if(player.x+player.w>hx+hw*.3&&player.x<hx+hw*.9&&player.y+player.h>455){
       stage.hospUsed=true;
-      if(player.mode===1){hospMsg='あら、たくみじゃない！\nゴリラポイントを回復しておくわね♪';player.gp=MAX_GP;}
-      else hospMsg='うちは人間はみれないんです、\nごめんなさい！';
+      if(player.mode===1){hospMsg='なつこさん：あら、たくみじゃない！\nGP（ゴリラポイント）を回復しておくわね。';player.gp=MAX_GP;}
+      else hospMsg='なつこさん：ごめんなさい、\nうちは人間はみれないの。さようなら。';
       hospTimer=4;gs=GS.HOSP;return;
     }
   }

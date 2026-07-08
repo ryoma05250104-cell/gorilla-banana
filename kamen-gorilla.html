@@ -714,8 +714,14 @@ class Enemy{
       const ox=Math.min(this.x+this.w,p.x+p.w)-Math.max(this.x,p.x);
       const oy=Math.min(this.y+this.h,p.y+p.h)-Math.max(this.y,p.y);
       if(ox>0&&oy>0){
-        if(ox<oy){if(this.x<p.x)this.x=p.x-this.w;else this.x=p.x+p.w;this.vx*=-.5;}
-        else{if(this.y<p.y){this.y=p.y-this.h;this.vy=0;this.onG=true;}else{this.y=p.y+p.h;this.vy=0;}}
+        if(p.isBlock){
+          // 上からのみ着地（角で弾かれない一方通行）
+          const prevBottom=this.y+this.h-this.vy;
+          if(this.vy>=0&&prevBottom<=p.y+4){this.y=p.y-this.h;this.vy=0;this.onG=true;}
+        }else{
+          if(ox<oy){if(this.x<p.x)this.x=p.x-this.w;else this.x=p.x+p.w;this.vx*=-.5;}
+          else{if(this.y<p.y){this.y=p.y-this.h;this.vy=0;this.onG=true;}else{this.y=p.y+p.h;this.vy=0;}}
+        }
       }
     }
   }

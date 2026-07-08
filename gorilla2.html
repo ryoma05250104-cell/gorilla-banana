@@ -420,14 +420,7 @@ class Player{
     else this.carVx*=.88;
     this.dir=this.carVx>=0?1:-1;
     if(pollJump()&&this.onG){this.vy=-16;this.onG=false;}
-    if(pollChg()){
-      if(stage&&stage.benz){
-        stage.benz.x=this.x+this.w/2-stage.benz.w/2;
-        stage.benz.y=this.y+this.h-stage.benz.h;
-        stage.benz.taken=false;
-      }
-      this.inCar=false;this.mode=1;this.chgT=.2;return;
-    }
+    if(pollChg()){this.inCar=false;this.mode=1;this.chgT=.2;return;}
     this.vx=this.carVx;this._phys(dt,plats);
     this.aH.carD.tick(dt);
     // 敵を轢く（車の視覚サイズに合わせた当たり判定、速度2以上）

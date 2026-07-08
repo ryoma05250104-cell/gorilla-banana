@@ -58,9 +58,9 @@ function buildCtrl(){
   const sz=v=>Math.round(v*s)+'px';
   mk('L','◀',{bottom:b+'px',left:ls+'px',width:sz(130),height:sz(130),background:'rgba(255,255,255,.18)',fontSize:'44px'});
   mk('R','▶',{bottom:b+'px',left:(ls+Math.round(144*s))+'px',width:sz(130),height:sz(130),background:'rgba(255,255,255,.18)',fontSize:'44px'});
-  mk('jump','ジャンプ',{bottom:b+'px',right:rs+'px',width:sz(120),height:sz(120),background:'rgba(40,200,60,.6)',fontSize:'16px'});
-  mk('chg','へん<br>しん',{bottom:(b+Math.round(132*s))+'px',right:(rs+Math.round(132*s))+'px',width:sz(90),height:sz(90),background:'rgba(60,60,220,.6)',fontSize:'14px'});
-  mk('atk','こう<br>げき',{bottom:b+'px',right:(rs+Math.round(132*s))+'px',width:sz(120),height:sz(120),background:'rgba(220,40,40,.7)',fontSize:'17px'});
+  mk('jump','ジャンプ',{bottom:b+'px',right:rs+'px',width:sz(120),height:sz(120),background:'rgba(40,200,60,.18)',fontSize:'16px'});
+  mk('chg','へん<br>しん',{bottom:(b+Math.round(132*s))+'px',right:(rs+Math.round(132*s))+'px',width:sz(90),height:sz(90),background:'rgba(60,60,220,.18)',fontSize:'14px'});
+  mk('atk','こう<br>げき',{bottom:b+'px',right:(rs+Math.round(132*s))+'px',width:sz(120),height:sz(120),background:'rgba(220,40,40,.18)',fontSize:'17px'});
 }
 
 /* ── キーボード ── */
@@ -1240,8 +1240,8 @@ function updatePlay(dt){
     const hx=stage.hospX,hw=stage.hospW;
     if(player.x+player.w>hx+hw*.3&&player.x<hx+hw*.9&&player.y+player.h>455){
       stage.hospUsed=true;
-      if(player.mode===1){hospMsg='いらっしゃい！診察しましょう！\nゴリラポイントが全回復しました！';player.gp=MAX_GP;}
-      else hospMsg='こちらは動物病院です。\n人間の方はお断りしています！';
+      if(player.mode===1){hospMsg='あら、たくみじゃない！\nゴリラポイントを回復しておくわね♪';player.gp=MAX_GP;}
+      else hospMsg='うちは人間はみれないんです、\nごめんなさい！';
       hospTimer=4;gs=GS.HOSP;return;
     }
   }

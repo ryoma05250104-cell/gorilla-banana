@@ -844,7 +844,7 @@ class Stage{
   constructor(){
     this.plats=[];this.enemies=[];this.bananas=[];this.peels=[];
     this.worldW=19200;this.shutterX=17280;
-    this.hospX=9600;this.hospW=260;this.hospUsed=false;
+    this.hospX=9950;this.hospW=260;this.hospUsed=false;
     this.benz=new Benz(3200,394);this.crackWall=null;this.boss=null;
     this._build();
   }
@@ -988,22 +988,46 @@ class Stage{
   _drawHosp(cx){
     const dx=this.hospX-cx,w=this.hospW,h=165,y=316;
     if(dx+w<-50||dx>CW+50)return;
-    // 建物（パステルピンク）
-    ctx.fillStyle='#ffc8e8';ctx.fillRect(dx,y,w,h);
-    // 屋根（パープル）
-    ctx.fillStyle='#c070d0';ctx.fillRect(dx-8,y-48,w+16,52);
-    // 魔法の星マーク
-    ctx.fillStyle='#ff80c8';ctx.fillRect(dx+90,y-42,52,76);ctx.fillRect(dx+72,y-24,90,40);
-    // 窓
-    ctx.fillStyle='rgba(180,220,255,.85)';ctx.fillRect(dx+14,y+20,50,50);ctx.fillRect(dx+w-64,y+20,50,50);
-    // ドア
-    ctx.fillStyle='#fff0d8';ctx.fillRect(dx+104,y+90,52,76);
+    // 建物（白）
+    ctx.fillStyle='#f5faff';ctx.fillRect(dx,y,w,h);
+    // 屋根（青緑）
+    ctx.fillStyle='#0e8c6a';ctx.fillRect(dx-8,y-50,w+16,54);
+    // 屋根の縁
+    ctx.fillStyle='#06614a';ctx.fillRect(dx-8,y-50,w+16,6);
+    // 赤十字（屋根中央）
+    ctx.fillStyle='#e80000';
+    ctx.fillRect(dx+w/2-7,y-44,14,34);
+    ctx.fillRect(dx+w/2-21,y-32,42,12);
+    // 壁のライン
+    ctx.strokeStyle='#c8dff0';ctx.lineWidth=1;
+    ctx.strokeRect(dx,y,w,h);
+    // 左窓
+    ctx.fillStyle='rgba(160,210,255,.85)';ctx.fillRect(dx+14,y+22,52,48);
+    ctx.strokeStyle='#80b8e8';ctx.lineWidth=2;ctx.strokeRect(dx+14,y+22,52,48);
+    ctx.beginPath();ctx.moveTo(dx+40,y+22);ctx.lineTo(dx+40,y+70);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(dx+14,y+46);ctx.lineTo(dx+66,y+46);ctx.stroke();
+    // 右窓
+    ctx.fillStyle='rgba(160,210,255,.85)';ctx.fillRect(dx+w-66,y+22,52,48);
+    ctx.strokeStyle='#80b8e8';ctx.strokeRect(dx+w-66,y+22,52,48);
+    ctx.beginPath();ctx.moveTo(dx+w-40,y+22);ctx.lineTo(dx+w-40,y+70);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(dx+w-66,y+46);ctx.lineTo(dx+w-14,y+46);ctx.stroke();
+    // ドア（アーチ型）
+    ctx.fillStyle='#c8a060';ctx.fillRect(dx+w/2-26,y+90,52,76);
+    ctx.fillStyle='#c8a060';ctx.beginPath();ctx.arc(dx+w/2,y+90,26,Math.PI,0);ctx.fill();
+    ctx.fillStyle='rgba(160,210,255,.4)';ctx.fillRect(dx+w/2-22,y+90,44,60);
     // 看板
-    ctx.fillStyle='#ffe060';ctx.fillRect(dx+8,y+8,106,34);
-    ctx.fillStyle='#602080';ctx.font='12px sans-serif';ctx.fillText('妖精のおうち',dx+11,y+29);
+    ctx.fillStyle='#fff';ctx.fillRect(dx+8,y+8,w-16,30);
+    ctx.strokeStyle='#0e8c6a';ctx.lineWidth=2;ctx.strokeRect(dx+8,y+8,w-16,30);
+    ctx.fillStyle='#0e3060';ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+    ctx.fillText('動物病院',dx+w/2,y+29);
+    // 肉球マーク（看板横）
+    ctx.fillStyle='#e06080';
+    ctx.beginPath();ctx.arc(dx+w-18,y+20,6,0,Math.PI*2);ctx.fill();
+    [[-8,-8],[4,-10],[10,-2]].forEach(([ox,oy])=>{ctx.beginPath();ctx.arc(dx+w-18+ox,y+20+oy,3,0,Math.PI*2);ctx.fill();});
+    ctx.textAlign='left';
     if(!this.hospUsed){
-      ctx.fillStyle='rgba(255,255,255,.92)';ctx.font='bold 12px sans-serif';ctx.textAlign='center';
-      ctx.fillText('入口に触れる→ゴリラで回復',dx+w/2,y-54);ctx.textAlign='left';
+      ctx.fillStyle='rgba(0,60,120,.85)';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
+      ctx.fillText('ゴリラで入ると回復！',dx+w/2,y-56);ctx.textAlign='left';
     }
   }
   _drawShutter(cx){
@@ -1216,8 +1240,8 @@ function updatePlay(dt){
     const hx=stage.hospX,hw=stage.hospW;
     if(player.x+player.w>hx+hw*.3&&player.x<hx+hw*.9&&player.y+player.h>455){
       stage.hospUsed=true;
-      if(player.mode===1){hospMsg='あら、たくみじゃない！\nゴリラポイントを回復しておくわね♪';player.gp=MAX_GP;}
-      else hospMsg='うちは人間はみれないんです、\nごめんなさい！';
+      if(player.mode===1){hospMsg='いらっしゃい！診察しましょう！\nゴリラポイントが全回復しました！';player.gp=MAX_GP;}
+      else hospMsg='こちらは動物病院です。\n人間の方はお断りしています！';
       hospTimer=4;gs=GS.HOSP;return;
     }
   }

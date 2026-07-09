@@ -30,7 +30,7 @@ const isTouch=('ontouchstart' in window);
 function resize(){
   const W=window.innerWidth,H=window.innerHeight;
   const portrait=H>W;
-  const SIDE=(!isTouch)?0:portrait?0:120;  // 横向き：左右120px、縦向き：0
+  const SIDE=(!isTouch)?0:portrait?0:160;  // 横向き：左右160px、縦向き：0
   const BOT =(!isTouch)?0:portrait?150:0;  // 縦向き：下150px、横向き：0
   scale=Math.min((W-SIDE*2)/CW,(H-BOT)/CH);
   const cw=CW*scale|0,ch=CH*scale|0;
@@ -91,19 +91,26 @@ function buildCtrl(){
     mk('jump','ジャンプ',   {left:p(jL),top:p(vt),  width:p(bsz),  height:p(bsz),  background:'rgba(40,200,60,.28)', fontSize:p(bsz*.18)});
     mk('chg','へん<br>しん',{left:p(chgL),top:p(chgT),width:p(smSz),height:p(smSz),background:'rgba(60,60,220,.28)', fontSize:p(smSz*.17)});
   } else {
-    // 横向き：左右120px帯にボタン縦並び
-    const bsz=Math.min(SIDE-16,96);
-    const mg=(SIDE-bsz)/2;
-    const smSz=Math.round(bsz*.82);
-    const smMg=(SIDE-smSz)/2;
+    // 横向き：左右160px帯
+    const lBsz=Math.min(SIDE-24,88);           // 左ボタンサイズ
+    const lMg=Math.round((SIDE-lBsz)/2);
     const cBot=ty+ch;
-    const bot=cBot-bsz-16;
-    const gap=Math.round(bsz*.22);
-    mk('L','◀',         {left:p(mg),        top:p(bot-bsz-gap),  width:p(bsz),  height:p(bsz),  background:'rgba(255,255,255,.22)',fontSize:p(bsz*.35)});
-    mk('R','▶',         {left:p(mg),        top:p(bot),          width:p(bsz),  height:p(bsz),  background:'rgba(255,255,255,.22)',fontSize:p(bsz*.35)});
-    mk('atk','こう<br>げき',{left:p(W-SIDE+mg), top:p(bot-bsz-gap),  width:p(bsz),  height:p(bsz),  background:'rgba(220,40,40,.28)', fontSize:p(bsz*.18)});
-    mk('jump','ジャンプ',   {left:p(W-SIDE+mg), top:p(bot),          width:p(bsz),  height:p(bsz),  background:'rgba(40,200,60,.28)', fontSize:p(bsz*.18)});
-    mk('chg','へん<br>しん',{left:p(W-SIDE+smMg),top:p(bot-bsz*2-gap*2),width:p(smSz),height:p(smSz),background:'rgba(60,60,220,.28)',fontSize:p(smSz*.17)});
+    const lBot=cBot-lBsz-14;
+    const lGap=Math.round(lBsz*.22);
+    // 左エリア：◀（上）▶（下）
+    mk('L','◀',{left:p(lMg),top:p(lBot-lBsz-lGap),width:p(lBsz),height:p(lBsz),background:'rgba(255,255,255,.22)',fontSize:p(lBsz*.35)});
+    mk('R','▶',{left:p(lMg),top:p(lBot),           width:p(lBsz),height:p(lBsz),background:'rgba(255,255,255,.22)',fontSize:p(lBsz*.35)});
+    // 右エリア：こうげき（上）ジャンプ（下）を右寄せ、へんしんを左・中間
+    const rBsz=62;
+    const chSz=52;
+    const rGap=Math.round(rBsz*.55);           // atk と jump の間隔を広めに
+    const rBot=cBot-rBsz-14;
+    const atkL=W-rBsz-10;                      // 右端から10px
+    const chgL=atkL-chSz-12;                   // こうげきの左に12px空けて配置
+    const chgT=Math.round(rBot-rGap/2-chSz/2); // atk と jump の中間に縦配置
+    mk('atk','こう<br>げき',{left:p(atkL),top:p(rBot-rBsz-rGap),width:p(rBsz),height:p(rBsz),background:'rgba(220,40,40,.28)',fontSize:p(rBsz*.18)});
+    mk('jump','ジャンプ',   {left:p(atkL),top:p(rBot),           width:p(rBsz),height:p(rBsz),background:'rgba(40,200,60,.28)', fontSize:p(rBsz*.18)});
+    mk('chg','へん<br>しん',{left:p(chgL),top:p(chgT),           width:p(chSz),height:p(chSz),background:'rgba(60,60,220,.32)', fontSize:p(chSz*.17)});
   }
 }
 

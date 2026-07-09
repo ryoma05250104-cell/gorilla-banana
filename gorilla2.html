@@ -1450,7 +1450,7 @@ function _drawHospInterior(){
   ctx.beginPath();ctx.arc(187,352,17,0,Math.PI*2);ctx.fill();
   // なつこさん（受付カウンター越しに上半身表示）
   {const ni=IMGS['n_idle'];const nx=Math.round(CW*.62);
-  if(ni){const nh=160,nw=Math.round(ni.width/ni.height*nh);ctx.save();ctx.scale(-1,1);ctx.drawImage(ni,-(nx+Math.round(nw/2)),320-nh,nw,nh);ctx.restore();}
+  if(ni){const nh=160,nw=Math.round(ni.width/ni.height*nh);ctx.save();ctx.translate(nx,0);ctx.scale(-1,1);ctx.drawImage(ni,-Math.round(nw/2),320-nh,nw,nh);ctx.restore();}
   else{_drawNatsuko(nx,320);}}
   // 受付カウンター（下半身を隠す）
   ctx.fillStyle='#7a9060';ctx.fillRect(120,308,CW-240,90);

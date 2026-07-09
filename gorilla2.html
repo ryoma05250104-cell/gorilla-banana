@@ -674,7 +674,7 @@ class Player{
       // ── 初回変身カットイン（仮面ライダー風）──
       const runImg=IMGS['human_run'],jmpImg=IMGS['human_jump'],faceImg=IMGS['takumi_face'];
       // フェーズ分割: p 1.0→0  (走る→ジャンプ→顔アップ→ゴリラ閃光)
-      const FACE_END=0.14,FACE_ST=0.38,JUMP_ST=0.65;
+      const FACE_END=0.12,JUMP_ST=0.65;
 
       if(p>FACE_END){
         // 黒背景
@@ -710,11 +710,14 @@ class Player{
         }
       }
 
-      // ── ジャンプ フェーズ (JUMP_ST > p > FACE_ST) ──
-      if(p<=JUMP_ST&&p>FACE_ST){
-        const t=(JUMP_ST-p)/(JUMP_ST-FACE_ST); // 0→1
+      // フェーズ境界
+      const ROUL_ST=0.48; // ジャンプ終わり→ルーレット開始
+      const ROUL_END=0.28; // ルーレット終わり→顔開始
+
+      // ── ジャンプ フェーズ (JUMP_ST > p > ROUL_ST) ──
+      if(p<=JUMP_ST&&p>ROUL_ST){
+        const t=(JUMP_ST-p)/(JUMP_ST-ROUL_ST);
         ctx.save();
-        // 光の輪
         [0,.1,.22].forEach(off=>{
           const rt=Math.max(0,t-off)*1.5;
           if(rt<1){
@@ -727,83 +730,73 @@ class Player{
         if(jmpImg){
           const scale=1.6+t*0.5;
           const sw=jmpImg.width*scale,sh=jmpImg.height*scale;
-          const jy=scy-sh*(.7+t*.2);
           ctx.save();
           ctx.shadowColor='rgba(255,180,0,1)';ctx.shadowBlur=40+t*30;
-          ctx.drawImage(jmpImg,scx-sw/2,jy,sw,sh);
+          ctx.drawImage(jmpImg,scx-sw/2,scy-sh*(.7+t*.2),sw,sh);
           ctx.restore();
         }
       }
 
-      // ── 顔アップ フェーズ (FACE_ST > p > FACE_END) ──
-      if(p<=FACE_ST&&p>FACE_END&&faceImg){
-        const t=(FACE_ST-p)/(FACE_ST-FACE_END); // 0→1
-        const scale=2.0+t*0.9;
-        const sh_i=Math.min(CH*0.95,faceImg.height*scale);
-        const sw_i=faceImg.width*(sh_i/faceImg.height);
-        const fx=scx-sw_i/2,fy=scy-sh_i*0.52;
-        // 顔写真
-        ctx.save();
-        ctx.drawImage(faceImg,fx,fy,sw_i,sh_i);
-        // 真っ赤なビネット
-        const vg=ctx.createRadialGradient(scx,scy,sh_i*.2,scx,scy,sh_i*.9);
-        vg.addColorStop(0,'transparent');vg.addColorStop(1,'rgba(120,0,0,.75)');
-        ctx.fillStyle=vg;ctx.fillRect(0,0,CW,CH);
-        ctx.restore();
-        // スキャンライン（シネマ風）
-        ctx.save();ctx.globalAlpha=0.18;ctx.fillStyle='#000';
-        for(let y=0;y<CH;y+=4){ctx.fillRect(0,y,CW,2);}
-        ctx.restore();
-
-        // ── 赤ルーレット（顔の前に重ねる）──
-        const rAngle=t*Math.PI*14; // 7回転
-        const rR=70+t*110;         // 小→大に拡大
-        const rAlpha=t<0.15?t/0.15:t>0.85?(1-t)/0.15:1; // フェードイン/アウト
+      // ── ルーレット フェーズ（単独・黒背景）(ROUL_ST > p > ROUL_END) ──
+      if(p<=ROUL_ST&&p>ROUL_END){
+        const t=(ROUL_ST-p)/(ROUL_ST-ROUL_END); // 0→1
+        const rAngle=t*Math.PI*16; // 8回転
+        const rR=80+t*130;
         const segs=16;
         ctx.save();
-        ctx.globalAlpha=rAlpha*0.92;
-        ctx.translate(scx,scy-10);
+        ctx.translate(scx,scy);
         ctx.rotate(rAngle);
-        // セグメント
         for(let i=0;i<segs;i++){
           const a1=(i/segs)*Math.PI*2,a2=((i+1)/segs)*Math.PI*2;
           ctx.fillStyle=i%2===0?'#cc0000':'#1a0000';
           ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,rR,a1,a2);ctx.closePath();ctx.fill();
-          // セグメント境界ライン
           ctx.strokeStyle='rgba(255,80,80,.5)';ctx.lineWidth=1.5;
           ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(a1)*rR,Math.sin(a1)*rR);ctx.stroke();
         }
-        // 外周リング
         ctx.strokeStyle='rgba(255,60,60,.9)';ctx.lineWidth=3;
         ctx.beginPath();ctx.arc(0,0,rR,0,Math.PI*2);ctx.stroke();
-        // 内側ハイライトリング
-        ctx.strokeStyle='rgba(255,180,180,.6)';ctx.lineWidth=1.5;
-        ctx.beginPath();ctx.arc(0,0,rR*0.55,0,Math.PI*2);ctx.stroke();
-        // 中心円
-        ctx.rotate(-rAngle); // テキストのために逆回転
+        ctx.strokeStyle='rgba(255,180,180,.5)';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.arc(0,0,rR*0.5,0,Math.PI*2);ctx.stroke();
+        ctx.rotate(-rAngle);
         ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,0,22,0,Math.PI*2);ctx.fill();
-        ctx.fillStyle='#cc0000';ctx.beginPath();ctx.arc(0,0,15,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#cc0000';ctx.beginPath();ctx.arc(0,0,14,0,Math.PI*2);ctx.fill();
         ctx.restore();
-
         // 放射スピードライン
-        ctx.save();
-        ctx.globalAlpha=rAlpha*0.35;
-        ctx.strokeStyle='#ff4444';ctx.lineWidth=1.5;
-        ctx.translate(scx,scy-10);
+        ctx.save();ctx.globalAlpha=0.4;ctx.strokeStyle='#ff4444';ctx.lineWidth=1.5;
+        ctx.translate(scx,scy);
         for(let i=0;i<24;i++){
           const a=(i/24)*Math.PI*2+rAngle*0.3;
-          const r0=rR+8,r1=rR+50+Math.sin(rAngle+i)*18;
-          ctx.beginPath();ctx.moveTo(Math.cos(a)*r0,Math.sin(a)*r0);
+          const r1=rR+55+Math.sin(rAngle+i)*20;
+          ctx.beginPath();ctx.moveTo(Math.cos(a)*(rR+5),Math.sin(a)*(rR+5));
           ctx.lineTo(Math.cos(a)*r1,Math.sin(a)*r1);ctx.stroke();
         }
         ctx.restore();
-
         // 「へんしん！！」テキスト
-        const ta=Math.min(1,t*3);
+        const ta=Math.min(1,t*4);
         ctx.save();ctx.globalAlpha=ta;
-        ctx.font='bold italic 80px sans-serif';ctx.textAlign='center';
-        ctx.fillStyle='#fff';ctx.shadowColor='#ff0000';ctx.shadowBlur=30;
-        ctx.fillText('へんしん！！',scx,90);
+        ctx.font='bold italic 72px sans-serif';ctx.textAlign='center';
+        ctx.fillStyle='#fff';ctx.shadowColor='#ff0000';ctx.shadowBlur=28;
+        ctx.fillText('へんしん！！',scx,54);
+        ctx.restore();
+      }
+
+      // ── 顔アップ フェーズ（単独・ルーレットなし）(ROUL_END > p > FACE_END) ──
+      if(p<=ROUL_END&&p>FACE_END&&faceImg){
+        const t=(ROUL_END-p)/(ROUL_END-FACE_END); // 0→1
+        const scale=2.0+t*0.8;
+        const sh_i=Math.min(CH*0.95,faceImg.height*scale);
+        const sw_i=faceImg.width*(sh_i/faceImg.height);
+        const fx=scx-sw_i/2,fy=scy-sh_i*0.52;
+        ctx.drawImage(faceImg,fx,fy,sw_i,sh_i);
+        // ビネット
+        ctx.save();
+        const vg=ctx.createRadialGradient(scx,scy,sh_i*.18,scx,scy,sh_i*.88);
+        vg.addColorStop(0,'transparent');vg.addColorStop(1,'rgba(100,0,0,.7)');
+        ctx.fillStyle=vg;ctx.fillRect(0,0,CW,CH);
+        ctx.restore();
+        // スキャンライン
+        ctx.save();ctx.globalAlpha=0.15;ctx.fillStyle='#000';
+        for(let y=0;y<CH;y+=4){ctx.fillRect(0,y,CW,2);}
         ctx.restore();
       }
 

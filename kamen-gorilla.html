@@ -9,7 +9,7 @@
 html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:none;user-select:none;-webkit-user-select:none;cursor:none;}
 #cv{position:fixed;image-rendering:pixelated;cursor:none;}
 #ctrl{position:fixed;pointer-events:none;cursor:none;}
-.btn{position:absolute;pointer-events:all;border-radius:50%;border:none;background:transparent!important;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;color:transparent;font-family:sans-serif;-webkit-tap-highlight-color:transparent;touch-action:none;cursor:none;line-height:1.2;text-align:center;}
+.btn{position:absolute;pointer-events:all;border-radius:50%;border:2px solid rgba(255,255,255,.55);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;color:rgba(255,255,255,.9);font-family:sans-serif;-webkit-tap-highlight-color:transparent;touch-action:none;cursor:none;line-height:1.2;text-align:center;}
 </style>
 </head>
 <body>
@@ -33,7 +33,7 @@ function resize(){
   const lx=(W-cw)/2|0,ty=(H-ch)/2|0;
   cv.style.cssText=`position:fixed;left:${lx}px;top:${ty}px;width:${cw}px;height:${ch}px;`;
   const ctrl=document.getElementById('ctrl');
-  ctrl.style.cssText=`position:fixed;left:${lx}px;top:${ty}px;width:${cw}px;height:${ch}px;pointer-events:none;cursor:none;visibility:${_ctrlVisible?'visible':'hidden'};`;
+  ctrl.style.cssText=`position:fixed;left:0;top:0;width:${W}px;height:${H}px;pointer-events:none;cursor:none;visibility:${_ctrlVisible?'visible':'hidden'};`;
   buildCtrl();
 }
 window.addEventListener('resize',resize);
@@ -44,7 +44,11 @@ const BTN={L:0,R:0,jump:0,atk:0,chg:0};
 function buildCtrl(){
   const ctrl=document.getElementById('ctrl');
   ctrl.innerHTML='';
-  const s=Math.min(scale,1.8);
+  const W=window.innerWidth,H=window.innerHeight;
+  const cw=CW*scale|0,ch=CH*scale|0;
+  const lx=(W-cw)/2|0; // 左右余白幅
+  const ty=(H-ch)/2|0; // 上下余白高さ
+
   function mk(prop,label,style){
     const d=document.createElement('div');
     d.className='btn';d.innerHTML=label;
@@ -54,13 +58,32 @@ function buildCtrl(){
     d.addEventListener('touchcancel',()=>{BTN[prop]=0;});
     ctrl.appendChild(d);
   }
-  const b=Math.round(20*s),ls=Math.round(14*s),rs=Math.round(14*s);
-  const sz=v=>Math.round(v*s)+'px';
-  mk('L','◀',{bottom:b+'px',left:ls+'px',width:sz(130),height:sz(130),background:'rgba(255,255,255,.15)',fontSize:'26px'});
-  mk('R','▶',{bottom:b+'px',left:(ls+Math.round(144*s))+'px',width:sz(130),height:sz(130),background:'rgba(255,255,255,.15)',fontSize:'26px'});
-  mk('jump','ジャンプ',{bottom:b+'px',right:rs+'px',width:sz(120),height:sz(120),background:'rgba(40,200,60,.18)',fontSize:'16px'});
-  mk('chg','へん<br>しん',{bottom:(b+Math.round(132*s))+'px',right:(rs+Math.round(132*s))+'px',width:sz(90),height:sz(90),background:'rgba(60,60,220,.18)',fontSize:'14px'});
-  mk('atk','こう<br>げき',{bottom:b+'px',right:(rs+Math.round(132*s))+'px',width:sz(120),height:sz(120),background:'rgba(220,40,40,.18)',fontSize:'17px'});
+
+  const p=v=>Math.round(v)+'px';
+
+  if(lx>=50){
+    // 左右に余白あり（ランドスケープ）→ 左右の黒帯にボタン配置
+    const bsz=Math.min(lx-12,90);
+    const lc=Math.round(lx/2-bsz/2);          // 左帯中心
+    const rc=W-lx+Math.round(lx/2-bsz/2);     // 右帯中心
+    const bot=Math.round(H*0.55);
+    const gap=Math.round(bsz*0.28);
+    mk('L','◀',{left:p(lc),top:p(bot),width:p(bsz),height:p(bsz),background:'rgba(255,255,255,.18)',fontSize:p(bsz*.3)});
+    mk('R','▶',{left:p(lc),top:p(bot+bsz+gap),width:p(bsz),height:p(bsz),background:'rgba(255,255,255,.18)',fontSize:p(bsz*.3)});
+    mk('jump','ジャンプ',{left:p(rc),top:p(bot+bsz+gap),width:p(bsz),height:p(bsz),background:'rgba(40,200,60,.25)',fontSize:p(bsz*.18)});
+    mk('atk','こう<br>げき',{left:p(rc),top:p(bot),width:p(bsz),height:p(bsz),background:'rgba(220,40,40,.25)',fontSize:p(bsz*.18)});
+    mk('chg','へん<br>しん',{left:p(rc-Math.round(bsz*0.7)),top:p(bot-Math.round(bsz*0.6)),width:p(Math.round(bsz*.85)),height:p(Math.round(bsz*.85)),background:'rgba(60,60,220,.25)',fontSize:p(bsz*.16)});
+  } else if(ty>=50){
+    // 上下に余白あり（ポートレート）→ 下の黒帯にボタン配置
+    const bsz=Math.min(ty-12,80);
+    const bot=H-ty+Math.round(ty/2-bsz/2);
+    const gap=10;
+    mk('L','◀',{left:p(W*.12),top:p(bot),width:p(bsz),height:p(bsz),background:'rgba(255,255,255,.18)',fontSize:p(bsz*.32)});
+    mk('R','▶',{left:p(W*.12+bsz+gap),top:p(bot),width:p(bsz),height:p(bsz),background:'rgba(255,255,255,.18)',fontSize:p(bsz*.32)});
+    mk('jump','ジャンプ',{left:p(W*.72),top:p(bot),width:p(bsz),height:p(bsz),background:'rgba(40,200,60,.25)',fontSize:p(bsz*.18)});
+    mk('atk','こう<br>げき',{left:p(W*.86),top:p(bot),width:p(bsz),height:p(bsz),background:'rgba(220,40,40,.25)',fontSize:p(bsz*.18)});
+    mk('chg','へん<br>しん',{left:p(W*.6),top:p(bot),width:p(bsz),height:p(bsz),background:'rgba(60,60,220,.25)',fontSize:p(bsz*.18)});
+  }
 }
 
 /* ── キーボード ── */

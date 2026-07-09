@@ -1007,14 +1007,10 @@ class Stage{
     pp(bl(5980,360,80));pp(bl(6320,335,80));
     bb(6020,330);bb(6360,305);
     ee('patrol',6100,436);ee('patrol',6440,436);ee('fly',6670,270);
-    // S5：降り階段 → 2面へ（+1920ずらし）
-    for(let i=0;i<8;i++){
-      const sx=6720+i*105,sy=310+i*22;
-      pp(bl(sx,sy,108));
-      if(i===2)bb(sx+30,sy-30);
-      if(i===5)bb(sx+30,sy-30);
-    }
-    ee('patrol',6790,284);ee('spike',6995,284);ee('fly',7220,240);
+    // S5：ラストエリア → 2面へ
+    pp(bl(6800,360,80));pp(bl(7100,335,80));pp(bl(7400,355,80));
+    bb(6840,330);bb(7140,305);bb(7440,325);
+    ee('patrol',6900,436);ee('spike',7200,436);ee('fly',7500,260);
   }
   _build2(){
     const bl=(x,y,w)=>({x,y,w,h:16,col:'#7030c0',solid:true,cracked:false,broken:false,isBlock:true});

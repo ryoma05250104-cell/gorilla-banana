@@ -958,9 +958,9 @@ class Stage{
     this.plats=[];this.enemies=[];this.bananas=[];this.peels=[];
     this.boss=null;this.crackWall=null;
     if(stageNum===1){
-      this.worldW=13440;this.shutterX=99999;
-      this.hospX=6850;this.hospW=260;
-      this.benz=new Benz(3200,394);
+      this.worldW=5760;this.shutterX=99999;
+      this.hospX=2900;this.hospW=260;
+      this.benz=new Benz(1100,394);
     } else {
       this.worldW=3840;this.shutterX=1920;
       this.hospX=-9999;this.hospW=0;
@@ -976,69 +976,37 @@ class Stage{
     const bb=(x,y)=>{this.bananas.push(new Banana(x,y));};
     const ee=(t,x,y)=>{this.enemies.push(new Enemy(t,x,y));};
     pp({x:0,y:480,w:this.worldW,h:80,col:'#5a3010',solid:true,cracked:false,broken:false,isGround:true});
-    // S0
-    pp(bl(350,360,96));pp(bl(740,335,80));
-    bb(390,330);bb(780,305);
-    ee('patrol',520,436);ee('patrol',860,436);
-    // S1
-    pp(bl(1100,355,96));pp(bl(1520,330,80));
-    bb(1140,325);bb(1560,300);
-    ee('patrol',1200,436);ee('spike',1400,436);
-    // S2
-    pp(bl(2060,360,96));pp(bl(2460,335,80));
-    bb(2100,330);bb(2500,305);
-    ee('patrol',2200,436);ee('patrol',2580,436);
-    // S3：ベンツ登場（x=3200）・広い平地
-    pp(bl(3700,350,80));
-    bb(3740,320);bb(3100,450);bb(3400,450);
-    ee('patrol',3000,436);ee('fly',3600,270);
-    // S4
-    pp(bl(3960,360,96));pp(bl(4380,335,80));
-    bb(4000,330);bb(4420,305);
-    ee('patrol',4100,436);ee('patrol',4500,436);
-    // S5
-    pp(bl(4920,355,96));pp(bl(5340,330,80));
-    bb(4960,325);bb(5380,300);
-    ee('patrol',5050,436);ee('spike',5280,436);
-    // S6：亀裂壁→病院手前
-    pp(bl(5880,360,80));pp(bl(6260,335,96));
-    bb(5920,330);bb(6300,305);
-    ee('patrol',6000,436);ee('fly',6350,270);
-    const cw=mkP(6450,290,32,192,'#a04020',true,true);
+    // S0：スタート
+    pp(bl(350,360,80));pp(bl(720,335,80));
+    bb(390,330);bb(760,305);
+    ee('patrol',500,436);ee('patrol',840,436);
+    // S1：ベンツ登場（x=1100）
+    pp(bl(1600,350,80));
+    bb(1640,320);bb(1100,450);bb(1400,450);
+    ee('patrol',1250,436);ee('fly',1700,270);
+    // S2：亀裂壁 → 動物病院
+    pp(bl(2100,360,80));pp(bl(2450,335,80));
+    bb(2140,330);bb(2490,305);
+    ee('patrol',2220,436);ee('spike',2380,436);
+    const cw=mkP(2640,290,32,192,'#a04020',true,true);
     this.crackWall=cw;pp(cw);
-    // S7：動物病院エリア（hospX=6850〜7110）
-    for(let i=0;i<4;i++)bb(6560+i*80,450);
-    pp(bl(7200,355,80));pp(bl(7450,335,96));
-    bb(7240,325);bb(7490,305);
-    ee('patrol',7320,436);
-    // S8
-    pp(bl(7800,360,96));pp(bl(8200,335,80));
-    bb(7840,330);bb(8240,305);
-    ee('patrol',7920,436);ee('patrol',8320,436);
-    // S9
-    pp(bl(8760,355,96));pp(bl(9160,330,80));
-    bb(8800,325);bb(9200,300);
-    ee('spike',8880,436);ee('patrol',9080,436);ee('fly',9300,270);
-    // S10
-    pp(bl(9720,360,80));pp(bl(10100,335,96));
-    bb(9760,330);bb(10140,305);
-    ee('patrol',9840,436);ee('spike',10060,436);
-    // S11
-    pp(bl(10680,355,96));pp(bl(11060,330,80));
-    bb(10720,325);bb(11100,300);
-    ee('patrol',10800,436);ee('patrol',11020,436);ee('fly',11200,270);
-    // S12
-    pp(bl(11640,360,80));pp(bl(12020,335,96));
-    bb(11680,330);bb(12060,305);
-    ee('spike',11760,436);ee('patrol',12100,436);
-    // S13：降り階段（2面への入口）
+    for(let i=0;i<3;i++)bb(2700+i*70,450);
+    // S3：病院の後 ～ 中盤
+    pp(bl(3100,355,80));pp(bl(3460,330,80));
+    bb(3140,325);bb(3500,300);
+    ee('patrol',3200,436);ee('fly',3500,270);ee('spike',3650,436);
+    // S4：中盤
+    pp(bl(4060,360,80));pp(bl(4400,335,80));
+    bb(4100,330);bb(4440,305);
+    ee('patrol',4180,436);ee('patrol',4520,436);ee('fly',4750,270);
+    // S5：降り階段 → 2面へ
     for(let i=0;i<8;i++){
-      const sx=12480+i*110,sy=300+i*24;
-      pp(bl(sx,sy,114));
+      const sx=4800+i*105,sy=310+i*22;
+      pp(bl(sx,sy,108));
       if(i===2)bb(sx+30,sy-30);
       if(i===5)bb(sx+30,sy-30);
     }
-    ee('patrol',12550,274);ee('spike',12770,274);ee('fly',13050,230);
+    ee('patrol',4870,284);ee('spike',5075,284);ee('fly',5300,240);
   }
   _build2(){
     const bl=(x,y,w)=>({x,y,w,h:16,col:'#7030c0',solid:true,cracked:false,broken:false,isBlock:true});
@@ -1278,7 +1246,7 @@ function drawTitle(dt){
 }
 
 function drawBG(){
-  if(gs===GS.BOSS){
+  if(gs===GS.BOSS||stageNum===2){
     const bg=ctx.createLinearGradient(0,0,0,CH);
     bg.addColorStop(0,'#1c0838');bg.addColorStop(.55,'#48107a');bg.addColorStop(1,'#8a28b8');
     ctx.fillStyle=bg;ctx.fillRect(0,0,CW,CH);
@@ -1314,7 +1282,9 @@ function drawScene(){
   ctx.fillStyle=mc;ctx.fillRect(4,54,178,28);ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';
   ctx.fillText(player.mode===1?'🦍 ゴリラ':'🧑 人間',10,71);
   ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='bold 13px sans-serif';ctx.textAlign='right';
-  ctx.fillText('👁 '+playCount+'回',CW-6,18);ctx.textAlign='left';
+  ctx.fillText('👁 '+playCount+'回',CW-6,18);
+  ctx.fillStyle=stageNum===2?'#cc88ff':'#ffffaa';
+  ctx.fillText('STAGE '+stageNum,CW-6,36);ctx.textAlign='left';
   if(!('ontouchstart' in window)){
     ctx.fillStyle='rgba(255,255,255,.38)';ctx.font='11px sans-serif';ctx.textAlign='right';
     ctx.fillText('↑/Z:ジャンプ X:攻撃 C:変身',CW-6,32);ctx.textAlign='left';

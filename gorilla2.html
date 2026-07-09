@@ -1010,7 +1010,7 @@ class Enemy{
   _drawBoss(dx,cx){
     const {y,w,h}=this;
     const sheet=IMGS['bk_sheet'];
-    const sw=128,sh=128;
+    const sw=180,sh=180;
     const sdx=dx+w/2-sw/2,sdy=y+h-sh;
     if(sheet&&BOSS_ANIM[this.bossAnim]){
       const [col,row]=BOSS_ANIM[this.bossAnim][this.bossFrame]||[0,0];

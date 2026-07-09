@@ -754,6 +754,23 @@ class Enemy{
   _boss(dt,player,plats){
     const px=player.x+player.w/2,bx=this.x+this.w/2;
     this.phaseT-=dt;
+    // ステージ2: 動かず連射のみ
+    if(stageNum===2){
+      this.vx=0;this._phys(plats);
+      if(this.phaseT<=0){
+        const d=px>bx?1:-1;
+        this.proj.push({x:bx,y:this.y+30,vx:d*9,vy:0,w:22,h:16,t:'carrot',life:3});
+        this.proj.push({x:bx,y:this.y+18,vx:d*7,vy:-3.5,w:22,h:16,t:'carrot',life:3});
+        this.proj.push({x:bx,y:this.y+42,vx:d*7,vy:3.5,w:22,h:16,t:'carrot',life:3});
+        this.phaseT=1.8;
+      }
+      for(let i=this.proj.length-1;i>=0;i--){
+        const p=this.proj[i];p.x+=p.vx;p.y+=p.vy;
+        if(p.t!=='shock'&&p.t!=='heart')p.vy+=.3;
+        p.life-=dt;if(p.life<=0||p.x<-300||p.x>25000)this.proj.splice(i,1);
+      }
+      return;
+    }
     if(this.phase===0){
       if(Math.abs(px-bx)>100)this.vx=(px>bx)?2.4:-2.4;else this.vx*=.7;
       this._phys(plats);
@@ -945,7 +962,7 @@ class Stage{
       this.hospX=6850;this.hospW=260;
       this.benz=new Benz(3200,394);
     } else {
-      this.worldW=7680;this.shutterX=5760;
+      this.worldW=3840;this.shutterX=1920;
       this.hospX=-9999;this.hospW=0;
       this.benz=null;
     }
@@ -1025,50 +1042,46 @@ class Stage{
   }
   _build2(){
     const bl=(x,y,w)=>({x,y,w,h:16,col:'#7030c0',solid:true,cracked:false,broken:false,isBlock:true});
+    const wl=(x,y,h)=>mkP(x,y,30,h,'#4a1880');  // 壁
     const cr=(x,y,w,h)=>({x,y,w,h,col:'#e890d8',solid:true,cracked:false,broken:false,isCrystal:true});
     const pp=v=>{this.plats.push(v);};
     const bb=(x,y)=>{this.bananas.push(new Banana(x,y));};
     const ee=(t,x,y)=>{this.enemies.push(new Enemy(t,x,y));};
-    pp({x:0,y:480,w:this.worldW,h:80,col:'#3a1860',solid:true,cracked:false,broken:false,isGround:true});
-    // B0
-    pp(bl(300,380,80));pp(bl(700,355,80));
-    bb(340,350);bb(740,325);
-    ee('patrol',450,436);ee('patrol',820,436);
-    // B1
-    pp(bl(1150,360,96));pp(bl(1550,335,80));
-    bb(1190,330);bb(1590,305);
-    ee('spike',1250,436);ee('patrol',1650,436);ee('fly',1700,280);
-    // B2
-    pp(bl(2080,355,96));pp(bl(2500,330,80));
-    bb(2120,325);bb(2540,300);
-    ee('patrol',2200,436);ee('fly',2450,270);ee('spike',2620,436);
-    // B3
-    pp(bl(3040,360,80));pp(bl(3460,335,96));
-    bb(3080,330);bb(3500,305);
-    ee('patrol',3150,436);ee('spike',3380,436);ee('patrol',3600,436);
-    // B4
-    pp(bl(4000,350,96));pp(bl(4420,325,80));
-    bb(4040,320);bb(4460,295);
-    ee('fly',4100,270);ee('patrol',4300,436);ee('spike',4540,436);
-    // B5：ボス前
-    pp(bl(4960,355,80));pp(bl(5380,330,96));
-    bb(5000,325);bb(5420,300);
-    ee('patrol',5060,436);ee('spike',5260,436);ee('fly',5500,270);
-    // ボスエリア（shutterX=5760）ウサギ大王
-    pp({x:5760,y:480,w:1920,h:80,col:'#3a0860',solid:true,cracked:false,broken:false,isGround:true,isBossGround:true});
-    const cx=6720;
+    // 地面（通常エリアのみ: x=0〜1920）
+    pp({x:0,y:480,w:1920,h:80,col:'#3a1860',solid:true,cracked:false,broken:false,isGround:true});
+    // ── B0（0〜960）: 壁1 ── ジャンプで越える必要あり
+    // 壁: x=580, y=255〜480（高さ225px、top=y255）
+    pp(wl(580,255,225));
+    // 跳び石: グランドから1段(y=340)→越え台(y=240)→降り台(y=310)
+    pp(bl(340,340,90));   // 1段目: 地面から rise=62px ✓
+    pp(bl(460,240,140)); // 2段目: rise=100px ✓ / feet y=240 < wall top y=255 ✓
+    pp(bl(630,310,90));   // 降り台
+    bb(510,210);bb(390,310);
+    ee('patrol',160,436);ee('fly',800,270);
+    // ── B1（960〜1920）: 壁2 ── より高い壁
+    // 壁: x=1450, y=240〜480（top=y240）
+    pp(wl(1450,240,240));
+    // 跳び石: 3ステップで越える
+    pp(bl(1200,340,90));  // 1段目
+    pp(bl(1310,265,80));  // 2段目: rise=75px ✓
+    pp(bl(1410,220,150)); // 3段目: rise=45px ✓ / feet y=220 < wall top y=240 ✓
+    pp(bl(1510,290,90));  // 降り台
+    bb(1350,240);bb(1460,190);bb(1240,310);
+    ee('patrol',1050,436);ee('spike',1650,436);ee('fly',1800,240);
+    // ── ボスエリア（shutterX=1920）ウサギ大王 ──
+    pp({x:1920,y:480,w:1920,h:80,col:'#3a0860',solid:true,cracked:false,broken:false,isGround:true,isBossGround:true});
+    const cx=2880;
     for(const l of [{w:720,y:448},{w:560,y:410},{w:420,y:372},{w:300,y:334},{w:200,y:296},{w:120,y:258},{w:60,y:222}])
       pp(cr(cx-l.w/2,l.y,l.w,Math.max(18,482-l.y)));
     pp(cr(cx-40,190,80,22));
-    pp(bl(cx-420,270,110));pp(bl(cx+310,270,110));
-    pp(bl(cx-200,210,100));pp(bl(cx+100,210,100));
-    pp(bl(cx-55,145,110));
-    pp(bl(cx-310,340,90));pp(bl(cx+220,340,90));
+    pp(bl(cx-420,270,110));pp(bl(cx+290,270,110));
+    pp(bl(cx-210,210,100));pp(bl(cx+110,210,100));
+    pp(bl(cx-55,148,110));
+    pp(bl(cx-320,340,90));pp(bl(cx+230,340,90));
     pp(mkP(this.worldW-30,0,30,CH+80,'#1a0840'));
     const boss=new Enemy('boss',cx-40,100);this.boss=boss;this.enemies.push(boss);
-    for(let i=0;i<5;i++)bb(5800+i*80,450);
-    bb(cx-180,418);bb(cx+90,418);bb(cx-80,348);bb(cx+40,310);
-    bb(cx-420,240);bb(cx+310,240);bb(cx-55,115);
+    bb(cx-200,418);bb(cx+80,418);bb(cx-90,348);bb(cx+50,310);
+    bb(cx-420,240);bb(cx+290,240);bb(cx-55,118);
   }
   tryBreak(px,py,pw,ph){
     const cw=this.crackWall;

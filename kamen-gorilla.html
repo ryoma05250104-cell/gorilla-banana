@@ -1127,7 +1127,7 @@ function overlapR(ax,ay,aw,ah,bx,by,bw,bh){return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&
 
 /* ── ゲーム管理 ── */
 let gs=GS.TITLE,player,stage,camX=0,peels=[];
-let hospMsg='',hospTimer=0,hospCooldown=0,transTimer=0,titleT=0,lastT=0;
+let hospLines=[],hospIdx=0,hospTimer=0,hospCooldown=0,transTimer=0,titleT=0,lastT=0;
 let playCount=0;
 let stageNum=1,stageTransTimer=0,_stageTransBuilt=false;
 
@@ -1338,9 +1338,15 @@ function updatePlay(dt){
     const hx=stage.hospX,hw=stage.hospW;
     if(player.x+player.w>hx+hw*.3&&player.x<hx+hw*.9&&player.y+player.h>455){
       hospCooldown=3;
-      if(player.mode===1){hospMsg='なつこさん：あら、たくみじゃない！\nGP（ゴリラポイント）を回復しておくわね。';player.gp=MAX_GP;}
-      else hospMsg='なつこさん：ごめんなさい、\nうちは人間はみれないの。さようなら。';
-      hospTimer=4;gs=GS.HOSP;return;
+      if(player.mode===1){
+        player.gp=MAX_GP;
+        hospLines=['なつこさん：あら、たくみじゃない！\nGP（ゴリラポイント）を回復しておくわね。',
+                   'ウホッ！ウホホホホ！ウッホホ！\n（ありがとう！なっちゃん！キリッ）'];
+      } else {
+        hospLines=['なつこさん：ごめんなさい、\nうちは人間はみれないの。さようなら。',
+                   'たくみ：なっちゃん俺だよ！たくみだよ～'];
+      }
+      hospIdx=0;hospTimer=4;gs=GS.HOSP;return;
     }
   }
 
@@ -1491,13 +1497,19 @@ function updateHosp(dt){
   ctx.fillStyle='rgba(0,20,60,.93)';ctx.fillRect(40,CH-150,CW-80,140);
   ctx.strokeStyle='#88aaff';ctx.lineWidth=3;ctx.strokeRect(40,CH-150,CW-80,140);
   // portrait
+  const hline=hospLines[hospIdx]||'';
+  const hisPlayer=hline.startsWith('ウホ')||hline.startsWith('たくみ');
   ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(42,CH-148,52,52);
-  if(IMGS['n_face']){ctx.drawImage(IMGS['n_face'],42,CH-148,52,52);}
-  else{ctx.font='32px sans-serif';ctx.fillText('👩‍⚕️',46,CH-104);}
+  if(!hisPlayer&&IMGS['n_face']){ctx.drawImage(IMGS['n_face'],42,CH-148,52,52);}
+  else{ctx.font='36px sans-serif';ctx.fillText(hisPlayer?(player.mode===1?'🦍':'🧑'):' ',44,CH-100);}
   ctx.fillStyle='#fff';ctx.font='bold 20px sans-serif';
-  hospMsg.split('\n').forEach((l,i)=>ctx.fillText(l,102,CH-118+i*42));
-  ctx.fillStyle='rgba(255,255,255,.6)';ctx.font='14px sans-serif';ctx.fillText('▼ ボタンを押して続ける',52,CH-56);
-  if(hospTimer<3&&(pollJump()||pollAtk()||pollChg()))gs=GS.PLAY;
+  hline.split('\n').forEach((l,i)=>ctx.fillText(l,102,CH-118+i*42));
+  ctx.fillStyle='rgba(255,255,255,.6)';ctx.font='14px sans-serif';
+  const isLast=hospIdx>=hospLines.length-1;
+  ctx.fillText(isLast?'▼ 閉じる':'▼ 次へ',52,CH-56);
+  if(hospTimer<3&&(pollJump()||pollAtk()||pollChg())){
+    if(isLast){gs=GS.PLAY;}else{hospIdx++;hospTimer=4;}
+  }
 }
 
 function updateTrans(dt){

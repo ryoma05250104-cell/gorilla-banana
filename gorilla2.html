@@ -157,24 +157,34 @@ function loadCarImg(){
 /* ── なつこさんスプライト ── */
 function loadNatsukoImgs(){
   const list=[
-    ['n_idle','assets/npc/natsuko/n_idle_1.png'],
-    ['n_face','assets/npc/natsuko/n_face_1.png'],
+    ['n_idle','assets/npc/natsuko/n_idle_1.png',true],
+    ['n_face','assets/npc/natsuko/n_face_1.png',false],
   ];
   let done=0;
-  list.forEach(([key,src])=>{
+  list.forEach(([key,src,flip])=>{
     const im=new Image();
     im.onload=()=>{
+      // 背景除去
       const oc=document.createElement('canvas');
       oc.width=im.width;oc.height=im.height;
       const ox=oc.getContext('2d');ox.drawImage(im,0,0);
       const id=ox.getImageData(0,0,oc.width,oc.height),d=id.data;
-      // sample top-left corner as background color and remove similar pixels
       const br=d[0],bg=d[1],bb=d[2];
       for(let i=0;i<d.length;i+=4){
         if(Math.abs(d[i]-br)<35&&Math.abs(d[i+1]-bg)<35&&Math.abs(d[i+2]-bb)<35)d[i+3]=0;
       }
-      ox.putImageData(id,0,0);IMGS[key]=oc;
-      if(++done===list.length){}
+      ox.putImageData(id,0,0);
+      if(flip){
+        // ロード時に左右反転済みcanvasを作成
+        const fc=document.createElement('canvas');
+        fc.width=im.width;fc.height=im.height;
+        const fx=fc.getContext('2d');
+        fx.translate(im.width,0);fx.scale(-1,1);fx.drawImage(oc,0,0);
+        IMGS[key]=fc;
+      }else{
+        IMGS[key]=oc;
+      }
+      done++;
     };
     im.onerror=()=>{IMGS[key]=null;done++;};
     im.src=src;
@@ -1450,7 +1460,7 @@ function _drawHospInterior(){
   ctx.beginPath();ctx.arc(187,352,17,0,Math.PI*2);ctx.fill();
   // なつこさん（受付カウンター越しに上半身表示）
   {const ni=IMGS['n_idle'];const nx=Math.round(CW*.62);
-  if(ni){const nh=160,nw=Math.round(ni.width/ni.height*nh);ctx.save();ctx.translate(nx,0);ctx.scale(-1,1);ctx.drawImage(ni,-Math.round(nw/2),320-nh,nw,nh);ctx.restore();}
+  if(ni){const nh=160,nw=Math.round(ni.width/ni.height*nh);ctx.drawImage(ni,nx-Math.round(nw/2),320-nh,nw,nh);}
   else{_drawNatsuko(nx,320);}}
   // 受付カウンター（下半身を隠す）
   ctx.fillStyle='#7a9060';ctx.fillRect(120,308,CW-240,90);

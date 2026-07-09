@@ -66,16 +66,30 @@ function buildCtrl(){
   const p=v=>Math.round(v)+'px';
 
   if(portrait){
-    // 縦向き：下150px帯にボタン横並び
-    const bsz=Math.min(Math.round(BOT*0.72),90);
-    const top=H-BOT+(BOT-bsz)/2;
-    const smSz=Math.round(bsz*.82);
-    const smTop=H-BOT+(BOT-smSz)/2;
-    mk('L','◀',    {left:p(W*.04), top:p(top),   width:p(bsz),  height:p(bsz),  background:'rgba(255,255,255,.22)',fontSize:p(bsz*.35)});
-    mk('R','▶',    {left:p(W*.18), top:p(top),   width:p(bsz),  height:p(bsz),  background:'rgba(255,255,255,.22)',fontSize:p(bsz*.35)});
-    mk('chg','へん<br>しん',{left:p(W*.55),top:p(smTop),width:p(smSz),height:p(smSz),background:'rgba(60,60,220,.28)', fontSize:p(smSz*.17)});
-    mk('atk','こう<br>げき',{left:p(W*.68),top:p(top),   width:p(bsz),  height:p(bsz),  background:'rgba(220,40,40,.28)', fontSize:p(bsz*.18)});
-    mk('jump','ジャンプ',   {left:p(W*.82),top:p(top),   width:p(bsz),  height:p(bsz),  background:'rgba(40,200,60,.28)', fontSize:p(bsz*.18)});
+    // 縦向き：ボタンサイズを画面幅に合わせて小さく
+    const bsz=Math.min(Math.round(W*0.17),72);
+    const smSz=Math.round(bsz*0.78);
+    const gap=Math.round(W*0.04);
+    const vt=H-BOT+Math.round((BOT-bsz)/2); // 帯内垂直中央
+
+    // 左グループ：◀ と ▶ を左端から順に配置
+    const lL=Math.round(W*0.04);
+    const lR=lL+bsz+gap;
+
+    // 右グループ：ジャンプを右端、こうげきをその左
+    const jL=Math.round(W*0.96)-bsz;
+    const aL=jL-gap-bsz;
+
+    // へんしん：左右グループの中間・上に浮かせる
+    const chgCx=Math.round((lR+bsz+aL)/2);
+    const chgL=chgCx-Math.round(smSz/2);
+    const chgT=H-BOT-smSz-Math.round(BOT*0.4);
+
+    mk('L','◀',         {left:p(lL),  top:p(vt),  width:p(bsz),  height:p(bsz),  background:'rgba(255,255,255,.22)',fontSize:p(bsz*.35)});
+    mk('R','▶',         {left:p(lR),  top:p(vt),  width:p(bsz),  height:p(bsz),  background:'rgba(255,255,255,.22)',fontSize:p(bsz*.35)});
+    mk('atk','こう<br>げき',{left:p(aL),top:p(vt),  width:p(bsz),  height:p(bsz),  background:'rgba(220,40,40,.28)', fontSize:p(bsz*.18)});
+    mk('jump','ジャンプ',   {left:p(jL),top:p(vt),  width:p(bsz),  height:p(bsz),  background:'rgba(40,200,60,.28)', fontSize:p(bsz*.18)});
+    mk('chg','へん<br>しん',{left:p(chgL),top:p(chgT),width:p(smSz),height:p(smSz),background:'rgba(60,60,220,.28)', fontSize:p(smSz*.17)});
   } else {
     // 横向き：左右120px帯にボタン縦並び
     const bsz=Math.min(SIDE-16,96);

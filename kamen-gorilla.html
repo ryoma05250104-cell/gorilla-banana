@@ -19,7 +19,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:no
 'use strict';
 const CW=960,CH=540,GRAV=0.55,MAX_GP=6;
 const SPD_H=4.5,SPD_G=4.0,JV=-13.5,JV2=-11;
-const GS={TITLE:0,PLAY:1,TRANS:2,BOSS:3,HOSP:4,CLEAR:5,OVER:6};
+const GS={TITLE:0,PLAY:1,TRANS:2,BOSS:3,HOSP:4,CLEAR:5,OVER:6,STAGE:7};
 
 /* ── キャンバス ── */
 const cv=document.getElementById('cv');
@@ -939,19 +939,26 @@ function mkP(x,y,w,h,col='#4a8a4a',solid=true,cracked=false){return{x,y,w,h,col,
 class Stage{
   constructor(){
     this.plats=[];this.enemies=[];this.bananas=[];this.peels=[];
-    this.worldW=15360;this.shutterX=13440;
-    this.hospX=6850;this.hospW=260;this.hospUsed=false;
-    this.benz=new Benz(3200,394);this.crackWall=null;this.boss=null;
+    this.boss=null;this.crackWall=null;
+    if(stageNum===1){
+      this.worldW=13440;this.shutterX=99999;
+      this.hospX=6850;this.hospW=260;
+      this.benz=new Benz(3200,394);
+    } else {
+      this.worldW=7680;this.shutterX=5760;
+      this.hospX=-9999;this.hospW=0;
+      this.benz=null;
+    }
+    this.hospUsed=false;
     this._build();
   }
-  _build(){
+  _build(){if(stageNum===1)this._build1();else this._build2();}
+  _build1(){
     const bl=(x,y,w)=>({x,y,w,h:16,col:'#c87030',solid:true,cracked:false,broken:false,isBlock:true});
-    const cr=(x,y,w,h)=>({x,y,w,h,col:'#e890d8',solid:true,cracked:false,broken:false,isCrystal:true});
     const pp=v=>{this.plats.push(v);};
     const bb=(x,y)=>{this.bananas.push(new Banana(x,y));};
     const ee=(t,x,y)=>{this.enemies.push(new Enemy(t,x,y));};
-    // 地面（16スクリーン：通常13440 + ボス1920）
-    pp({x:0,y:480,w:13440,h:80,col:'#5a3010',solid:true,cracked:false,broken:false,isGround:true});
+    pp({x:0,y:480,w:this.worldW,h:80,col:'#5a3010',solid:true,cracked:false,broken:false,isGround:true});
     // S0
     pp(bl(350,360,96));pp(bl(740,335,80));
     bb(390,330);bb(780,305);
@@ -982,7 +989,7 @@ class Stage{
     ee('patrol',6000,436);ee('fly',6350,270);
     const cw=mkP(6450,290,32,192,'#a04020',true,true);
     this.crackWall=cw;pp(cw);
-    // S7：動物病院エリア（hospX=6850〜7110）ブロックは病院の外のみ
+    // S7：動物病院エリア（hospX=6850〜7110）
     for(let i=0;i<4;i++)bb(6560+i*80,450);
     pp(bl(7200,355,80));pp(bl(7450,335,96));
     bb(7240,325);bb(7490,305);
@@ -1007,7 +1014,7 @@ class Stage{
     pp(bl(11640,360,80));pp(bl(12020,335,96));
     bb(11680,330);bb(12060,305);
     ee('spike',11760,436);ee('patrol',12100,436);
-    // S13：ボス前・降り階段
+    // S13：降り階段（2面への入口）
     for(let i=0;i<8;i++){
       const sx=12480+i*110,sy=300+i*24;
       pp(bl(sx,sy,114));
@@ -1015,23 +1022,51 @@ class Stage{
       if(i===5)bb(sx+30,sy-30);
     }
     ee('patrol',12550,274);ee('spike',12770,274);ee('fly',13050,230);
-    // S14-15：ボスエリア（shutterX=13440）ウサギ大王
-    pp({x:13440,y:480,w:1920,h:80,col:'#3a0860',solid:true,cracked:false,broken:false,isGround:true,isBossGround:true});
-    const cx=14400;
-    // クリスタル台座（ピラミッド型）
+  }
+  _build2(){
+    const bl=(x,y,w)=>({x,y,w,h:16,col:'#7030c0',solid:true,cracked:false,broken:false,isBlock:true});
+    const cr=(x,y,w,h)=>({x,y,w,h,col:'#e890d8',solid:true,cracked:false,broken:false,isCrystal:true});
+    const pp=v=>{this.plats.push(v);};
+    const bb=(x,y)=>{this.bananas.push(new Banana(x,y));};
+    const ee=(t,x,y)=>{this.enemies.push(new Enemy(t,x,y));};
+    pp({x:0,y:480,w:this.worldW,h:80,col:'#3a1860',solid:true,cracked:false,broken:false,isGround:true});
+    // B0
+    pp(bl(300,380,80));pp(bl(700,355,80));
+    bb(340,350);bb(740,325);
+    ee('patrol',450,436);ee('patrol',820,436);
+    // B1
+    pp(bl(1150,360,96));pp(bl(1550,335,80));
+    bb(1190,330);bb(1590,305);
+    ee('spike',1250,436);ee('patrol',1650,436);ee('fly',1700,280);
+    // B2
+    pp(bl(2080,355,96));pp(bl(2500,330,80));
+    bb(2120,325);bb(2540,300);
+    ee('patrol',2200,436);ee('fly',2450,270);ee('spike',2620,436);
+    // B3
+    pp(bl(3040,360,80));pp(bl(3460,335,96));
+    bb(3080,330);bb(3500,305);
+    ee('patrol',3150,436);ee('spike',3380,436);ee('patrol',3600,436);
+    // B4
+    pp(bl(4000,350,96));pp(bl(4420,325,80));
+    bb(4040,320);bb(4460,295);
+    ee('fly',4100,270);ee('patrol',4300,436);ee('spike',4540,436);
+    // B5：ボス前
+    pp(bl(4960,355,80));pp(bl(5380,330,96));
+    bb(5000,325);bb(5420,300);
+    ee('patrol',5060,436);ee('spike',5260,436);ee('fly',5500,270);
+    // ボスエリア（shutterX=5760）ウサギ大王
+    pp({x:5760,y:480,w:1920,h:80,col:'#3a0860',solid:true,cracked:false,broken:false,isGround:true,isBossGround:true});
+    const cx=6720;
     for(const l of [{w:720,y:448},{w:560,y:410},{w:420,y:372},{w:300,y:334},{w:200,y:296},{w:120,y:258},{w:60,y:222}])
       pp(cr(cx-l.w/2,l.y,l.w,Math.max(18,482-l.y)));
     pp(cr(cx-40,190,80,22));
-    // 上空足場（ボスを上から狙える）
     pp(bl(cx-420,270,110));pp(bl(cx+310,270,110));
     pp(bl(cx-200,210,100));pp(bl(cx+100,210,100));
     pp(bl(cx-55,145,110));
-    // 左右サイド台
     pp(bl(cx-310,340,90));pp(bl(cx+220,340,90));
-    // 右端壁（進めない）
     pp(mkP(this.worldW-30,0,30,CH+80,'#1a0840'));
     const boss=new Enemy('boss',cx-40,100);this.boss=boss;this.enemies.push(boss);
-    for(let i=0;i<5;i++)bb(13480+i*80,450);
+    for(let i=0;i<5;i++)bb(5800+i*80,450);
     bb(cx-180,418);bb(cx+90,418);bb(cx-80,348);bb(cx+40,310);
     bb(cx-420,240);bb(cx+310,240);bb(cx-55,115);
   }
@@ -1074,7 +1109,7 @@ class Stage{
       }
     }
     this._drawHosp(cx);this._drawShutter(cx);
-    this.benz.draw(cx);
+    if(this.benz)this.benz.draw(cx);
     for(const b of this.bananas)b.draw(cx);
     for(const p of this.peels)p.draw(cx);
   }
@@ -1141,6 +1176,7 @@ function overlapR(ax,ay,aw,ah,bx,by,bw,bh){return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&
 let gs=GS.TITLE,player,stage,camX=0,peels=[];
 let hospMsg='',hospTimer=0,hospCooldown=0,transTimer=0,titleT=0,lastT=0;
 let playCount=0;
+let stageNum=1,stageTransTimer=0,_stageTransBuilt=false;
 
 // ── ロックマン式: 画面単位スクロール ──
 let screenAnchor=0;   // 現在の画面の左端 (world座標)
@@ -1177,8 +1213,9 @@ function showCtrl(v){
 }
 
 function startGame(){
+  stageNum=1;
   player=new Player();stage=new Stage();
-  camX=0;peels=[];
+  camX=0;peels=[];hospCooldown=0;
   screenAnchor=0;scrSliding=false;scrSlideT=0;scrSlideDir=0;
   gs=GS.PLAY;
   showCtrl(true);
@@ -1206,6 +1243,7 @@ function loop(ts){
   if(gs===GS.TITLE)drawTitle(dt);
   else if(gs===GS.PLAY||gs===GS.BOSS)updatePlay(dt);
   else if(gs===GS.TRANS)updateTrans(dt);
+  else if(gs===GS.STAGE)updateStageTrans(dt);
   else if(gs===GS.HOSP)updateHosp(dt);
   else if(gs===GS.CLEAR)drawClear();
   else if(gs===GS.OVER)drawOver();
@@ -1284,6 +1322,9 @@ function checkScreenEdge(){
     // 次の画面へ
     if(nextAnchor<stage.worldW){
       scrSliding=true;scrSlideDir=1;scrSlideT=0;
+    } else if(stageNum===1){
+      // 1面クリア → 2面へ
+      gs=GS.STAGE;stageTransTimer=0;_stageTransBuilt=false;
     } else {
       player.x=screenAnchor+CW-player.w-6;player.vx=0;
     }
@@ -1504,14 +1545,42 @@ function updateHosp(dt){
 
 function updateTrans(dt){
   transTimer+=dt;
-
-  // カメラスナップはシャッターが完全に閉じた瞬間
   if(transTimer>=TRANS_CLOSE&&!transCamDone){
     camX=stage.shutterX+80;screenAnchor=stage.shutterX+80;transCamDone=true;
   }
   drawScene();
   _drawShutterStrips(transTimer);
   if(transTimer>=TRANS_TOTAL)gs=GS.BOSS;
+}
+
+function updateStageTrans(dt){
+  stageTransTimer+=dt;
+  const T=0.5,HOLD=1.8;
+  if(stageTransTimer<T){
+    drawScene();
+    ctx.fillStyle=`rgba(0,0,0,${stageTransTimer/T})`;ctx.fillRect(0,0,CW,CH);
+  } else {
+    if(!_stageTransBuilt){
+      stageNum=2;stage=new Stage();
+      player.x=80;player.y=350;player.vx=0;player.vy=0;
+      player.state='idle';player.stT=0;player.inv=0;player.arrows=[];
+      camX=0;screenAnchor=0;scrSliding=false;peels=[];hospCooldown=0;
+      _stageTransBuilt=true;
+    }
+    const el=stageTransTimer-T;
+    if(el<HOLD){
+      ctx.fillStyle='#000';ctx.fillRect(0,0,CW,CH);
+      ctx.fillStyle='#ffd700';ctx.font='bold 68px sans-serif';ctx.textAlign='center';
+      ctx.fillText('STAGE  2',CW/2,CH/2-24);
+      ctx.fillStyle='#cc88ff';ctx.font='bold 28px sans-serif';
+      ctx.fillText('〜ウサギ城〜',CW/2,CH/2+26);ctx.textAlign='left';
+    } else {
+      drawScene();
+      const fi=1-Math.min(1,(el-HOLD)/T);
+      if(fi>0){ctx.fillStyle=`rgba(0,0,0,${fi})`;ctx.fillRect(0,0,CW,CH);}
+      if(el>=HOLD+T){gs=GS.PLAY;}
+    }
+  }
 }
 function _drawShutterStrips(t){
   for(let i=0;i<STRIPS;i++){

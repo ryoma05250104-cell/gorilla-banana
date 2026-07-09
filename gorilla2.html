@@ -782,7 +782,7 @@ class Enemy{
       this.bossAnim='idle';this.bossFrame=0;this.bossAnimT=0;
       this.bossPhase=0;this.bossAttacking=false;this.bossDir=1;
       this.carrotCD=2.5;this.heartCD=999;this.slamCD=999;
-      this.slamHitboxes=[];
+      this.slamHitboxes=[];this.lastAttack='';this.comboT=0;
     }
   }
   hit(dmg,src){
@@ -814,9 +814,11 @@ class Enemy{
   }
   _fireHeart(px,bx){
     const d=this.bossDir;
-    const angs=[-0.4,-0.2,0,0.2,0.4];
-    for(const a of angs)
-      this.proj.push({x:bx,y:this.y+44,vx:d*Math.cos(a)*6,vy:-2.5+Math.sin(a)*3,w:28,h:28,t:'heart',life:3.5});
+    const angs=[-0.45,-0.22,0,0.22,0.45];
+    for(const a of angs){
+      const spd=5+Math.random()*2.5;
+      this.proj.push({x:bx,y:this.y+44,vx:d*Math.cos(a)*spd,vy:-2.8+Math.sin(a)*3+(Math.random()-.5)*.8,w:28,h:28,t:'heart',life:4.5});
+    }
   }
   _fireSlam(){
     const bx=this.x+this.w/2,by=this.y+this.h;
@@ -865,9 +867,9 @@ class Enemy{
         } else {
           if(ba==='down'){this.alive=false;return;}
           if(ba!=='idle'){
-            if(ba==='carrot')this.carrotCD=[2.5,2.0,1.5][ph];
-            if(ba==='slam')  this.slamCD=[999,999,4.5][ph];
-            if(ba==='heart') this.heartCD=[999,8.0,6.0][ph];
+            if(ba==='carrot'){this.carrotCD=[2.5,2.0,1.3][ph];if(ph>=2)this.comboT=0.55;}
+            if(ba==='slam')  this.slamCD=[999,999,4.0][ph];
+            if(ba==='heart') this.heartCD=[999,7.0,5.0][ph];
             this.bossAnim='idle';this.bossFrame=0;this.bossAttacking=false;
           } else {this.bossFrame=0;}
         }
@@ -877,12 +879,21 @@ class Enemy{
         this.carrotCD-=dt;
         if(ph>=1)this.heartCD-=dt;
         if(ph>=2)this.slamCD-=dt;
+        // フェーズ3 コンボ（前回攻撃から0.5sで2発目のにんじん）
+        if(this.comboT>0){
+          this.comboT-=dt;
+          if(this.comboT<=0){this._fireCarrot(px,bx);this.comboT=0;}
+        }
         const ready=[];
         if(this.carrotCD<=0)ready.push('carrot');
         if(this.heartCD<=0)ready.push('heart');
         if(this.slamCD<=0)ready.push('slam');
         if(ready.length>0){
-          const next=ready[Math.floor(Math.random()*ready.length)];
+          // 同じ攻撃を連続しないよう優先
+          const filtered=ready.filter(a=>a!==this.lastAttack);
+          const pool=filtered.length>0?filtered:ready;
+          const next=pool[Math.floor(Math.random()*pool.length)];
+          this.lastAttack=next;
           this.bossAnim=next;this.bossFrame=0;this.bossAnimT=0;this.bossAttacking=true;
         }
       }
@@ -892,9 +903,15 @@ class Enemy{
         if(s.life<=0)this.slamHitboxes.splice(i,1);
       }
       // 飛び道具更新
+      const pty=player.y+player.h/2;
       for(let i=this.proj.length-1;i>=0;i--){
         const p=this.proj[i];p.x+=p.vx;p.y+=p.vy;
         if(p.t==='carrot')p.vy+=.28;
+        if(p.t==='heart'){
+          // ゆるやかにプレイヤーを追尾
+          p.vy+=(pty>p.y?.055:-.055);
+          p.vy=Math.max(-7,Math.min(7,p.vy));
+        }
         p.life-=dt;if(p.life<=0||p.x<-500||p.x>25000)this.proj.splice(i,1);
       }
       return;
@@ -1011,7 +1028,7 @@ class Enemy{
   _drawBoss(dx,cx){
     const {y,w,h}=this;
     const sheet=IMGS['bk_sheet'];
-    const sw=180,sh=180;
+    const sw=216,sh=216;
     const sdx=dx+w/2-sw/2,sdy=y+h-sh;
     if(sheet&&BOSS_ANIM[this.bossAnim]){
       const [col,row]=BOSS_ANIM[this.bossAnim][this.bossFrame]||[0,0];
@@ -1107,7 +1124,7 @@ class Stage{
     this.boss=null;this.crackWall=null;
     if(stageNum===1){
       this.worldW=7680;this.shutterX=99999;
-      this.hospX=4820;this.hospW=260;
+      this.hospX=5150;this.hospW=260;
       this.benz=new Benz(1100,394);
     } else {
       this.worldW=3840;this.shutterX=1920;
@@ -1402,12 +1419,56 @@ function drawTitle(dt){
 
 function drawBG(){
   if(gs===GS.BOSS||stageNum===2){
-    const bg=ctx.createLinearGradient(0,0,0,CH);
-    bg.addColorStop(0,'#1c0838');bg.addColorStop(.55,'#48107a');bg.addColorStop(1,'#8a28b8');
-    ctx.fillStyle=bg;ctx.fillRect(0,0,CW,CH);
-    ctx.fillStyle='rgba(240,180,255,.35)';ctx.beginPath();ctx.arc(830,72,60,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(200,120,255,.18)';
-    [[60,45,3],[180,82,2],[740,32,2],[880,76,3],[560,58,2]].forEach(([x,y,r])=>{ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();});
+    // ── 城内部背景 ──
+    ctx.fillStyle='#16102a';ctx.fillRect(0,0,CW,CH);
+    // 石ブロック目地（スクロール対応）
+    const bw=80,bh=40;
+    const offX=camX%bw;
+    ctx.strokeStyle='#0e0a1c';ctx.lineWidth=1;
+    for(let r=0;r<Math.ceil(430/bh)+1;r++){
+      const odd=r%2;
+      for(let c=-1;c<Math.ceil(CW/bw)+2;c++){
+        const x=c*bw-offX+(odd?bw/2:0);
+        ctx.strokeRect(x,r*bh,bw,bh);
+      }
+    }
+    // 石柱（480px間隔）
+    const pInt=480,pStart=Math.floor(camX/pInt)*pInt;
+    for(let px=pStart;px<camX+CW+pInt;px+=pInt){
+      const dx=px-camX;
+      ctx.fillStyle='#241a40';ctx.fillRect(dx-14,0,28,432);
+      ctx.fillStyle='#342858';ctx.fillRect(dx-10,0,5,432);
+      ctx.fillStyle='#1a1030';ctx.fillRect(dx-20,412,40,20);ctx.fillRect(dx-20,0,40,16);
+    }
+    // 松明（柱の中間=240pxオフセット）
+    const tInt=480,tOff=240;
+    const flk=Math.sin(Date.now()*.009)*.18;
+    const tStart=Math.floor((camX-tOff)/tInt)*tInt+tOff;
+    for(let tx=tStart;tx<camX+CW+tInt;tx+=tInt){
+      const dx=tx-camX;
+      if(dx<-80||dx>CW+80)continue;
+      const g=ctx.createRadialGradient(dx,272,0,dx,272,58);
+      g.addColorStop(0,`rgba(255,150,20,${.42+flk})`);g.addColorStop(1,'rgba(200,60,0,0)');
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(dx,272,58,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#6a3808';ctx.fillRect(dx-3,270,6,28);
+      ctx.fillStyle=`rgba(255,${170+Math.floor(flk*80)},10,.92)`;
+      ctx.beginPath();ctx.moveTo(dx-7,270);ctx.quadraticCurveTo(dx+(flk>0?3:-3),252,dx,243+flk*7);
+      ctx.quadraticCurveTo(dx-(flk>0?3:-3),252,dx+7,270);ctx.closePath();ctx.fill();
+      ctx.fillStyle='rgba(255,255,120,.55)';
+      ctx.beginPath();ctx.moveTo(dx-3,270);ctx.quadraticCurveTo(dx,258,dx,252);
+      ctx.quadraticCurveTo(dx,258,dx+3,270);ctx.closePath();ctx.fill();
+    }
+    // 石畳の床
+    ctx.fillStyle='#1e1632';ctx.fillRect(0,430,CW,CH-430);
+    const tw=64,th=18,offT=camX%tw;
+    ctx.strokeStyle='#130e22';ctx.lineWidth=1;
+    for(let r=0;r<4;r++){
+      const odd2=r%2;
+      for(let c=-1;c<Math.ceil(CW/tw)+2;c++){
+        const x=c*tw-offT+(odd2?tw/2:0);
+        ctx.strokeRect(x,430+r*th,tw,th);
+      }
+    }
   } else {
     // マリオ風青空
     ctx.fillStyle='#5c94fc';ctx.fillRect(0,0,CW,CH);

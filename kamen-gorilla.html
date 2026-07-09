@@ -19,7 +19,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:no
 'use strict';
 const CW=960,CH=540,GRAV=0.55,MAX_GP=6;
 const SPD_H=4.5,SPD_G=4.0,JV=-13.5,JV2=-11;
-const GS={TITLE:0,PLAY:1,TRANS:2,BOSS:3,HOSP:4,CLEAR:5,OVER:6,STAGE:7};
+const GS={TITLE:0,PLAY:1,TRANS:2,BOSS:3,HOSP:4,CLEAR:5,OVER:6,STAGE:7,CASTLE:8};
 /* ── うさぎ大王スプライト定義 (160×160セル, 6列×5行スプライトシート) ── */
 const BOSS_ANIM={
   idle:  [[0,0]],
@@ -1307,6 +1307,7 @@ let gs=GS.TITLE,player,stage,camX=0,peels=[];
 let hospLines=[],hospIdx=0,hospTimer=0,hospCooldown=0,transTimer=0,titleT=0,lastT=0;
 let playCount=0;
 let stageNum=1,stageTransTimer=0,_stageTransBuilt=false;
+let castleT=0;
 
 // ── ロックマン式: 画面単位スクロール ──
 let screenAnchor=0;   // 現在の画面の左端 (world座標)
@@ -1375,6 +1376,7 @@ function loop(ts){
   else if(gs===GS.PLAY||gs===GS.BOSS)updatePlay(dt);
   else if(gs===GS.TRANS)updateTrans(dt);
   else if(gs===GS.STAGE)updateStageTrans(dt);
+  else if(gs===GS.CASTLE)updateCastle(dt);
   else if(gs===GS.HOSP)updateHosp(dt);
   else if(gs===GS.CLEAR)drawClear();
   else if(gs===GS.OVER)drawOver();
@@ -1458,8 +1460,8 @@ function checkScreenEdge(){
     if(nextAnchor<stage.worldW){
       scrSliding=true;scrSlideDir=1;scrSlideT=0;
     } else if(stageNum===1){
-      // 1面クリア → 2面へ
-      gs=GS.STAGE;stageTransTimer=0;_stageTransBuilt=false;
+      // 1面クリア → 城入場カットシーン → 2面へ
+      gs=GS.CASTLE;castleT=0;
     } else {
       player.x=screenAnchor+CW-player.w-6;player.vx=0;
     }
@@ -1706,6 +1708,122 @@ function updateTrans(dt){
   drawScene();
   _drawShutterStrips(transTimer);
   if(transTimer>=TRANS_TOTAL)gs=GS.BOSS;
+}
+
+/* ── うさぎ城 入場カットシーン ── */
+function _drawCastleBG(){
+  // 夜空
+  const sky=ctx.createLinearGradient(0,0,0,CH);
+  sky.addColorStop(0,'#020410');sky.addColorStop(1,'#180830');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,CW,CH);
+  // 星
+  const stars=[[80,40],[200,90],[350,30],[500,70],[650,20],[820,55],[120,150],[900,100],[430,110],[720,140]];
+  ctx.fillStyle='#ffffffcc';
+  for(const[sx,sy]of stars){ctx.fillRect(sx,sy,2,2);}
+  // 月
+  ctx.fillStyle='#e8e0c0';ctx.beginPath();ctx.arc(820,75,38,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#c8c0a0';ctx.beginPath();ctx.arc(835,65,14,0,Math.PI*2);ctx.fill(); // クレーター
+  // 地面
+  const grd=ctx.createLinearGradient(0,440,0,CH);
+  grd.addColorStop(0,'#1a0830');grd.addColorStop(1,'#0a0418');
+  ctx.fillStyle=grd;ctx.fillRect(0,440,CW,CH-440);
+}
+function _drawCastleBuilding(){
+  const ST='#3a3650',DK='#252336',LT='#524e6a',DOOR='#040812';
+  function stones(x,y,w,h){
+    ctx.fillStyle=ST;ctx.fillRect(x,y,w,h);
+    const bh=20,bw=40;
+    ctx.strokeStyle=DK;ctx.lineWidth=1;
+    for(let ry=0;ry<Math.ceil(h/bh);ry++){
+      const odd=ry%2,py=y+ry*bh;
+      for(let rx=odd?-bw/2:0;rx<w;rx+=bw){
+        const bx=x+rx,by2=py,bw2=Math.min(bw,x+w-bx-x+x),bh2=Math.min(bh,y+h-by2);
+        if(bw2>0&&bh2>0)ctx.strokeRect(bx,by2,bw2,bh2);
+      }
+    }
+  }
+  function teeth(x,y,w,tw=24,gw=18){
+    const tot=tw+gw;
+    ctx.strokeStyle=DK;ctx.lineWidth=1;
+    for(let bx=x;bx<x+w;bx+=tot){
+      const cw=Math.min(tw,x+w-bx);
+      ctx.fillStyle=ST;ctx.fillRect(bx,y-30,cw,30);ctx.strokeRect(bx,y-30,cw,30);
+    }
+  }
+  // 左タワー
+  stones(190,70,100,372);teeth(190,70,100,20,16);
+  // 右タワー
+  stones(670,70,100,372);teeth(670,70,100,20,16);
+  // 本体
+  stones(270,140,460,302);teeth(270,140,460,26,18);
+  // タワー窓（ランプ光）
+  ctx.fillStyle='#ff990088';ctx.fillRect(222,170,34,48);ctx.fillRect(222,248,34,48);
+  ctx.fillStyle='#ff990088';ctx.fillRect(704,170,34,48);ctx.fillRect(704,248,34,48);
+  ctx.fillStyle=LT;ctx.lineWidth=2;ctx.strokeStyle=LT;
+  ctx.strokeRect(222,170,34,48);ctx.strokeRect(222,248,34,48);
+  ctx.strokeRect(704,170,34,48);ctx.strokeRect(704,248,34,48);
+  // ドア（アーチ型）
+  const dCx=500,dTop=275,dW=130,dHRect=145;
+  ctx.fillStyle=DOOR;
+  ctx.fillRect(dCx-dW/2,dTop+dW/2,dW,dHRect);
+  ctx.beginPath();ctx.arc(dCx,dTop+dW/2,dW/2,Math.PI,0);ctx.fill();
+  ctx.strokeStyle='#7050b0';ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.moveTo(dCx-dW/2,dTop+dW/2+dHRect);
+  ctx.lineTo(dCx-dW/2,dTop+dW/2);
+  ctx.arc(dCx,dTop+dW/2,dW/2,Math.PI,0);
+  ctx.lineTo(dCx+dW/2,dTop+dW/2+dHRect);
+  ctx.stroke();
+  // 城名テキスト
+  ctx.fillStyle='#cc88ff';ctx.font='bold 28px sans-serif';ctx.textAlign='center';
+  ctx.fillText('🏰 うさぎ城',CW/2,52);ctx.textAlign='left';
+}
+function updateCastle(dt){
+  castleT+=dt;
+  _drawCastleBG();
+  _drawCastleBuilding();
+  // プレイヤーシルエット
+  const WALK_S=0.4,WALK_E=3.0,ENTER_E=3.6;
+  if(castleT>WALK_S&&castleT<ENTER_E){
+    const wt=Math.min(1,(castleT-WALK_S)/(WALK_E-WALK_S));
+    const charX=80+wt*390; // x=80 → x=470（ドア前）
+    const charY=430;
+    const entering=castleT>WALK_E;
+    const alpha=entering?Math.max(0,1-(castleT-WALK_E)/(ENTER_E-WALK_E)):1;
+    ctx.globalAlpha=alpha;
+    const swing=entering?0:Math.sin(castleT*9)*8;
+    ctx.fillStyle='#1a0840';
+    // 足
+    ctx.fillRect(charX-13,charY-28,11,28+Math.max(0,swing));
+    ctx.fillRect(charX+2,charY-28,11,28+Math.max(0,-swing));
+    // 体
+    ctx.fillRect(charX-14,charY-58,28,32);
+    // 頭
+    ctx.beginPath();ctx.arc(charX,charY-68,15,0,Math.PI*2);ctx.fill();
+    // 腕（振り）
+    ctx.fillRect(charX-20,charY-52,7,18+Math.max(0,-swing/2));
+    ctx.fillRect(charX+13,charY-52,7,18+Math.max(0,swing/2));
+    ctx.globalAlpha=1;
+  }
+  // ドアが閉まるエフェクト
+  if(castleT>3.1&&castleT<3.6){
+    const p=Math.min(1,(castleT-3.1)/0.5);
+    const dCx=500,dTop=275,dW=130,dH=220;
+    ctx.fillStyle='#1a0030';
+    ctx.fillRect(dCx-dW/2,dTop+dW/2,dW*p,dH); // 左扉が閉まる
+    ctx.fillRect(dCx+dW/2-dW*p,dTop+dW/2,dW*p,dH); // 右扉が閉まる
+  }
+  // フェードイン
+  if(castleT<0.4){
+    ctx.fillStyle=`rgba(0,0,0,${1-castleT/0.4})`;ctx.fillRect(0,0,CW,CH);
+  }
+  // フェードアウト
+  if(castleT>3.8){
+    const f=Math.min(1,(castleT-3.8)/0.8);
+    ctx.fillStyle=`rgba(0,0,0,${f})`;ctx.fillRect(0,0,CW,CH);
+  }
+  // STAGE 2遷移
+  if(castleT>4.6){gs=GS.STAGE;stageTransTimer=0;_stageTransBuilt=false;}
 }
 
 function updateStageTrans(dt){

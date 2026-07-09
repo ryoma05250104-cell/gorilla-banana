@@ -1007,20 +1007,33 @@ class Stage{
     pp(bl(11640,360,80));pp(bl(12020,335,96));
     bb(11680,330);bb(12060,305);
     ee('spike',11760,436);ee('patrol',12100,436);
-    // S13：ボス前
-    pp(bl(12520,355,96));pp(bl(12920,330,80));
-    bb(12560,325);bb(12960,300);
-    ee('spike',12640,436);ee('patrol',12840,436);ee('fly',13050,270);
-    // S14-15：ボスエリア（shutterX=13440）
+    // S13：ボス前・降り階段
+    for(let i=0;i<8;i++){
+      const sx=12480+i*110,sy=300+i*24;
+      pp(bl(sx,sy,114));
+      if(i===2)bb(sx+30,sy-30);
+      if(i===5)bb(sx+30,sy-30);
+    }
+    ee('patrol',12550,274);ee('spike',12770,274);ee('fly',13050,230);
+    // S14-15：ボスエリア（shutterX=13440）ウサギ大王
     pp({x:13440,y:480,w:1920,h:80,col:'#3a0860',solid:true,cracked:false,broken:false,isGround:true,isBossGround:true});
     const cx=14400;
+    // クリスタル台座（ピラミッド型）
     for(const l of [{w:720,y:448},{w:560,y:410},{w:420,y:372},{w:300,y:334},{w:200,y:296},{w:120,y:258},{w:60,y:222}])
       pp(cr(cx-l.w/2,l.y,l.w,Math.max(18,482-l.y)));
     pp(cr(cx-40,190,80,22));
+    // 上空足場（ボスを上から狙える）
+    pp(bl(cx-420,270,110));pp(bl(cx+310,270,110));
+    pp(bl(cx-200,210,100));pp(bl(cx+100,210,100));
+    pp(bl(cx-55,145,110));
+    // 左右サイド台
     pp(bl(cx-310,340,90));pp(bl(cx+220,340,90));
+    // 右端壁（進めない）
+    pp(mkP(this.worldW-30,0,30,CH+80,'#1a0840'));
     const boss=new Enemy('boss',cx-40,100);this.boss=boss;this.enemies.push(boss);
     for(let i=0;i<5;i++)bb(13480+i*80,450);
     bb(cx-180,418);bb(cx+90,418);bb(cx-80,348);bb(cx+40,310);
+    bb(cx-420,240);bb(cx+310,240);bb(cx-55,115);
   }
   tryBreak(px,py,pw,ph){
     const cw=this.crackWall;
@@ -1127,6 +1140,7 @@ function overlapR(ax,ay,aw,ah,bx,by,bw,bh){return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&
 /* ── ゲーム管理 ── */
 let gs=GS.TITLE,player,stage,camX=0,peels=[];
 let hospMsg='',hospTimer=0,hospCooldown=0,transTimer=0,titleT=0,lastT=0;
+let playCount=0;
 
 // ── ロックマン式: 画面単位スクロール ──
 let screenAnchor=0;   // 現在の画面の左端 (world座標)
@@ -1142,6 +1156,8 @@ const TRANS_TOTAL=TRANS_CLOSE+TRANS_HOLD+TRANS_OPEN;
 let transCamDone=false;
 
 async function init(){
+  playCount=parseInt(localStorage.getItem('kgViews')||'0')+1;
+  localStorage.setItem('kgViews',String(playCount));
   resize();
   loadPlayerImgs();
   loadGorillaImgs();
@@ -1246,9 +1262,11 @@ function drawScene(){
   const mc=player.mode===1?'rgba(30,120,50,.7)':'rgba(30,80,160,.7)';
   ctx.fillStyle=mc;ctx.fillRect(4,54,178,28);ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';
   ctx.fillText(player.mode===1?'🦍 ゴリラ':'🧑 人間',10,71);
+  ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='bold 13px sans-serif';ctx.textAlign='right';
+  ctx.fillText('👁 '+playCount+'回',CW-6,18);ctx.textAlign='left';
   if(!('ontouchstart' in window)){
     ctx.fillStyle='rgba(255,255,255,.38)';ctx.font='11px sans-serif';ctx.textAlign='right';
-    ctx.fillText('↑/Z:ジャンプ X:攻撃 C:変身',CW-6,16);ctx.textAlign='left';
+    ctx.fillText('↑/Z:ジャンプ X:攻撃 C:変身',CW-6,32);ctx.textAlign='left';
   }
 }
 

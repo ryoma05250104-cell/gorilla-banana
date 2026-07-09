@@ -1039,17 +1039,15 @@ class Stage{
     // ── ボスエリア（shutterX=1920）ウサギ大王 ──
     pp({x:1920,y:480,w:1920,h:80,col:'#3a0860',solid:true,cracked:false,broken:false,isGround:true,isBossGround:true});
     const cx=2880;
-    for(const l of [{w:720,y:448},{w:560,y:410},{w:420,y:372},{w:300,y:334},{w:200,y:296},{w:120,y:258},{w:60,y:222}])
-      pp(cr(cx-l.w/2,l.y,l.w,Math.max(18,482-l.y)));
-    pp(cr(cx-40,190,80,22));
-    pp(bl(cx-420,270,110));pp(bl(cx+290,270,110));
-    pp(bl(cx-210,210,100));pp(bl(cx+110,210,100));
-    pp(bl(cx-55,148,110));
-    pp(bl(cx-320,340,90));pp(bl(cx+230,340,90));
+    // 王座（低めの台座）
+    pp(cr(cx-120,390,240,92));
+    // プレイヤー用ジャンプ台（左右）
+    pp(bl(cx-500,360,100));pp(bl(cx+400,360,100));
+    pp(bl(cx-420,270,100));pp(bl(cx+320,270,100));
+    pp(bl(cx-200,200,100));pp(bl(cx+100,200,100));
     pp(mkP(this.worldW-30,0,30,CH+80,'#1a0840'));
-    const boss=new Enemy('boss',cx-40,100);this.boss=boss;this.enemies.push(boss);
-    bb(cx-200,418);bb(cx+80,418);bb(cx-90,348);bb(cx+50,310);
-    bb(cx-420,240);bb(cx+290,240);bb(cx-55,118);
+    const boss=new Enemy('boss',cx-40,280);this.boss=boss;this.enemies.push(boss);
+    bb(cx-500,330);bb(cx+400,330);bb(cx-420,240);bb(cx+320,240);bb(cx-200,170);bb(cx+100,170);
   }
   tryBreak(px,py,pw,ph){
     const cw=this.crackWall;

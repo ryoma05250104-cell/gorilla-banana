@@ -137,6 +137,43 @@ function pollJump(){const v=KEY['ArrowUp']||KEY['KeyW']||KEY['KeyZ']||BTN.jump;i
 function pollAtk(){const v=KEY['KeyX']||KEY['Space']||BTN.atk;if(v&&!_pa){_pa=1;return 1;}if(!v)_pa=0;return 0;}
 function pollChg(){const v=KEY['KeyC']||BTN.chg;if(v&&!_pc){_pc=1;return 1;}if(!v)_pc=0;return 0;}
 
+/* ── 効果音 ── */
+let _AC=null;
+function _ac(){return _AC||(_AC=new(window.AudioContext||window.webkitAudioContext)());}
+function playZkyun(){
+  try{
+    const ac=_ac(),t=ac.currentTime;
+    // ── メイン：ズ→キューン（鋸波、低→高→低）──
+    const o1=ac.createOscillator(),g1=ac.createGain();
+    o1.connect(g1);g1.connect(ac.destination);
+    o1.type='sawtooth';
+    o1.frequency.setValueAtTime(140,t);
+    o1.frequency.linearRampToValueAtTime(1600,t+.09);
+    o1.frequency.exponentialRampToValueAtTime(90,t+.38);
+    g1.gain.setValueAtTime(0,t);
+    g1.gain.linearRampToValueAtTime(.38,t+.02);
+    g1.gain.exponentialRampToValueAtTime(.001,t+.40);
+    o1.start(t);o1.stop(t+.42);
+    // ── 高音キラキラ（サイン波） ──
+    const o2=ac.createOscillator(),g2=ac.createGain();
+    o2.connect(g2);g2.connect(ac.destination);
+    o2.type='sine';
+    o2.frequency.setValueAtTime(1800,t+.07);
+    o2.frequency.exponentialRampToValueAtTime(280,t+.38);
+    g2.gain.setValueAtTime(0,t+.06);
+    g2.gain.linearRampToValueAtTime(.22,t+.12);
+    g2.gain.exponentialRampToValueAtTime(.001,t+.40);
+    o2.start(t+.06);o2.stop(t+.42);
+    // ── ノイズバースト（ズ の頭） ──
+    const buf=ac.createBuffer(1,ac.sampleRate*.04,ac.sampleRate);
+    const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    const src=ac.createBufferSource(),g3=ac.createGain();
+    src.buffer=buf;src.connect(g3);g3.connect(ac.destination);
+    g3.gain.setValueAtTime(.18,t);g3.gain.exponentialRampToValueAtTime(.001,t+.04);
+    src.start(t);
+  }catch(e){}
+}
+
 /* ── 画像ロード（白背景透過） ── */
 const IMGS={};
 function loadImg(name,src){
@@ -477,7 +514,7 @@ class Player{
           if(this.onG){this.vy=JV;this.jc=1;this.onG=false;}
           else if(this.mode===1&&this.jc===1){this.vy=JV2;this.jc=2;}
         }
-        if(pollChg()){this.mode=this.mode===0?1:0;this.chgT=0.3;this.state='idle';this.vx=0;}
+        if(pollChg()){this.mode=this.mode===0?1:0;this.chgT=0.3;this.state='idle';this.vx=0;playZkyun();}
         // ベンツ乗り込み（右移動 or 攻撃ボタンで発動）
         let _cet=false;
         if(stage&&stage.benz&&!stage.benz.taken&&this.mode===0&&this.onG){
@@ -552,7 +589,7 @@ class Player{
     else this.carVx*=.88;
     this.dir=this.carVx>=0?1:-1;
     if(pollJump()&&this.onG){this.vy=-16;this.onG=false;}
-    if(pollChg()){this.inCar=false;this.mode=1;this.chgT=.2;return;}
+    if(pollChg()){this.inCar=false;this.mode=1;this.chgT=.2;playZkyun();return;}
     this.vx=this.carVx;this._phys(dt,plats);
     this.aH.carD.tick(dt);
     // 敵を轢く（車の視覚サイズに合わせた当たり判定、速度2以上）

@@ -154,6 +154,33 @@ function loadCarImg(){
   im.src='assets/car_drive.png';
 }
 
+/* ── なつこさんスプライト ── */
+function loadNatsukoImgs(){
+  const list=[
+    ['n_idle','assets/npc/natsuko/n_idle_1.png'],
+    ['n_face','assets/npc/natsuko/n_face_1.png'],
+  ];
+  let done=0;
+  list.forEach(([key,src])=>{
+    const im=new Image();
+    im.onload=()=>{
+      const oc=document.createElement('canvas');
+      oc.width=im.width;oc.height=im.height;
+      const ox=oc.getContext('2d');ox.drawImage(im,0,0);
+      const id=ox.getImageData(0,0,oc.width,oc.height),d=id.data;
+      // sample top-left corner as background color and remove similar pixels
+      const br=d[0],bg=d[1],bb=d[2];
+      for(let i=0;i<d.length;i+=4){
+        if(Math.abs(d[i]-br)<35&&Math.abs(d[i+1]-bg)<35&&Math.abs(d[i+2]-bb)<35)d[i+3]=0;
+      }
+      ox.putImageData(id,0,0);IMGS[key]=oc;
+      if(++done===list.length){}
+    };
+    im.onerror=()=>{IMGS[key]=null;done++;};
+    im.src=src;
+  });
+}
+
 /* ── プレイヤー画像（全て白背景除去）── */
 const PIMGS={idle:null,walk:null,run:null,jump:null,bow2:null,bow3:null,car1:null,car2:null,car3:null};
 let pimgsReady=false;
@@ -1112,6 +1139,7 @@ async function init(){
   try{if(screen.orientation&&screen.orientation.lock){const p=screen.orientation.lock('landscape');if(p&&p.catch)p.catch(()=>{});}}catch(e){}
   await Promise.all([loadImg('title','title.png'),loadImg('human','human.png'),loadImg('gorilla','gorilla.png'),loadImg('human2','human2.png')]);
   loadCarImg();
+  loadNatsukoImgs();
   showCtrl(false);
   requestAnimationFrame(loop);
 }
@@ -1421,7 +1449,9 @@ function _drawHospInterior(){
   ctx.beginPath();ctx.arc(155,352,17,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.arc(187,352,17,0,Math.PI*2);ctx.fill();
   // なつこさん（受付カウンター越しに上半身表示）
-  _drawNatsuko(Math.round(CW*.62),320);
+  {const ni=IMGS['n_idle'];const nx=Math.round(CW*.62);
+  if(ni){const nh=160,nw=Math.round(ni.width/ni.height*nh);ctx.drawImage(ni,nx-Math.round(nw/2),320-nh,nw,nh);}
+  else{_drawNatsuko(nx,320);}}
   // 受付カウンター（下半身を隠す）
   ctx.fillStyle='#7a9060';ctx.fillRect(120,308,CW-240,90);
   ctx.fillStyle='#9ab880';ctx.fillRect(120,308,CW-240,14);
@@ -1436,7 +1466,8 @@ function updateHosp(dt){
   ctx.strokeStyle='#88aaff';ctx.lineWidth=3;ctx.strokeRect(40,CH-150,CW-80,140);
   // portrait
   ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(42,CH-148,52,52);
-  ctx.font='32px sans-serif';ctx.fillText('👩‍⚕️',46,CH-104);
+  if(IMGS['n_face']){ctx.drawImage(IMGS['n_face'],42,CH-148,52,52);}
+  else{ctx.font='32px sans-serif';ctx.fillText('👩‍⚕️',46,CH-104);}
   ctx.fillStyle='#fff';ctx.font='bold 20px sans-serif';
   hospMsg.split('\n').forEach((l,i)=>ctx.fillText(l,102,CH-118+i*42));
   ctx.fillStyle='rgba(255,255,255,.6)';ctx.font='14px sans-serif';ctx.fillText('▼ ボタンを押して続ける',52,CH-56);

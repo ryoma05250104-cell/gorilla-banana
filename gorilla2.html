@@ -684,7 +684,7 @@ class Player{
         ctx.save();
         ctx.translate(CW/2,CH/2);ctx.rotate(-0.25);ctx.translate(-CW/2,-CH/2);
         for(let i=-4;i<22;i++){
-          ctx.fillStyle=i%2===0?'rgba(255,215,0,.35)':'transparent';
+          ctx.fillStyle=i%2===0?'rgba(200,0,0,.4)':'transparent';
           ctx.fillRect(i*70,0,70,CH*2);
         }
         ctx.restore();
@@ -781,7 +781,7 @@ class Player{
       // ── ゴリラ顔 フェーズ（単独）──
       if(p<=GORIL_ST&&p>GORIL_END){
         const t=(GORIL_ST-p)/(GORIL_ST-GORIL_END);
-        const gImg=pimgsReady?PIMGS.idle1:null;
+        const gImg=gimgsReady?GIMGS.idle1:null;
         if(gImg){
           const scale=2.0+t*1.2,sw=gImg.width*scale,sh=gImg.height*scale;
           ctx.save();ctx.shadowColor='rgba(255,200,0,1)';ctx.shadowBlur=50+t*40;

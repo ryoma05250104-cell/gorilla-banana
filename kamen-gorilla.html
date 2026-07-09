@@ -172,6 +172,7 @@ function loadBossImgs(){
     ['bk_sheet','assets/boss/rabbit_king/spritesheet.png'],
     ['bk_portrait','assets/boss/rabbit_king/boss_portrait.png'],
     ['bk_heart','assets/boss/rabbit_king/boss_heart.png'],
+    ['castle_sign','assets/castle/rabbit_sign.png'],
   ];
   list.forEach(([key,src])=>{
     const im=new Image();
@@ -1774,6 +1775,12 @@ function _drawCastleBuilding(){
   ctx.arc(dCx,dTop+dW/2,dW/2,Math.PI,0);
   ctx.lineTo(dCx+dW/2,dTop+dW/2+dHRect);
   ctx.stroke();
+  // うさぎ看板（城の正面中央）
+  const sign=IMGS['castle_sign'];
+  const sw2=120,sh2=120,sx2=dCx-sw2/2,sy2=dTop-sh2-14;
+  ctx.fillStyle='#7050b0';ctx.lineWidth=4;ctx.strokeStyle='#cc88ff';
+  ctx.fillRect(sx2-8,sy2-8,sw2+16,sh2+16);ctx.strokeRect(sx2-8,sy2-8,sw2+16,sh2+16);
+  if(sign){ctx.drawImage(sign,sx2,sy2,sw2,sh2);}
   // 城名テキスト
   ctx.fillStyle='#cc88ff';ctx.font='bold 28px sans-serif';ctx.textAlign='center';
   ctx.fillText('🏰 うさぎ城',CW/2,52);ctx.textAlign='left';

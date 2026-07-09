@@ -517,7 +517,7 @@ class Player{
           if(this.onG){this.vy=JV;this.jc=1;this.onG=false;}
           else if(this.mode===1&&this.jc===1){this.vy=JV2;this.jc=2;}
         }
-        if(pollChg()){this.mode=this.mode===0?1:0;this.chgT=1.6;this.chgTFirst=!window._transformedOnce;window._transformedOnce=true;this.state='idle';this.vx=0;playZkyun();}
+        if(pollChg()){this.mode=this.mode===0?1:0;this.chgTFirst=!window._transformedOnce;window._transformedOnce=true;this.chgT=this.chgTFirst?1.6:0.22;this.state='idle';this.vx=0;playZkyun();}
         // ベンツ乗り込み（右移動 or 攻撃ボタンで発動）
         let _cet=false;
         if(stage&&stage.benz&&!stage.benz.taken&&this.mode===0&&this.onG){
@@ -592,7 +592,7 @@ class Player{
     else this.carVx*=.88;
     this.dir=this.carVx>=0?1:-1;
     if(pollJump()&&this.onG){this.vy=-16;this.onG=false;}
-    if(pollChg()){this.inCar=false;this.mode=1;this.chgT=1.6;this.chgTFirst=!window._transformedOnce;window._transformedOnce=true;playZkyun();return;}
+    if(pollChg()){this.inCar=false;this.mode=1;this.chgTFirst=!window._transformedOnce;window._transformedOnce=true;this.chgT=this.chgTFirst?1.6:0.22;playZkyun();return;}
     this.vx=this.carVx;this._phys(dt,plats);
     this.aH.carD.tick(dt);
     // 敵を轢く（車の視覚サイズに合わせた当たり判定、速度2以上）
@@ -674,12 +674,8 @@ class Player{
       // ── 初回変身カットイン（仮面ライダー風）──
       const runImg=IMGS['human_run'],jmpImg=IMGS['human_jump'],faceImg=IMGS['takumi_face'];
       // フェーズ分割: p 1.0→0  (走る→ジャンプ→顔アップ→ゴリラ閃光)
-      const FACE_END=0.12,JUMP_ST=0.65;
-
-      if(p>FACE_END){
-        // 黒背景
-        ctx.fillStyle='#000';ctx.fillRect(0,0,CW,CH);
-      }
+      const JUMP_ST=0.65;
+      ctx.fillStyle='#000';ctx.fillRect(0,0,CW,CH);
 
       // ── 走る フェーズ (p > JUMP_ST) ──
       if(p>JUMP_ST){
@@ -710,11 +706,11 @@ class Player{
         }
       }
 
-      // フェーズ境界
-      const ROUL_ST=0.48; // ジャンプ終わり→ルーレット開始
-      const ROUL_END=0.28; // ルーレット終わり→顔開始
+      // フェーズ境界 (p: 1.0→0)
+      // 走る:1.0-0.65 ジャンプ:0.65-0.50 ルーレット:0.50-0.36 顔:0.36-0.13 ゴリラ顔:0.13-0.05 閃光:0.05-0
+      const ROUL_ST=0.50,ROUL_END=0.36,GORIL_ST=0.13,GORIL_END=0.05;
 
-      // ── ジャンプ フェーズ (JUMP_ST > p > ROUL_ST) ──
+      // ── ジャンプ フェーズ ──
       if(p<=JUMP_ST&&p>ROUL_ST){
         const t=(JUMP_ST-p)/(JUMP_ST-ROUL_ST);
         ctx.save();
@@ -728,24 +724,17 @@ class Player{
         });
         ctx.restore();
         if(jmpImg){
-          const scale=1.6+t*0.5;
-          const sw=jmpImg.width*scale,sh=jmpImg.height*scale;
-          ctx.save();
-          ctx.shadowColor='rgba(255,180,0,1)';ctx.shadowBlur=40+t*30;
-          ctx.drawImage(jmpImg,scx-sw/2,scy-sh*(.7+t*.2),sw,sh);
-          ctx.restore();
+          const scale=1.6+t*0.5,sw=jmpImg.width*scale,sh=jmpImg.height*scale;
+          ctx.save();ctx.shadowColor='rgba(255,180,0,1)';ctx.shadowBlur=40+t*30;
+          ctx.drawImage(jmpImg,scx-sw/2,scy-sh*(.7+t*.2),sw,sh);ctx.restore();
         }
       }
 
-      // ── ルーレット フェーズ（単独・黒背景）(ROUL_ST > p > ROUL_END) ──
+      // ── ルーレット フェーズ（単独）──
       if(p<=ROUL_ST&&p>ROUL_END){
-        const t=(ROUL_ST-p)/(ROUL_ST-ROUL_END); // 0→1
-        const rAngle=t*Math.PI*16; // 8回転
-        const rR=80+t*130;
-        const segs=16;
-        ctx.save();
-        ctx.translate(scx,scy);
-        ctx.rotate(rAngle);
+        const t=(ROUL_ST-p)/(ROUL_ST-ROUL_END);
+        const rAngle=t*Math.PI*16,rR=80+t*130,segs=16;
+        ctx.save();ctx.translate(scx,scy);ctx.rotate(rAngle);
         for(let i=0;i<segs;i++){
           const a1=(i/segs)*Math.PI*2,a2=((i+1)/segs)*Math.PI*2;
           ctx.fillStyle=i%2===0?'#cc0000':'#1a0000';
@@ -761,48 +750,51 @@ class Player{
         ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,0,22,0,Math.PI*2);ctx.fill();
         ctx.fillStyle='#cc0000';ctx.beginPath();ctx.arc(0,0,14,0,Math.PI*2);ctx.fill();
         ctx.restore();
-        // 放射スピードライン
         ctx.save();ctx.globalAlpha=0.4;ctx.strokeStyle='#ff4444';ctx.lineWidth=1.5;
         ctx.translate(scx,scy);
         for(let i=0;i<24;i++){
-          const a=(i/24)*Math.PI*2+rAngle*0.3;
-          const r1=rR+55+Math.sin(rAngle+i)*20;
+          const a=(i/24)*Math.PI*2+rAngle*0.3,r1=rR+55+Math.sin(rAngle+i)*20;
           ctx.beginPath();ctx.moveTo(Math.cos(a)*(rR+5),Math.sin(a)*(rR+5));
           ctx.lineTo(Math.cos(a)*r1,Math.sin(a)*r1);ctx.stroke();
         }
         ctx.restore();
-        // 「へんしん！！」テキスト
         const ta=Math.min(1,t*4);
-        ctx.save();ctx.globalAlpha=ta;
-        ctx.font='bold italic 72px sans-serif';ctx.textAlign='center';
+        ctx.save();ctx.globalAlpha=ta;ctx.font='bold italic 72px sans-serif';ctx.textAlign='center';
         ctx.fillStyle='#fff';ctx.shadowColor='#ff0000';ctx.shadowBlur=28;
-        ctx.fillText('へんしん！！',scx,54);
-        ctx.restore();
+        ctx.fillText('へんしん！！',scx,54);ctx.restore();
       }
 
-      // ── 顔アップ フェーズ（単独・ルーレットなし）(ROUL_END > p > FACE_END) ──
-      if(p<=ROUL_END&&p>FACE_END&&faceImg){
-        const t=(ROUL_END-p)/(ROUL_END-FACE_END); // 0→1
-        const scale=2.0+t*0.8;
-        const sh_i=Math.min(CH*0.95,faceImg.height*scale);
+      // ── 顔アップ フェーズ（単独・長め）──
+      if(p<=ROUL_END&&p>GORIL_ST&&faceImg){
+        const t=(ROUL_END-p)/(ROUL_END-GORIL_ST);
+        const scale=2.0+t*0.7,sh_i=Math.min(CH*0.97,faceImg.height*scale);
         const sw_i=faceImg.width*(sh_i/faceImg.height);
-        const fx=scx-sw_i/2,fy=scy-sh_i*0.52;
-        ctx.drawImage(faceImg,fx,fy,sw_i,sh_i);
-        // ビネット
+        ctx.drawImage(faceImg,scx-sw_i/2,scy-sh_i*0.52,sw_i,sh_i);
         ctx.save();
         const vg=ctx.createRadialGradient(scx,scy,sh_i*.18,scx,scy,sh_i*.88);
-        vg.addColorStop(0,'transparent');vg.addColorStop(1,'rgba(100,0,0,.7)');
-        ctx.fillStyle=vg;ctx.fillRect(0,0,CW,CH);
-        ctx.restore();
-        // スキャンライン
-        ctx.save();ctx.globalAlpha=0.15;ctx.fillStyle='#000';
-        for(let y=0;y<CH;y+=4){ctx.fillRect(0,y,CW,2);}
-        ctx.restore();
+        vg.addColorStop(0,'transparent');vg.addColorStop(1,'rgba(100,0,0,.65)');
+        ctx.fillStyle=vg;ctx.fillRect(0,0,CW,CH);ctx.restore();
+        ctx.save();ctx.globalAlpha=0.12;ctx.fillStyle='#000';
+        for(let y=0;y<CH;y+=4){ctx.fillRect(0,y,CW,2);}ctx.restore();
       }
 
-      // ── 閃光フェーズ (p <= FACE_END) ──
-      if(p<=FACE_END){
-        const t=1-(p/FACE_END);
+      // ── ゴリラ顔 フェーズ（単独）──
+      if(p<=GORIL_ST&&p>GORIL_END){
+        const t=(GORIL_ST-p)/(GORIL_ST-GORIL_END);
+        const gImg=pimgsReady?PIMGS.idle1:null;
+        if(gImg){
+          const scale=2.0+t*1.2,sw=gImg.width*scale,sh=gImg.height*scale;
+          ctx.save();ctx.shadowColor='rgba(255,200,0,1)';ctx.shadowBlur=50+t*40;
+          ctx.drawImage(gImg,scx-sw/2,scy-sh*0.75,sw,sh);ctx.restore();
+        }
+        // 白いフラッシュが始まる
+        ctx.save();ctx.globalAlpha=t*0.6;
+        ctx.fillStyle='#fff';ctx.fillRect(0,0,CW,CH);ctx.restore();
+      }
+
+      // ── 閃光フェーズ ──
+      if(p<=GORIL_END){
+        const t=1-(p/GORIL_END);
         ctx.fillStyle=`rgba(255,230,50,${t})`;ctx.fillRect(0,0,CW,CH);
       }
       return;

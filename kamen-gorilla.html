@@ -958,9 +958,9 @@ class Stage{
     this.plats=[];this.enemies=[];this.bananas=[];this.peels=[];
     this.boss=null;this.crackWall=null;
     if(stageNum===1){
-      this.worldW=960;this.shutterX=99999;
-      this.hospX=-9999;this.hospW=0;
-      this.benz=null;
+      this.worldW=5760;this.shutterX=99999;
+      this.hospX=2900;this.hospW=260;
+      this.benz=new Benz(1100,394);
     } else {
       this.worldW=3840;this.shutterX=1920;
       this.hospX=-9999;this.hospW=0;
@@ -976,9 +976,37 @@ class Stage{
     const bb=(x,y)=>{this.bananas.push(new Banana(x,y));};
     const ee=(t,x,y)=>{this.enemies.push(new Enemy(t,x,y));};
     pp({x:0,y:480,w:this.worldW,h:80,col:'#5a3010',solid:true,cracked:false,broken:false,isGround:true});
-    pp(bl(300,360,80));pp(bl(600,335,80));
-    bb(340,330);bb(640,305);
-    ee('patrol',400,436);ee('patrol',700,436);
+    // S0：スタート
+    pp(bl(350,360,80));pp(bl(720,335,80));
+    bb(390,330);bb(760,305);
+    ee('patrol',500,436);ee('patrol',840,436);
+    // S1：ベンツ登場（x=1100）
+    pp(bl(1600,350,80));
+    bb(1640,320);bb(1100,450);bb(1400,450);
+    ee('patrol',1250,436);ee('fly',1700,270);
+    // S2：亀裂壁 → 動物病院
+    pp(bl(2100,360,80));pp(bl(2450,335,80));
+    bb(2140,330);bb(2490,305);
+    ee('patrol',2220,436);ee('spike',2380,436);
+    const cw=mkP(2640,290,32,192,'#a04020',true,true);
+    this.crackWall=cw;pp(cw);
+    for(let i=0;i<3;i++)bb(2700+i*70,450);
+    // S3：病院の後 ～ 中盤
+    pp(bl(3100,355,80));pp(bl(3460,330,80));
+    bb(3140,325);bb(3500,300);
+    ee('patrol',3200,436);ee('fly',3500,270);ee('spike',3650,436);
+    // S4：中盤
+    pp(bl(4060,360,80));pp(bl(4400,335,80));
+    bb(4100,330);bb(4440,305);
+    ee('patrol',4180,436);ee('patrol',4520,436);ee('fly',4750,270);
+    // S5：降り階段 → 2面へ
+    for(let i=0;i<8;i++){
+      const sx=4800+i*105,sy=310+i*22;
+      pp(bl(sx,sy,108));
+      if(i===2)bb(sx+30,sy-30);
+      if(i===5)bb(sx+30,sy-30);
+    }
+    ee('patrol',4870,284);ee('spike',5075,284);ee('fly',5300,240);
   }
   _build2(){
     const bl=(x,y,w)=>({x,y,w,h:16,col:'#7030c0',solid:true,cracked:false,broken:false,isBlock:true});

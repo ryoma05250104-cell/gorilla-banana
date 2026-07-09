@@ -781,11 +781,12 @@ class Player{
       // ── ゴリラ顔 フェーズ（単独）──
       if(p<=GORIL_ST&&p>GORIL_END){
         const t=(GORIL_ST-p)/(GORIL_ST-GORIL_END);
-        const gImg=gimgsReady?GIMGS.idle1:null;
+        const gImg=IMGS.title;
         if(gImg){
-          const scale=2.0+t*1.2,sw=gImg.width*scale,sh=gImg.height*scale;
-          ctx.save();ctx.shadowColor='rgba(255,200,0,1)';ctx.shadowBlur=50+t*40;
-          ctx.drawImage(gImg,scx-sw/2,scy-sh*0.75,sw,sh);ctx.restore();
+          const scale=0.75+t*0.5;
+          const sw=gImg.width*scale,sh=gImg.height*scale;
+          ctx.save();ctx.shadowColor='rgba(255,200,0,1)';ctx.shadowBlur=40+t*50;
+          ctx.drawImage(gImg,scx-sw/2,scy-sh*0.5,sw,sh);ctx.restore();
         }
         // 白いフラッシュが始まる
         ctx.save();ctx.globalAlpha=t*0.6;

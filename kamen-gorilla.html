@@ -958,8 +958,8 @@ class Stage{
     this.plats=[];this.enemies=[];this.bananas=[];this.peels=[];
     this.boss=null;this.crackWall=null;
     if(stageNum===1){
-      this.worldW=5760;this.shutterX=99999;
-      this.hospX=2900;this.hospW=260;
+      this.worldW=7680;this.shutterX=99999;
+      this.hospX=4820;this.hospW=260;
       this.benz=new Benz(1100,394);
     } else {
       this.worldW=3840;this.shutterX=1920;
@@ -984,29 +984,37 @@ class Stage{
     pp(bl(1600,350,80));
     bb(1640,320);bb(1100,450);bb(1400,450);
     ee('patrol',1250,436);ee('fly',1700,270);
-    // S2：亀裂壁 → 動物病院
-    pp(bl(2100,360,80));pp(bl(2450,335,80));
-    bb(2140,330);bb(2490,305);
-    ee('patrol',2220,436);ee('spike',2380,436);
-    const cw=mkP(2640,290,32,192,'#a04020',true,true);
+    // S1b：ベンツ後・追加1画面目（1920〜2880）
+    pp(bl(2050,360,80));pp(bl(2300,330,80));pp(bl(2620,355,80));
+    bb(2090,330);bb(2340,300);bb(2660,325);
+    ee('patrol',1970,436);ee('fly',2250,260);ee('spike',2500,436);
+    // S1c：追加2画面目（2880〜3840）
+    pp(bl(3000,345,80));pp(bl(3300,320,80));pp(bl(3620,345,80));
+    bb(3040,315);bb(3340,290);bb(3660,315);
+    ee('patrol',3100,436);ee('patrol',3420,436);ee('fly',3650,255);
+    // S2：亀裂壁 → 動物病院（+1920ずらし）
+    pp(bl(4020,360,80));pp(bl(4370,335,80));
+    bb(4060,330);bb(4410,305);
+    ee('patrol',4140,436);ee('spike',4300,436);
+    const cw=mkP(4560,290,32,192,'#a04020',true,true);
     this.crackWall=cw;pp(cw);
-    for(let i=0;i<3;i++)bb(2700+i*70,450);
-    // S3：病院の後 ～ 中盤
-    pp(bl(3100,355,80));pp(bl(3460,330,80));
-    bb(3140,325);bb(3500,300);
-    ee('patrol',3200,436);ee('fly',3500,270);ee('spike',3650,436);
-    // S4：中盤
-    pp(bl(4060,360,80));pp(bl(4400,335,80));
-    bb(4100,330);bb(4440,305);
-    ee('patrol',4180,436);ee('patrol',4520,436);ee('fly',4750,270);
-    // S5：降り階段 → 2面へ
+    for(let i=0;i<3;i++)bb(4620+i*70,450);
+    // S3：病院の後 ～ 中盤（+1920ずらし）
+    pp(bl(5020,355,80));pp(bl(5380,330,80));
+    bb(5060,325);bb(5420,300);
+    ee('patrol',5120,436);ee('fly',5420,270);ee('spike',5570,436);
+    // S4：中盤（+1920ずらし）
+    pp(bl(5980,360,80));pp(bl(6320,335,80));
+    bb(6020,330);bb(6360,305);
+    ee('patrol',6100,436);ee('patrol',6440,436);ee('fly',6670,270);
+    // S5：降り階段 → 2面へ（+1920ずらし）
     for(let i=0;i<8;i++){
-      const sx=4800+i*105,sy=310+i*22;
+      const sx=6720+i*105,sy=310+i*22;
       pp(bl(sx,sy,108));
       if(i===2)bb(sx+30,sy-30);
       if(i===5)bb(sx+30,sy-30);
     }
-    ee('patrol',4870,284);ee('spike',5075,284);ee('fly',5300,240);
+    ee('patrol',6790,284);ee('spike',6995,284);ee('fly',7220,240);
   }
   _build2(){
     const bl=(x,y,w)=>({x,y,w,h:16,col:'#7030c0',solid:true,cracked:false,broken:false,isBlock:true});

@@ -139,7 +139,7 @@ function pollChg(){const v=KEY['KeyC']||BTN.chg;if(v&&!_pc){_pc=1;return 1;}if(!
 
 /* ── 効果音 ── */
 let _AC=null;
-function _ac(){return _AC||(_AC=new(window.AudioContext||window.webkitAudioContext)());}
+function _ac(){if(!_AC)_AC=new(window.AudioContext||window.webkitAudioContext)();if(_AC.state==='suspended')_AC.resume();return _AC;}
 function playZkyun(){
   try{
     const ac=_ac(),t=ac.currentTime;
@@ -217,23 +217,24 @@ function playHenshinVoice(){
     ns2.start(t+0.05);
   }catch(e){}
   // ── 音声合成 ──
-  if(!window.speechSynthesis)return;
-  window.speechSynthesis.cancel();
-  const fire=()=>{
-    const vs=window.speechSynthesis.getVoices();
-    const pick=vs.find(v=>v.lang.startsWith('ja')&&/male|男|takumi|hattori|otoya/i.test(v.name))
-              ||vs.find(v=>v.lang.startsWith('ja'));
-    const u=new SpeechSynthesisUtterance('へんしん！');
-    u.lang='ja-JP';u.pitch=0;u.rate=0.6;u.volume=1.0;
-    // 男性ボイス優先（Otoya=男, Keita=男, Daniel等）
-    const mPick=vs.find(v=>v.lang.startsWith('ja')&&/otoya|keita|男|male/i.test(v.name))
-               ||vs.find(v=>v.lang.startsWith('ja')&&!/(kyoko|haruka|女|female)/i.test(v.name))
-               ||vs.find(v=>v.lang.startsWith('ja'));
-    if(mPick)u.voice=mPick;
-    window.speechSynthesis.speak(u);
-  };
-  if(window.speechSynthesis.getVoices().length>0)fire();
-  else window.speechSynthesis.onvoiceschanged=()=>{fire();window.speechSynthesis.onvoiceschanged=null;};
+  try{
+    if(!window.speechSynthesis)return;
+    window.speechSynthesis.cancel();
+    const fire=()=>{
+      try{
+        const vs=window.speechSynthesis.getVoices();
+        const u=new SpeechSynthesisUtterance('へんしん！');
+        u.lang='ja-JP';u.pitch=0;u.rate=0.6;u.volume=1.0;
+        const mPick=vs.find(v=>v.lang.startsWith('ja')&&/otoya|keita|男|male/i.test(v.name))
+                   ||vs.find(v=>v.lang.startsWith('ja')&&!/(kyoko|haruka|女|female)/i.test(v.name))
+                   ||vs.find(v=>v.lang.startsWith('ja'));
+        if(mPick)u.voice=mPick;
+        window.speechSynthesis.speak(u);
+      }catch(e){}
+    };
+    if(window.speechSynthesis.getVoices().length>0)fire();
+    else window.speechSynthesis.onvoiceschanged=()=>{try{fire();}catch(e){}window.speechSynthesis.onvoiceschanged=null;};
+  }catch(e){}
 }
 
 /* ── 画像ロード（白背景透過） ── */
@@ -1096,6 +1097,7 @@ class Enemy{
     this.phaseT-=dt;
     // ──── ステージ2: うさぎ大王（スプライト・フェーズ制） ────
     if(stageNum===2){
+      const ba=this.bossAnim;
       if(ba==='idle'){const spd=[0.8,1.5,2.2][this.bossPhase]||0.8;this.vx=(px>bx)?spd:-spd;}else{this.vx=0;}
       this._phys(plats);
       this.bossDir=px>bx?1:-1;
@@ -1103,7 +1105,6 @@ class Enemy{
       const hpR=this.hp/this.maxhp;
       const ph=hpR>.66?0:hpR>.33?1:2;
       this.bossPhase=ph;
-      const ba=this.bossAnim;
       const frames=BOSS_ANIM[ba]||BOSS_ANIM.idle;
       // アニメーション進行
       this.bossAnimT+=dt;
@@ -1595,8 +1596,8 @@ class Stage{
     ee('patrol',4100,436);ee('spike',4260,436);
     const cw=mkP(4560,290,32,192,'#a04020',true,true);
     this.crackWall=cw;pp(cw);
-    // S3：病院後（ブロック1枚）
-    pp(bl(5120,338,260));
+    // S3：病院前（ブロック1枚）
+    pp(bl(4750,338,260));
     ee('patrol',5080,436);ee('fly',5380,265);ee('spike',5540,436);
     // S4（ブロック1枚）
     pp(bl(6060,345,260));

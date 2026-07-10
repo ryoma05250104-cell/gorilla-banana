@@ -271,13 +271,27 @@ function playExplosion(){
 }
 
 /* ── BGM ── */
-let _bgmOn=false,_bgmTid=null;
-function startBGM(){if(_bgmOn)return;_bgmOn=true;_bgmLoop();}
-function stopBGM(){_bgmOn=false;if(_bgmTid)clearTimeout(_bgmTid);_bgmTid=null;}
+let _bgmOn=false,_bgmTid=null,_bgmGain=null;
+function _getBgmDst(){
+  const ac=_ac();
+  if(!_bgmGain){_bgmGain=ac.createGain();_bgmGain.gain.value=1;_bgmGain.connect(ac.destination);}
+  return _bgmGain;
+}
+function startBGM(){
+  if(_bgmOn)return;_bgmOn=true;
+  const g=_getBgmDst(),t=_ac().currentTime;
+  g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(1,t);
+  _bgmLoop();
+}
+function stopBGM(){
+  _bgmOn=false;if(_bgmTid)clearTimeout(_bgmTid);_bgmTid=null;
+  if(_bgmGain){const t=_ac().currentTime;_bgmGain.gain.cancelScheduledValues(t);_bgmGain.gain.setValueAtTime(1,t);_bgmGain.gain.exponentialRampToValueAtTime(0.001,t+0.25);}
+}
 function _bgmLoop(){
   if(!_bgmOn)return;
   try{
     const ac=_ac(),t=ac.currentTime+0.05;
+    const dst=_getBgmDst();
     const bpm=158,bt=60/bpm,bar=bt*4;
     const tone=(f,s,d,tp,v)=>{try{
       const o=ac.createOscillator(),g=ac.createGain();
@@ -285,14 +299,14 @@ function _bgmLoop(){
       g.gain.setValueAtTime(v||.07,t+s);
       g.gain.setValueAtTime((v||.07)*.6,t+s+d*.65);
       g.gain.exponentialRampToValueAtTime(.001,t+s+d);
-      o.connect(g);g.connect(ac.destination);
+      o.connect(g);g.connect(dst);
       o.start(t+s);o.stop(t+s+d+.02);
     }catch(e){}};
     const kick=(s)=>{try{
       const o=ac.createOscillator(),g=ac.createGain();
       o.frequency.setValueAtTime(200,t+s);o.frequency.exponentialRampToValueAtTime(38,t+s+.15);
       g.gain.setValueAtTime(.65,t+s);g.gain.exponentialRampToValueAtTime(.001,t+s+.22);
-      o.connect(g);g.connect(ac.destination);o.start(t+s);o.stop(t+s+.25);
+      o.connect(g);g.connect(dst);o.start(t+s);o.stop(t+s+.25);
     }catch(e){}};
     const snr=(s)=>{try{
       const len=Math.ceil(ac.sampleRate*.07),b=ac.createBuffer(1,len,ac.sampleRate),d=b.getChannelData(0);
@@ -300,7 +314,7 @@ function _bgmLoop(){
       const src=ac.createBufferSource(),g=ac.createGain(),f=ac.createBiquadFilter();
       src.buffer=b;f.type='bandpass';f.frequency.value=2500;f.Q.value=.7;
       g.gain.setValueAtTime(.22,t+s);g.gain.exponentialRampToValueAtTime(.001,t+s+.07);
-      src.connect(f);f.connect(g);g.connect(ac.destination);src.start(t+s);src.stop(t+s+.1);
+      src.connect(f);f.connect(g);g.connect(dst);src.start(t+s);src.stop(t+s+.1);
     }catch(e){}};
     const hat=(s,v)=>{try{
       const len=Math.ceil(ac.sampleRate*.022),b=ac.createBuffer(1,len,ac.sampleRate),d=b.getChannelData(0);
@@ -308,7 +322,7 @@ function _bgmLoop(){
       const src=ac.createBufferSource(),g=ac.createGain(),f=ac.createBiquadFilter();
       src.buffer=b;f.type='highpass';f.frequency.value=9000;
       g.gain.setValueAtTime(v||.05,t+s);g.gain.exponentialRampToValueAtTime(.001,t+s+.022);
-      src.connect(f);f.connect(g);g.connect(ac.destination);src.start(t+s);src.stop(t+s+.03);
+      src.connect(f);f.connect(g);g.connect(dst);src.start(t+s);src.stop(t+s+.03);
     }catch(e){}};
     const C3=130.81,F3=174.61,G3=196,A3=220,B3=246.94;
     const C4=261.63,D4=293.66,E4=329.63,F4=349.23,G4=392,A4=440,B4=493.88;
@@ -343,13 +357,27 @@ function _bgmLoop(){
 }
 
 /* ── ボス戦BGM（Dマイナー・BPM180） ── */
-let _bossBGMOn=false,_bossBGMTid=null;
-function startBossBGM(){if(_bossBGMOn)return;_bossBGMOn=true;stopBGM();_bossBGMLoop();}
-function stopBossBGM(){_bossBGMOn=false;if(_bossBGMTid)clearTimeout(_bossBGMTid);_bossBGMTid=null;}
+let _bossBGMOn=false,_bossBGMTid=null,_bossGain=null;
+function _getBossGainDst(){
+  const ac=_ac();
+  if(!_bossGain){_bossGain=ac.createGain();_bossGain.gain.value=1;_bossGain.connect(ac.destination);}
+  return _bossGain;
+}
+function startBossBGM(){
+  if(_bossBGMOn)return;_bossBGMOn=true;stopBGM();
+  const g=_getBossGainDst(),t=_ac().currentTime;
+  g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(1,t);
+  _bossBGMLoop();
+}
+function stopBossBGM(){
+  _bossBGMOn=false;if(_bossBGMTid)clearTimeout(_bossBGMTid);_bossBGMTid=null;
+  if(_bossGain){const t=_ac().currentTime;_bossGain.gain.cancelScheduledValues(t);_bossGain.gain.setValueAtTime(1,t);_bossGain.gain.exponentialRampToValueAtTime(0.001,t+0.25);}
+}
 function _bossBGMLoop(){
   if(!_bossBGMOn)return;
   try{
     const ac=_ac(),t=ac.currentTime+0.05;
+    const dst=_getBossGainDst();
     const bpm=180,bt=60/bpm,bar=bt*4;
     const tone=(f,s,d,tp,v)=>{try{
       const o=ac.createOscillator(),g=ac.createGain();
@@ -357,13 +385,13 @@ function _bossBGMLoop(){
       g.gain.setValueAtTime(v||.07,t+s);
       g.gain.setValueAtTime((v||.07)*.45,t+s+d*.55);
       g.gain.exponentialRampToValueAtTime(.001,t+s+d);
-      o.connect(g);g.connect(ac.destination);o.start(t+s);o.stop(t+s+d+.02);
+      o.connect(g);g.connect(dst);o.start(t+s);o.stop(t+s+d+.02);
     }catch(e){}};
     const kick=(s,v)=>{try{
       const o=ac.createOscillator(),g=ac.createGain();
       o.frequency.setValueAtTime(220,t+s);o.frequency.exponentialRampToValueAtTime(35,t+s+.12);
       g.gain.setValueAtTime(v||.85,t+s);g.gain.exponentialRampToValueAtTime(.001,t+s+.18);
-      o.connect(g);g.connect(ac.destination);o.start(t+s);o.stop(t+s+.22);
+      o.connect(g);g.connect(dst);o.start(t+s);o.stop(t+s+.22);
     }catch(e){}};
     const snr=(s,v)=>{try{
       const len=Math.ceil(ac.sampleRate*.09),b=ac.createBuffer(1,len,ac.sampleRate),d=b.getChannelData(0);
@@ -371,7 +399,7 @@ function _bossBGMLoop(){
       const src=ac.createBufferSource(),g=ac.createGain(),f=ac.createBiquadFilter();
       src.buffer=b;f.type='bandpass';f.frequency.value=2800;f.Q.value=.6;
       g.gain.setValueAtTime(v||.3,t+s);g.gain.exponentialRampToValueAtTime(.001,t+s+.09);
-      src.connect(f);f.connect(g);g.connect(ac.destination);src.start(t+s);src.stop(t+s+.12);
+      src.connect(f);f.connect(g);g.connect(dst);src.start(t+s);src.stop(t+s+.12);
     }catch(e){}};
     const hat=(s,v)=>{try{
       const len=Math.ceil(ac.sampleRate*.016),b=ac.createBuffer(1,len,ac.sampleRate),d=b.getChannelData(0);
@@ -379,7 +407,7 @@ function _bossBGMLoop(){
       const src=ac.createBufferSource(),g=ac.createGain(),f=ac.createBiquadFilter();
       src.buffer=b;f.type='highpass';f.frequency.value=10000;
       g.gain.setValueAtTime(v||.06,t+s);g.gain.exponentialRampToValueAtTime(.001,t+s+.016);
-      src.connect(f);f.connect(g);g.connect(ac.destination);src.start(t+s);src.stop(t+s+.022);
+      src.connect(f);f.connect(g);g.connect(dst);src.start(t+s);src.stop(t+s+.022);
     }catch(e){}};
     const D3=146.83,F3=174.61,G3=196,A3=220,C4=261.63;
     const D4=293.66,F4=349.23,G4=392,A4=440,Bb4=466.16,C5=523.25,D5=587.33;
@@ -2150,7 +2178,7 @@ function checkScreenEdge(){
   if(player.x<0){player.x=0;player.vx=0;}
   // ボス部屋シャッター判定
   if(gs!==GS.BOSS&&player.x+player.w>=stage.shutterX){
-    gs=GS.TRANS;transTimer=0;transCamDone=false;return;
+    gs=GS.TRANS;transTimer=0;transCamDone=false;stopBGM();return;
   }
   // 右端到達（ステージクリア）
   if(player.x+player.w>=stage.worldW-10){

@@ -1353,11 +1353,11 @@ class Peel{
 /* ── 爆発エフェクト ── */
 class Explosion{
   constructor(x,y){
-    this.x=x;this.y=y;this.t=0;this.alive=true;this.dur=0.52;
-    this.sparks=Array.from({length:14},()=>({
-      vx:(Math.random()-.5)*300,
-      vy:-Math.random()*240-50,
-      col:`hsl(${20+Math.random()*40},100%,${55+Math.random()*25}%)`
+    this.x=x;this.y=y;this.t=0;this.alive=true;this.dur=0.75;
+    this.sparks=Array.from({length:26},()=>({
+      vx:(Math.random()-.5)*520,
+      vy:-Math.random()*360-80,
+      col:`hsl(${10+Math.random()*50},100%,${50+Math.random()*30}%)`
     }));
   }
   update(dt){this.t+=dt;if(this.t>=this.dur)this.alive=false;}
@@ -1365,26 +1365,26 @@ class Explosion{
     if(!this.alive)return;
     const p=this.t/this.dur,dx=this.x-cx;
     // 白フラッシュ
-    if(p<0.22){
-      ctx.save();ctx.globalAlpha=(0.22-p)/0.22*0.9;
+    if(p<0.28){
+      ctx.save();ctx.globalAlpha=(0.28-p)/0.28*1.0;
       ctx.fillStyle='#fff';
-      ctx.beginPath();ctx.arc(dx,this.y,20+p*120,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(dx,this.y,40+p*200,0,Math.PI*2);ctx.fill();
       ctx.restore();
     }
     // 炎リング
-    ctx.save();ctx.globalAlpha=Math.max(0,1-p*1.8);
-    const gr=ctx.createRadialGradient(dx,this.y,4,dx,this.y,Math.max(1,60*p+8));
-    gr.addColorStop(0,'rgba(255,220,60,.95)');
-    gr.addColorStop(0.5,'rgba(255,80,0,.7)');
+    ctx.save();ctx.globalAlpha=Math.max(0,1-p*1.6);
+    const gr=ctx.createRadialGradient(dx,this.y,6,dx,this.y,Math.max(1,110*p+18));
+    gr.addColorStop(0,'rgba(255,240,80,.98)');
+    gr.addColorStop(0.45,'rgba(255,90,0,.8)');
     gr.addColorStop(1,'rgba(180,20,0,0)');
     ctx.fillStyle=gr;
-    ctx.beginPath();ctx.arc(dx,this.y,60*p+8,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(dx,this.y,110*p+18,0,Math.PI*2);ctx.fill();
     ctx.restore();
     // スパーク
     const e=this.t;
     this.sparks.forEach(s=>{
-      ctx.save();ctx.globalAlpha=Math.max(0,1-p*2.2);ctx.fillStyle=s.col;
-      ctx.beginPath();ctx.arc(dx+s.vx*e,this.y+s.vy*e+300*e*e,Math.max(0,3.5*(1-p)),0,Math.PI*2);
+      ctx.save();ctx.globalAlpha=Math.max(0,1-p*2.0);ctx.fillStyle=s.col;
+      ctx.beginPath();ctx.arc(dx+s.vx*e,this.y+s.vy*e+400*e*e,Math.max(0,6*(1-p)),0,Math.PI*2);
       ctx.fill();ctx.restore();
     });
   }

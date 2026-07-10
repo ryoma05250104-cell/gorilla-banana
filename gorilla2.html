@@ -174,6 +174,24 @@ function playZkyun(){
   }catch(e){}
 }
 
+function playHenshinVoice(){
+  if(!window.speechSynthesis)return;
+  window.speechSynthesis.cancel();
+  const say=()=>{
+    const u=new SpeechSynthesisUtterance('へんしん！');
+    u.lang='ja-JP';u.pitch=0.3;u.rate=0.72;u.volume=1.0;
+    // 低い男性ボイスを優先探索
+    const vs=window.speechSynthesis.getVoices();
+    const pick=vs.find(v=>v.lang.startsWith('ja')&&/male|男|takumi|hattori|otoya/i.test(v.name))
+              ||vs.find(v=>v.lang.startsWith('ja'));
+    if(pick)u.voice=pick;
+    window.speechSynthesis.speak(u);
+  };
+  // voicesが未ロードなら待つ
+  if(window.speechSynthesis.getVoices().length>0)say();
+  else window.speechSynthesis.onvoiceschanged=()=>{say();window.speechSynthesis.onvoiceschanged=null;};
+}
+
 /* ── 画像ロード（白背景透過） ── */
 const IMGS={};
 function loadImg(name,src){
@@ -517,7 +535,7 @@ class Player{
           if(this.onG){this.vy=JV;this.jc=1;this.onG=false;}
           else if(this.mode===1&&this.jc===1){this.vy=JV2;this.jc=2;}
         }
-        if(pollChg()){this.mode=this.mode===0?1:0;this.chgTFirst=!window._transformedOnce;window._transformedOnce=true;this.chgT=this.chgTFirst?1.6:0.22;this.state='idle';this.vx=0;playZkyun();}
+        if(pollChg()){this.mode=this.mode===0?1:0;this.chgTFirst=!window._transformedOnce;window._transformedOnce=true;this.chgT=this.chgTFirst?1.6:0.22;this.state='idle';this.vx=0;playZkyun();if(this.chgTFirst)playHenshinVoice();}
         // ベンツ乗り込み（右移動 or 攻撃ボタンで発動）
         let _cet=false;
         if(stage&&stage.benz&&!stage.benz.taken&&this.mode===0&&this.onG){
@@ -592,7 +610,7 @@ class Player{
     else this.carVx*=.88;
     this.dir=this.carVx>=0?1:-1;
     if(pollJump()&&this.onG){this.vy=-16;this.onG=false;}
-    if(pollChg()){this.inCar=false;this.mode=1;this.chgTFirst=!window._transformedOnce;window._transformedOnce=true;this.chgT=this.chgTFirst?1.6:0.22;playZkyun();return;}
+    if(pollChg()){this.inCar=false;this.mode=1;this.chgTFirst=!window._transformedOnce;window._transformedOnce=true;this.chgT=this.chgTFirst?1.6:0.22;playZkyun();if(this.chgTFirst)playHenshinVoice();return;}
     this.vx=this.carVx;this._phys(dt,plats);
     this.aH.carD.tick(dt);
     // 敵を轢く（車の視覚サイズに合わせた当たり判定、速度2以上）

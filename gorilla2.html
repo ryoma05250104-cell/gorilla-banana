@@ -1372,46 +1372,62 @@ class Stage{
   }
   _build(){if(stageNum===1)this._build1();else this._build2();}
   _build1(){
-    const bl=(x,y,w)=>({x,y,w,h:16,col:'#c87030',solid:true,cracked:false,broken:false,isBlock:true});
+    // ロックマン風: 青メタルブロック、地面にピットあり
+    const bl=(x,y,w=96,h=24)=>({x,y,w,h,col:'#1048b8',solid:true,cracked:false,broken:false,isBlock:true});
+    const gnd=(x,w)=>({x,y:480,w,h:80,col:'#0c2860',solid:true,cracked:false,broken:false,isGround:true});
     const pp=v=>{this.plats.push(v);};
     const bb=(x,y)=>{this.bananas.push(new Banana(x,y));};
     const ee=(t,x,y)=>{this.enemies.push(new Enemy(t,x,y));};
-    pp({x:0,y:480,w:this.worldW,h:80,col:'#5a3010',solid:true,cracked:false,broken:false,isGround:true});
-    // S0：スタート
-    pp(bl(350,360,80));pp(bl(720,335,80));
-    bb(390,330);bb(760,305);
-    ee('patrol',500,436);ee('patrol',840,436);
-    // S1：ベンツ登場（x=1100）
-    pp(bl(1600,350,80));
-    bb(1640,320);bb(1100,450);bb(1400,450);
-    ee('patrol',1250,436);ee('fly',1700,270);
-    // S1b：ベンツ後・追加1画面目（1920〜2880）
-    pp(bl(2050,360,80));pp(bl(2300,330,80));pp(bl(2620,355,80));
-    bb(2090,330);bb(2340,300);bb(2660,325);
-    ee('patrol',1970,436);ee('fly',2250,260);ee('spike',2500,436);
-    // S1c：追加2画面目（2880〜3840）
-    pp(bl(3000,345,80));pp(bl(3300,320,80));pp(bl(3620,345,80));
-    bb(3040,315);bb(3340,290);bb(3660,315);
-    ee('patrol',3100,436);ee('patrol',3420,436);ee('fly',3650,255);
-    // S2：亀裂壁 → 動物病院（+1920ずらし）
-    pp(bl(4020,360,80));pp(bl(4370,335,80));
-    bb(4060,330);bb(4410,305);
-    ee('patrol',4140,436);ee('spike',4300,436);
+    // 地面（ピット込み）
+    pp(gnd(0,300));pp(gnd(380,260));pp(gnd(720,400));
+    pp(gnd(1200,600));pp(gnd(1900,400));pp(gnd(2380,500));
+    pp(gnd(2960,380));pp(gnd(3420,460));
+    pp(gnd(3960,300));pp(gnd(4340,3600));
+    pp(gnd(5200,500));pp(gnd(5780,400));
+    pp(gnd(6260,380));pp(gnd(6720,420));pp(gnd(7220,460));
+    // S0：スタート（0〜960）ロックマン階段
+    pp(bl(200,396,96));pp(bl(348,372,96));pp(bl(496,348,96));
+    pp(bl(644,372,96));pp(bl(792,396,96));
+    bb(300,366);bb(548,318);bb(740,342);
+    ee('patrol',440,436);ee('patrol',860,436);
+    // S1：ベンツ登場（960〜1920）
+    pp(bl(1000,396,96));pp(bl(1140,348,120));pp(bl(1340,300,96));
+    pp(bl(1520,336,96));pp(bl(1700,372,96));pp(bl(1820,396,96));
+    bb(1190,318);bb(1390,270);bb(1570,306);bb(1750,342);
+    bb(1100,450);bb(1400,450);
+    ee('patrol',1060,436);ee('fly',1400,250);ee('patrol',1760,436);
+    // S1b：1920〜2880
+    pp(bl(1960,384,96));pp(bl(2080,336,120));pp(bl(2280,288,96));
+    pp(bl(2440,324,96));pp(bl(2600,372,96));pp(bl(2740,396,96));
+    bb(2130,306);bb(2330,258);bb(2490,294);bb(2650,342);
+    ee('patrol',2000,436);ee('fly',2320,250);ee('spike',2560,436);
+    // S1c：2880〜3840
+    pp(bl(2980,396,96));pp(bl(3120,348,120));pp(bl(3310,300,96));
+    pp(bl(3480,336,96));pp(bl(3650,372,96));pp(bl(3760,396,96));
+    bb(3170,318);bb(3360,270);bb(3530,306);bb(3700,342);
+    ee('patrol',3040,436);ee('patrol',3400,436);ee('fly',3720,250);
+    // S2：亀裂壁→動物病院（3840〜4800）
+    pp(bl(3980,384,96));pp(bl(4130,324,96));pp(bl(4280,276,96));
+    bb(4060,354);bb(4180,294);
+    ee('patrol',4060,436);ee('spike',4360,436);
     const cw=mkP(4560,290,32,192,'#a04020',true,true);
     this.crackWall=cw;pp(cw);
     for(let i=0;i<3;i++)bb(4620+i*70,450);
-    // S3：病院の後 ～ 中盤（+1920ずらし）
-    pp(bl(5020,355,80));pp(bl(5380,330,80));
-    bb(5060,325);bb(5420,300);
-    ee('patrol',5120,436);ee('fly',5420,270);ee('spike',5570,436);
-    // S4：中盤（+1920ずらし）
-    pp(bl(5980,360,80));pp(bl(6320,335,80));
-    bb(6020,330);bb(6360,305);
-    ee('patrol',6100,436);ee('patrol',6440,436);ee('fly',6670,270);
-    // S5：ラストエリア → 2面へ
-    pp(bl(6800,360,80));pp(bl(7100,335,80));pp(bl(7400,355,80));
-    bb(6840,330);bb(7140,305);bb(7440,325);
-    ee('patrol',6900,436);ee('spike',7200,436);ee('fly',7500,260);
+    // S3：病院後（4800〜5760）
+    pp(bl(4880,396,96));pp(bl(5040,348,96));pp(bl(5200,300,120));
+    pp(bl(5420,336,96));pp(bl(5600,372,96));pp(bl(5730,396,96));
+    bb(4930,366);bb(5090,318);bb(5250,270);bb(5470,306);
+    ee('patrol',4860,436);ee('fly',5260,250);ee('spike',5660,436);
+    // S4：中盤（5760〜6720）
+    pp(bl(5860,384,96));pp(bl(6020,324,120));pp(bl(6230,276,96));
+    pp(bl(6400,312,96));pp(bl(6560,360,96));pp(bl(6690,396,96));
+    bb(5910,354);bb(6070,294);bb(6280,246);bb(6450,282);bb(6610,330);
+    ee('patrol',5840,436);ee('patrol',6300,436);ee('fly',6580,240);
+    // S5：ラスト→2面（6720〜7680）
+    pp(bl(6800,396,96));pp(bl(6960,348,96));pp(bl(7120,300,96));
+    pp(bl(7280,336,96));pp(bl(7440,372,96));pp(bl(7580,396,96));
+    bb(6850,366);bb(7010,318);bb(7170,270);bb(7330,306);bb(7490,342);
+    ee('patrol',6780,436);ee('spike',7080,436);ee('fly',7400,250);
   }
   _build2(){
     const bl=(x,y,w)=>({x,y,w,h:16,col:'#7030c0',solid:true,cracked:false,broken:false,isBlock:true});
@@ -1444,15 +1460,13 @@ class Stage{
     // ── ボスエリア（shutterX=1920）ウサギ大王 ──
     pp({x:1920,y:480,w:1920,h:80,col:'#3a0860',solid:true,cracked:false,broken:false,isGround:true,isBossGround:true});
     const cx=2880;
-    // 王座（低めの台座）
-    pp(cr(cx-120,390,240,92));
-    // プレイヤー用ジャンプ台（左右）
-    pp(bl(cx-500,360,100));pp(bl(cx+400,360,100));
-    pp(bl(cx-420,270,100));pp(bl(cx+320,270,100));
-    pp(bl(cx-200,200,100));pp(bl(cx+100,200,100));
+    // ジャンプ台（左右・ボスの高さに合わせた低め）
+    pp(bl(cx-520,380,110));pp(bl(cx+410,380,110));
+    pp(bl(cx-430,300,90)); pp(bl(cx+340,300,90));
     pp(mkP(this.worldW-30,0,30,CH+80,'#1a0840'));
-    const boss=new Enemy('boss',cx-40,280);this.boss=boss;this.enemies.push(boss);
-    bb(cx-500,330);bb(cx+400,330);bb(cx-420,240);bb(cx+320,240);bb(cx-200,170);bb(cx+100,170);
+    // ボスは玉座なし → 地面に落下してプレイヤーと同じ高さに
+    const boss=new Enemy('boss',cx-40,80);this.boss=boss;this.enemies.push(boss);
+    bb(cx-520,350);bb(cx+410,350);bb(cx-430,270);bb(cx+340,270);
   }
   tryBreak(px,py,pw,ph){
     const cw=this.crackWall;
@@ -1465,18 +1479,38 @@ class Stage{
       const dx=p.x-cx;if(dx+p.w<-10||dx>CW+10)continue;
       ctx.fillStyle=p.cracked?'#a04020':p.col;
       ctx.fillRect(dx,p.y,p.w,p.h);
-      // 地面テクスチャ（マリオ風：緑の芝生＋茶色の土）
+      // 地面テクスチャ
       if(p.isGround){
-        ctx.fillStyle=p.isBossGround?'#6010a0':'#3aaa00';
-        ctx.fillRect(dx,p.y,p.w,14);
-        ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(dx,p.y,p.w,3);
+        if(p.isBossGround){
+          ctx.fillStyle='#5010a0';ctx.fillRect(dx,p.y,p.w,12);
+        } else if(stageNum===2){
+          ctx.fillStyle='#5010a0';ctx.fillRect(dx,p.y,p.w,12);
+        } else {
+          // ロックマン風: 青金属タイル
+          ctx.fillStyle='#1860d0';ctx.fillRect(dx,p.y,p.w,12);
+          ctx.fillStyle='rgba(255,255,255,.25)';ctx.fillRect(dx,p.y,p.w,3);
+          const tw=40,offT=(p.x+dx<0?0:0);
+          ctx.strokeStyle='rgba(0,30,100,.5)';ctx.lineWidth=1;
+          for(let tx=dx;tx<dx+p.w;tx+=tw){ctx.strokeRect(tx,p.y,tw,p.h);}
+        }
       }
-      // ブロックテクスチャ（マリオ風レンガ）
+      // ブロックテクスチャ
       if(p.isBlock){
-        ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=1;
-        for(let by=p.y+8;by<p.y+p.h;by+=8){ctx.beginPath();ctx.moveTo(dx,by);ctx.lineTo(dx+p.w,by);ctx.stroke();}
-        ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(dx,p.y,p.w,2);
-        ctx.fillStyle='rgba(0,0,0,.15)';ctx.fillRect(dx,p.y+p.h-2,p.w,2);
+        if(stageNum===1){
+          // ロックマン風メタルブロック
+          ctx.fillStyle='rgba(80,160,255,.25)';ctx.fillRect(dx,p.y,p.w,4);
+          ctx.fillStyle='rgba(0,0,60,.3)';ctx.fillRect(dx,p.y+p.h-4,p.w,4);
+          ctx.strokeStyle='rgba(0,40,150,.5)';ctx.lineWidth=1;
+          const bw=32;
+          for(let bx=dx;bx<dx+p.w;bx+=bw){ctx.strokeRect(bx,p.y,bw,p.h);}
+          // 右端ハイライト
+          ctx.fillStyle='rgba(120,200,255,.15)';ctx.fillRect(dx+p.w-3,p.y,3,p.h);
+        } else {
+          ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=1;
+          for(let by=p.y+8;by<p.y+p.h;by+=8){ctx.beginPath();ctx.moveTo(dx,by);ctx.lineTo(dx+p.w,by);ctx.stroke();}
+          ctx.fillStyle='rgba(255,255,255,.2)';ctx.fillRect(dx,p.y,p.w,2);
+          ctx.fillStyle='rgba(0,0,0,.15)';ctx.fillRect(dx,p.y+p.h-2,p.w,2);
+        }
       }
       // クリスタル山テクスチャ
       if(p.isCrystal){
@@ -1706,15 +1740,36 @@ function drawBG(){
       }
     }
   } else {
-    // マリオ風青空
-    ctx.fillStyle='#5c94fc';ctx.fillRect(0,0,CW,CH);
-    // マリオ風の白い雲
-    const mc=(x,y,s)=>{
-      ctx.fillStyle='#fff';
-      [[0,0,14],[20,-5,18],[44,-2,14]].forEach(([ox,oy,r])=>{ctx.beginPath();ctx.arc(x+ox,y+oy,r*s,0,Math.PI*2);ctx.fill();});
-      ctx.fillRect(x-14*s,y,72*s,14*s);
-    };
-    mc(90,75,1);mc(370,55,1.2);mc(680,80,0.9);mc(850,60,1.1);
+    // ロックマン風: 工場都市夜景
+    const sky=ctx.createLinearGradient(0,0,0,CH);
+    sky.addColorStop(0,'#0c1428');sky.addColorStop(0.7,'#182248');sky.addColorStop(1,'#1c2850');
+    ctx.fillStyle=sky;ctx.fillRect(0,0,CW,CH);
+    // 遠景ビルシルエット（ゆっくりパラックス）
+    const boff=Math.floor(-camX*0.12%960);
+    [boff,boff+960,boff-960].forEach(ox=>{
+      [[0,170,88],[100,130,66],[195,155,105],[325,105,75],[435,140,88],[548,115,68],[638,160,95],[755,120,78],[865,145,88]].forEach(([rx,rh,rw])=>{
+        ctx.fillStyle='#0a1020';ctx.fillRect(ox+rx,480-rh,rw,rh);
+        for(let wy=480-rh+14;wy<480-28;wy+=18){
+          for(let wx=ox+rx+7;wx<ox+rx+rw-7;wx+=14){
+            const lit=(wx*13+wy*7)%19<5;
+            ctx.fillStyle=lit?'rgba(255,200,60,.28)':'rgba(40,80,200,.1)';
+            ctx.fillRect(wx,wy,8,11);
+          }
+        }
+      });
+    });
+    // 近景ビル（よりパラックス）
+    const boff2=Math.floor(-camX*0.38%800);
+    [boff2,boff2+800,boff2-800].forEach(ox=>{
+      [[0,220,110],[120,200,80],[220,230,100],[360,205,85],[480,225,105],[620,210,90],[740,220,80]].forEach(([rx,rh,rw])=>{
+        ctx.fillStyle='#060c18';ctx.fillRect(ox+rx,480-rh,rw,rh);
+      });
+    });
+    // グリッドライン（工場壁）
+    ctx.strokeStyle='rgba(30,70,180,.12)';ctx.lineWidth=1;
+    const offG=camX*0.6%80;
+    for(let x=((-offG%80)+80)%80;x<CW+80;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,CH);ctx.stroke();}
+    for(let y=0;y<CH;y+=60){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(CW,y);ctx.stroke();}
   }
 }
 

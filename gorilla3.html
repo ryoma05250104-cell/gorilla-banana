@@ -67,15 +67,20 @@ function buildCtrl(){
   if(!W)return;
 
   function mk(prop,label,style){
+    const pad=22,pxv=s=>parseInt(s)||0;
+    // 外側：透明なヒットエリア（見た目より大きい）
+    const hit=document.createElement('div');
+    hit.dataset.prop=prop;
+    hit.style.cssText=`position:absolute;left:${p(pxv(style.left)-pad)};top:${p(pxv(style.top)-pad)};width:${p(pxv(style.width)+pad*2)};height:${p(pxv(style.height)+pad*2)};cursor:none;touch-action:none;pointer-events:auto;-webkit-tap-highlight-color:transparent;`;
+    // 内側：実際に見えるボタン
     const d=document.createElement('div');
     d.className='btn';d.innerHTML=label;
-    d.dataset.prop=prop;
-    Object.assign(d.style,style);
-    // 即時反応：ボタン個別のtouchstart
-    d.addEventListener('touchstart',e=>{e.preventDefault();BTN[prop]=1;},{passive:false});
-    d.addEventListener('touchend',  e=>{e.preventDefault();_updateBTN(e.touches);},{passive:false});
-    d.addEventListener('touchcancel',()=>{BTN[prop]=0;});
-    ctrl.appendChild(d);
+    d.style.cssText=`position:absolute;left:${p(pad)};top:${p(pad)};width:${style.width};height:${style.height};background:${style.background};font-size:${style.fontSize};pointer-events:none;`;
+    hit.appendChild(d);
+    hit.addEventListener('touchstart',e=>{e.preventDefault();BTN[prop]=1;},{passive:false});
+    hit.addEventListener('touchend',  e=>{e.preventDefault();_updateBTN(e.touches);},{passive:false});
+    hit.addEventListener('touchcancel',()=>{BTN[prop]=0;});
+    ctrl.appendChild(hit);
   }
   const p=v=>Math.round(v)+'px';
 
@@ -134,7 +139,8 @@ function _updateBTN(touches){
   for(let i=0;i<touches.length;i++){
     const t=touches[i];
     const el=document.elementFromPoint(t.clientX,t.clientY);
-    if(el&&el.dataset&&el.dataset.prop)BTN[el.dataset.prop]=1;
+    const hit=el&&el.closest('[data-prop]');
+    if(hit)BTN[hit.dataset.prop]=1;
   }
 }
 // touchmoveのみドキュメントレベルで監視（指スライド対応）

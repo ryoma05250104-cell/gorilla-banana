@@ -1037,9 +1037,14 @@ class Enemy{
     if(this.hp<=0){
       this.hp=0;
       this.alive=false;
-      // 5回に1回（20%）補聴器をドロップ（ボス除く）
-      if(this.type!=='boss'&&Math.random()<0.3)
-        hearingAidItems.push(new HearingAid(this.x+this.w/2-14,this.y));
+      // 爆発エフェクト
+      explosions.push(new Explosion(this.x+this.w/2,this.y+this.h/2));
+      // ドロップ（ボス除く）: バナナ70% / 補聴器30%（Lv3未満のみ）
+      if(this.type!=='boss'){
+        const r=Math.random();
+        if(r<0.7) droppedBananas.push(new DroppedBanana(this.x+this.w/2-14,this.y));
+        else if(player&&player.powerLevel<3) hearingAidItems.push(new HearingAid(this.x+this.w/2-14,this.y));
+      }
     } else if(this.type==='boss'&&stageNum===2&&this.bossAnim!=='down'&&this.bossAnim!=='hit'){
       this.bossAnim='hit';this.bossFrame=0;this.bossAnimT=0;this.bossAttacking=false;
     }
@@ -1344,6 +1349,73 @@ class Peel{
   draw(cx){ctx.fillStyle='#aaee00';ctx.fillRect(this.x-cx,this.y,this.w,this.h);}
 }
 
+/* ── 爆発エフェクト ── */
+class Explosion{
+  constructor(x,y){
+    this.x=x;this.y=y;this.t=0;this.alive=true;this.dur=0.52;
+    this.sparks=Array.from({length:14},()=>({
+      vx:(Math.random()-.5)*300,
+      vy:-Math.random()*240-50,
+      col:`hsl(${20+Math.random()*40},100%,${55+Math.random()*25}%)`
+    }));
+  }
+  update(dt){this.t+=dt;if(this.t>=this.dur)this.alive=false;}
+  draw(cx){
+    if(!this.alive)return;
+    const p=this.t/this.dur,dx=this.x-cx;
+    // 白フラッシュ
+    if(p<0.22){
+      ctx.save();ctx.globalAlpha=(0.22-p)/0.22*0.9;
+      ctx.fillStyle='#fff';
+      ctx.beginPath();ctx.arc(dx,this.y,20+p*120,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }
+    // 炎リング
+    ctx.save();ctx.globalAlpha=Math.max(0,1-p*1.8);
+    const gr=ctx.createRadialGradient(dx,this.y,4,dx,this.y,Math.max(1,60*p+8));
+    gr.addColorStop(0,'rgba(255,220,60,.95)');
+    gr.addColorStop(0.5,'rgba(255,80,0,.7)');
+    gr.addColorStop(1,'rgba(180,20,0,0)');
+    ctx.fillStyle=gr;
+    ctx.beginPath();ctx.arc(dx,this.y,60*p+8,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+    // スパーク
+    const e=this.t;
+    this.sparks.forEach(s=>{
+      ctx.save();ctx.globalAlpha=Math.max(0,1-p*2.2);ctx.fillStyle=s.col;
+      ctx.beginPath();ctx.arc(dx+s.vx*e,this.y+s.vy*e+300*e*e,Math.max(0,3.5*(1-p)),0,Math.PI*2);
+      ctx.fill();ctx.restore();
+    });
+  }
+}
+
+/* ── ドロップバナナ（敵が落とす） ── */
+class DroppedBanana{
+  constructor(x,y){
+    this.x=x;this.y=y;this.w=28;this.h=28;
+    this.vx=(Math.random()-.5)*4;this.vy=-6;
+    this.alive=true;this.t=0;
+  }
+  update(plats){
+    this.t+=1/60;
+    this.vy=Math.min(this.vy+GRAV,14);
+    this.x+=this.vx;this.y+=this.vy;
+    for(const p of plats){
+      if(p.solid&&overlapR(this.x,this.y,this.w,this.h,p.x,p.y,p.w,p.h)&&this.vy>=0){
+        this.y=p.y-this.h;this.vy=0;this.vx*=0.5;
+      }
+    }
+    if(this.y>CH+200)this.alive=false;
+  }
+  draw(cx){
+    if(!this.alive)return;
+    const dx=this.x-cx,bob=Math.sin(this.t*5)*3;
+    ctx.font='28px sans-serif';ctx.textAlign='center';
+    ctx.fillText('🍌',dx+14,this.y+26+bob);
+    ctx.textAlign='left';
+  }
+}
+
 /* ── 補聴器アイテム ── */
 class HearingAid{
   constructor(x,y){
@@ -1503,43 +1575,33 @@ class Stage{
   _build1(){
     const bl=(x,y,w=220)=>({x,y,w,h:16,col:'#c87030',solid:true,cracked:false,broken:false,isBlock:true});
     const pp=v=>{this.plats.push(v);};
-    const bb=(x,y)=>{this.bananas.push(new Banana(x,y));};
     const ee=(t,x,y)=>{this.enemies.push(new Enemy(t,x,y));};
     pp({x:0,y:480,w:this.worldW,h:80,col:'#5a3010',solid:true,cracked:false,broken:false,isGround:true});
-    // S0
-    pp(bl(300,360));pp(bl(680,330));
-    bb(390,330);bb(780,300);
+    // S0（ブロック1枚）
+    pp(bl(450,345));
     ee('patrol',500,436);ee('patrol',860,436);
-    // S1：ベンツ登場
+    // S1：ベンツ登場（ブロック1枚）
     pp(bl(1520,350,260));
-    bb(1620,320);bb(1100,450);bb(1400,450);
     ee('patrol',1250,436);ee('fly',1700,270);
-    // S1b
-    pp(bl(1980,355));pp(bl(2280,325));pp(bl(2580,350));
-    bb(2070,325);bb(2380,295);bb(2680,320);
+    // S1b（ブロック1枚）
+    pp(bl(2200,338));
     ee('patrol',1950,436);ee('fly',2230,255);ee('spike',2490,436);
-    // S1c
-    pp(bl(2950,340));pp(bl(3250,315));pp(bl(3560,340));
-    bb(3050,310);bb(3350,285);bb(3660,310);
+    // S1c（ブロック2枚：踏み台）
+    pp(bl(3050,335));pp(bl(3500,315));
     ee('patrol',3060,436);ee('patrol',3400,436);ee('fly',3650,255);
-    // S2：亀裂壁→動物病院
-    pp(bl(3960,355,240));pp(bl(4290,330,240));
-    bb(4060,325);bb(4390,300);
+    // S2：亀裂壁→動物病院（ブロック1枚）
+    pp(bl(4080,345,260));
     ee('patrol',4100,436);ee('spike',4260,436);
     const cw=mkP(4560,290,32,192,'#a04020',true,true);
     this.crackWall=cw;pp(cw);
-    for(let i=0;i<3;i++)bb(4620+i*70,450);
-    // S3：病院後
-    pp(bl(4970,350,240));pp(bl(5310,325,240));
-    bb(5070,320);bb(5410,295);
+    // S3：病院後（ブロック1枚）
+    pp(bl(5120,338,260));
     ee('patrol',5080,436);ee('fly',5380,265);ee('spike',5540,436);
-    // S4
-    pp(bl(5900,355,240));pp(bl(6240,330,240));
-    bb(6000,325);bb(6340,300);
+    // S4（ブロック1枚）
+    pp(bl(6060,345,260));
     ee('patrol',6060,436);ee('patrol',6400,436);ee('fly',6630,265);
-    // S5
-    pp(bl(6750,355));pp(bl(7060,330));pp(bl(7370,350));
-    bb(6850,325);bb(7160,300);bb(7470,320);
+    // S5（ブロック2枚）
+    pp(bl(6860,350));pp(bl(7300,335));
     ee('patrol',6860,436);ee('spike',7170,436);ee('fly',7460,255);
   }
   _build2(){
@@ -1688,7 +1750,7 @@ function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
 function overlapR(ax,ay,aw,ah,bx,by,bw,bh){return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&ay+ah>by;}
 
 /* ── ゲーム管理 ── */
-let gs=GS.TITLE,player,stage,camX=0,peels=[],hearingAidItems=[],auras=[];
+let gs=GS.TITLE,player,stage,camX=0,peels=[],hearingAidItems=[],auras=[],explosions=[],droppedBananas=[];
 let hospLines=[],hospIdx=0,hospTimer=0,hospCooldown=0,transTimer=0,titleT=0,lastT=0;
 let playCount=0;
 let stageNum=1,stageTransTimer=0,_stageTransBuilt=false;
@@ -1732,7 +1794,7 @@ function showCtrl(v){
 function startGame(){
   stageNum=1;
   player=new Player();stage=new Stage();
-  camX=0;peels=[];hearingAidItems=[];auras=[];hospCooldown=0;
+  camX=0;peels=[];hearingAidItems=[];auras=[];explosions=[];droppedBananas=[];hospCooldown=0;
   screenAnchor=0;scrSliding=false;scrSlideT=0;scrSlideDir=0;
   gs=GS.PLAY;
   showCtrl(true);
@@ -1856,8 +1918,10 @@ function drawScene(){
   drawBG();stage.draw(camX);
   for(const e of stage.enemies)e.draw(camX);
   for(const a of player.arrows)a.draw(camX);
+  for(const db of droppedBananas)db.draw(camX);
   for(const ha of hearingAidItems)ha.draw(camX);
   for(const au of auras)au.draw(camX);
+  for(const ex of explosions)ex.draw(camX);
   player.draw(camX);
   // HUD
   ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(4,4,206,46);
@@ -1956,6 +2020,20 @@ function updatePlay(dt){
   for(let i=auras.length-1;i>=0;i--){
     auras[i].update(stage.enemies,stage.plats);
     if(!auras[i].alive)auras.splice(i,1);
+  }
+  // ドロップバナナ
+  for(let i=droppedBananas.length-1;i>=0;i--){
+    const db=droppedBananas[i];
+    db.update(stage.plats);
+    if(db.alive&&overlapR(player.x-30,player.y-10,player.w+60,player.h+20,db.x,db.y,db.w,db.h)){
+      db.alive=false;player.gp=Math.min(MAX_GP,player.gp+1);
+    }
+    if(!db.alive)droppedBananas.splice(i,1);
+  }
+  // 爆発エフェクト
+  for(let i=explosions.length-1;i>=0;i--){
+    explosions[i].update(dt);
+    if(!explosions[i].alive)explosions.splice(i,1);
   }
   // プレイヤー
   player.update(dt,stage.plats,stage.bananas,stage.enemies,stage);

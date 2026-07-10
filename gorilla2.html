@@ -237,6 +237,27 @@ function playHenshinVoice(){
   }catch(e){}
 }
 
+function playExplosion(){
+  try{
+    const ac=_ac(),t=ac.currentTime;
+    // ノイズバースト（ドン）
+    const len=Math.ceil(ac.sampleRate*.18);
+    const buf=ac.createBuffer(1,len,ac.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,1.5);
+    const src=ac.createBufferSource(),g=ac.createGain(),lp=ac.createBiquadFilter();
+    src.buffer=buf;lp.type='lowpass';lp.frequency.value=1200;
+    g.gain.setValueAtTime(1.0,t);g.gain.exponentialRampToValueAtTime(.001,t+.18);
+    src.connect(lp);lp.connect(g);g.connect(ac.destination);
+    src.start(t);src.stop(t+.2);
+    // 低音ドーン
+    const o=ac.createOscillator(),og=ac.createGain();
+    o.frequency.setValueAtTime(120,t);o.frequency.exponentialRampToValueAtTime(30,t+.15);
+    og.gain.setValueAtTime(.6,t);og.gain.exponentialRampToValueAtTime(.001,t+.18);
+    o.connect(og);og.connect(ac.destination);o.start(t);o.stop(t+.2);
+  }catch(e){}
+}
+
 /* ── BGM ── */
 let _bgmOn=false,_bgmTid=null;
 function startBGM(){if(_bgmOn)return;_bgmOn=true;_bgmLoop();}
@@ -1112,6 +1133,7 @@ class Enemy{
       this.alive=false;
       // 爆発エフェクト
       explosions.push(new Explosion(this.x+this.w/2,this.y+this.h/2));
+      playExplosion();
       // ドロップ（ボス除く）: バナナ70% / 補聴器30%（Lv3未満のみ）
       if(this.type!=='boss'){
         const r=Math.random();
@@ -1987,19 +2009,6 @@ function drawBG(){
       ctx.lineTo(CW-90+Math.cos(a)*r2,62+Math.sin(a)*r2);ctx.strokeStyle='#ffcc00';ctx.stroke();
     }
     ctx.restore();
-    // 山（視差スクロール: 雲より遅め）- 2個に減らす
-    const moff=((-camX*0.12)%CW+CW)%CW;
-    const drawMt=(bx,mh,c1,c2)=>{
-      const by=CH-80;
-      ctx.fillStyle=c1;
-      ctx.beginPath();ctx.moveTo(bx-mh*.65,by);ctx.lineTo(bx,by-mh);ctx.lineTo(bx+mh*.65,by);ctx.closePath();ctx.fill();
-      ctx.fillStyle=c2;
-      ctx.beginPath();ctx.moveTo(bx-mh*.18,by-mh*.62);ctx.lineTo(bx,by-mh);ctx.lineTo(bx+mh*.18,by-mh*.62);ctx.closePath();ctx.fill();
-    };
-    [-CW,0,CW,CW*2].forEach(ox=>{
-      drawMt(160+ox+moff,175,'#5a8a30','#7cbf45');
-      drawMt(680+ox+moff,145,'#4e7a28','#6eaf3a');
-    });
     // 雲
     const mc=(x,y,s)=>{
       ctx.fillStyle='#fff';

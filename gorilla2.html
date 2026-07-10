@@ -223,10 +223,14 @@ function playHenshinVoice(){
     const vs=window.speechSynthesis.getVoices();
     const pick=vs.find(v=>v.lang.startsWith('ja')&&/male|男|takumi|hattori|otoya/i.test(v.name))
               ||vs.find(v=>v.lang.startsWith('ja'));
-    const u=new SpeechSynthesisUtterance('へんしん！');
-    u.lang='ja-JP';u.pitch=0;u.rate=0.5;u.volume=1.0;
-    if(pick)u.voice=pick;
-    window.speechSynthesis.speak(u);
+    ['へ','ん','し','ん'].forEach((mora,i)=>{
+      setTimeout(()=>{
+        const u=new SpeechSynthesisUtterance(mora);
+        u.lang='ja-JP';u.pitch=0;u.rate=0.9;u.volume=1.0;
+        if(pick)u.voice=pick;
+        window.speechSynthesis.speak(u);
+      },i*220);
+    });
   };
   if(window.speechSynthesis.getVoices().length>0)fire();
   else window.speechSynthesis.onvoiceschanged=()=>{fire();window.speechSynthesis.onvoiceschanged=null;};

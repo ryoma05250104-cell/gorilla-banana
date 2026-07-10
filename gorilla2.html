@@ -185,10 +185,10 @@ function playHenshinVoice(){
     ['ヘ','ン','シ','ン'].forEach((mora,i)=>{
       setTimeout(()=>{
         const u=new SpeechSynthesisUtterance(mora);
-        u.lang='ja-JP';u.pitch=0.45;u.rate=1.6;u.volume=1.0;
+        u.lang='ja-JP';u.pitch=0.01;u.rate=1.1;u.volume=1.0;
         if(pick)u.voice=pick;
         window.speechSynthesis.speak(u);
-      },i*145);
+      },i*80);
     });
   };
   if(window.speechSynthesis.getVoices().length>0)fire();

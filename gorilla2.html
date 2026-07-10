@@ -1799,8 +1799,12 @@ function updatePlay(dt){
   for(let i=peels.length-1;i>=0;i--){peels[i].update(stage.plats);if(!peels[i].alive)peels.splice(i,1);}
   // プレイヤー
   player.update(dt,stage.plats,stage.bananas,stage.enemies,stage);
+  // プレイヤー攻撃でボスを倒した場合（player.update内でhit→alive=falseになる）
+  if(stage.boss&&!stage.boss.alive){gs=GS.CLEAR;return;}
   // 矢
   for(let i=player.arrows.length-1;i>=0;i--){player.arrows[i].update(stage.enemies,stage.plats);if(!player.arrows[i].alive)player.arrows.splice(i,1);}
+  // 矢でボスを倒した場合
+  if(stage.boss&&!stage.boss.alive){gs=GS.CLEAR;return;}
   // 敵
   for(const e of stage.enemies){
     if(!e.alive)continue;

@@ -510,6 +510,7 @@ class Player{
     this.mode=0;this.gp=MAX_GP;this.dir=1;
     this.state='idle';this.stT=0;this.inv=0;this.confusedT=0;
     this.arrows=[];this.chgT=0;this.inCar=false;this.carVx=0;
+    this.powerLevel=0;
     this.bowPhase=0;this.bowArrowFired=false;
     this.carEnterPhase=0;
     this._gIdleT=0;this._gIdleF=0;
@@ -679,11 +680,12 @@ class Player{
   }
   _gDoAtk(enemies,stage,ad){
     let px,py,pw,ph;
+    // Lv1以上: リーチ2倍
+    const rMul=this.powerLevel>=1?2.0:1.0;
     if(ad.groundArea){px=this.x-70;py=this.y+this.h-20;pw=this.w+140;ph=30;}
     else if(ad.area){px=this.x-70;py=this.y-20;pw=this.w+140;ph=this.h+40;}
     else{
-      const r=ad.reach||110;
-      // プレイヤー中心よりやや前から判定開始（端スタートより当たりやすい）
+      const r=(ad.reach||110)*rMul;
       const ox=this.w*0.35|0;
       px=this.dir>0?this.x+ox:this.x+this.w-ox-r;
       py=this.y-10;pw=r;ph=this.h+20;
@@ -691,6 +693,14 @@ class Player{
     const dmg=ad.dmg||2;
     for(const e of enemies)if(e.alive&&overlapR(px,py,pw,ph,e.x,e.y,e.w,e.h))e.hit(dmg,'punch');
     if(stage)stage.tryBreak(px,py,pw,ph);
+    // Lv2以上: オーラ発射
+    if(this.powerLevel>=2){
+      const large=this.powerLevel>=3;
+      const sz=large?72:34;
+      const ax=this.dir>0?this.x+this.w+4:this.x-sz-4;
+      const ay=this.y+this.h/2-sz/2;
+      auras.push(new Aura(ax,ay,this.dir,large));
+    }
   }
 
   _phys(dt,plats){
@@ -1027,6 +1037,10 @@ class Enemy{
     if(this.hp<=0){
       this.hp=0;
       this.alive=false;
+      // 5回に1回（20%）補聴器をドロップ（ボス除く）
+      if(this.type!=='boss'&&Math.random()<0.2){
+        hearingAidItems.push(new HearingAid(this.x+this.w/2-12,this.y));
+      }
     } else if(this.type==='boss'&&stageNum===2&&this.bossAnim!=='down'&&this.bossAnim!=='hit'){
       this.bossAnim='hit';this.bossFrame=0;this.bossAnimT=0;this.bossAttacking=false;
     }
@@ -1331,6 +1345,79 @@ class Peel{
   draw(cx){ctx.fillStyle='#aaee00';ctx.fillRect(this.x-cx,this.y,this.w,this.h);}
 }
 
+/* ── 補聴器アイテム ── */
+class HearingAid{
+  constructor(x,y){
+    this.x=x;this.y=y;this.w=24;this.h=20;
+    this.vx=(Math.random()-.5)*3;this.vy=-5;
+    this.alive=true;this.t=0;
+  }
+  update(plats){
+    this.t+=1/60;
+    this.vy=Math.min(this.vy+GRAV,14);
+    this.x+=this.vx;this.y+=this.vy;
+    for(const p of plats){
+      if(p.solid&&overlapR(this.x,this.y,this.w,this.h,p.x,p.y,p.w,p.h)&&this.vy>=0){
+        this.y=p.y-this.h;this.vy=0;this.vx*=0.6;
+      }
+    }
+    if(this.y>CH+200)this.alive=false;
+  }
+  draw(cx){
+    if(!this.alive)return;
+    const dx=this.x-cx;
+    ctx.save();
+    ctx.translate(dx+this.w/2,this.y+this.h/2+Math.sin(this.t*5)*3);
+    ctx.font='22px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🦻',0,0);
+    ctx.textBaseline='alphabetic';ctx.textAlign='left';
+    ctx.restore();
+  }
+}
+
+/* ── オーラ弾 ── */
+class Aura{
+  constructor(x,y,dir,large){
+    this.x=x;this.y=y;this.dir=dir;this.large=large;
+    this.sz=large?72:34;this.vx=dir*(large?13:10);
+    this.alive=true;this.t=0;
+  }
+  update(enemies,plats){
+    this.x+=this.vx;this.t+=1/60;
+    if(this.x<-300||this.x>35000){this.alive=false;return;}
+    for(const e of enemies){
+      if(e.alive&&overlapR(this.x,this.y,this.sz,this.sz,e.x,e.y,e.w,e.h)){
+        e.hit(this.large?4:2,'aura');this.alive=false;return;
+      }
+    }
+    for(const p of plats){
+      if(p.solid&&!p.isGround&&overlapR(this.x,this.y,this.sz,this.sz,p.x,p.y,p.w,p.h)){
+        this.alive=false;return;
+      }
+    }
+  }
+  draw(cx){
+    if(!this.alive)return;
+    const dx=this.x-cx,sz=this.sz;
+    const pulse=Math.sin(this.t*25)*0.12;
+    const r=sz/2*(1+pulse),cx2=dx+sz/2,cy2=this.y+sz/2;
+    ctx.save();ctx.globalAlpha=0.88;
+    const grd=ctx.createRadialGradient(cx2,cy2,0,cx2,cy2,r);
+    if(this.large){
+      grd.addColorStop(0,'rgba(255,230,50,1)');
+      grd.addColorStop(0.45,'rgba(255,100,0,0.85)');
+      grd.addColorStop(1,'rgba(255,30,0,0)');
+    } else {
+      grd.addColorStop(0,'rgba(120,230,255,1)');
+      grd.addColorStop(0.45,'rgba(30,100,255,0.8)');
+      grd.addColorStop(1,'rgba(0,30,200,0)');
+    }
+    ctx.fillStyle=grd;
+    ctx.beginPath();ctx.arc(cx2,cy2,r,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+}
+
 /* ── ベンツ ── */
 class Benz{
   constructor(x,y){this.x=x;this.y=y;this.w=168;this.h=86;this.taken=false;}
@@ -1557,7 +1644,7 @@ function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
 function overlapR(ax,ay,aw,ah,bx,by,bw,bh){return ax<bx+bw&&ax+aw>bx&&ay<by+bh&&ay+ah>by;}
 
 /* ── ゲーム管理 ── */
-let gs=GS.TITLE,player,stage,camX=0,peels=[];
+let gs=GS.TITLE,player,stage,camX=0,peels=[],hearingAidItems=[],auras=[];
 let hospLines=[],hospIdx=0,hospTimer=0,hospCooldown=0,transTimer=0,titleT=0,lastT=0;
 let playCount=0;
 let stageNum=1,stageTransTimer=0,_stageTransBuilt=false;
@@ -1601,7 +1688,7 @@ function showCtrl(v){
 function startGame(){
   stageNum=1;
   player=new Player();stage=new Stage();
-  camX=0;peels=[];hospCooldown=0;
+  camX=0;peels=[];hearingAidItems=[];auras=[];hospCooldown=0;
   screenAnchor=0;scrSliding=false;scrSlideT=0;scrSlideDir=0;
   gs=GS.PLAY;
   showCtrl(true);
@@ -1725,6 +1812,8 @@ function drawScene(){
   drawBG();stage.draw(camX);
   for(const e of stage.enemies)e.draw(camX);
   for(const a of player.arrows)a.draw(camX);
+  for(const ha of hearingAidItems)ha.draw(camX);
+  for(const au of auras)au.draw(camX);
   player.draw(camX);
   // HUD
   ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(4,4,206,46);
@@ -1736,6 +1825,13 @@ function drawScene(){
   const mc=player.mode===1?'rgba(30,120,50,.7)':'rgba(30,80,160,.7)';
   ctx.fillStyle=mc;ctx.fillRect(4,54,178,28);ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';
   ctx.fillText(player.mode===1?'🦍 ゴリラ':'🧑 人間',10,71);
+  // 補聴器パワーレベル表示
+  if(player.powerLevel>0){
+    ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(4,86,130,26);
+    ctx.fillStyle='#ffe066';ctx.font='bold 12px sans-serif';
+    const lvLabels=['','リーチUP','リーチUP+オーラ','リーチUP+特大オーラ'];
+    ctx.fillText('🦻 Lv'+player.powerLevel+' '+lvLabels[player.powerLevel],8,103);
+  }
   ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='bold 13px sans-serif';ctx.textAlign='right';
   ctx.fillText('👁 '+playCount+'回',CW-6,18);
   ctx.fillStyle=stageNum===2?'#cc88ff':'#ffffaa';
@@ -1797,6 +1893,25 @@ function updatePlay(dt){
 
   // 皮
   for(let i=peels.length-1;i>=0;i--){peels[i].update(stage.plats);if(!peels[i].alive)peels.splice(i,1);}
+  // 補聴器アイテム
+  for(let i=hearingAidItems.length-1;i>=0;i--){
+    const ha=hearingAidItems[i];
+    ha.update(stage.plats);
+    if(ha.alive&&overlapR(player.x,player.y,player.w,player.h,ha.x,ha.y,ha.w,ha.h)){
+      ha.alive=false;
+      if(player.powerLevel<3){
+        player.powerLevel++;
+        // 取得エフェクト用フラッシュ
+        player.inv=Math.max(player.inv,0.05);
+      }
+    }
+    if(!ha.alive)hearingAidItems.splice(i,1);
+  }
+  // オーラ
+  for(let i=auras.length-1;i>=0;i--){
+    auras[i].update(stage.enemies,stage.plats);
+    if(!auras[i].alive)auras.splice(i,1);
+  }
   // プレイヤー
   player.update(dt,stage.plats,stage.bananas,stage.enemies,stage);
   // プレイヤー攻撃でボスを倒した場合（player.update内でhit→alive=falseになる）
@@ -2112,7 +2227,7 @@ function updateStageTrans(dt){
       stageNum=2;stage=new Stage();
       player.x=80;player.y=350;player.vx=0;player.vy=0;
       player.state='idle';player.stT=0;player.inv=0;player.arrows=[];
-      camX=0;screenAnchor=0;scrSliding=false;peels=[];hospCooldown=0;
+      camX=0;screenAnchor=0;scrSliding=false;peels=[];hearingAidItems=[];auras=[];hospCooldown=0;
       _stageTransBuilt=true;
     }
     const el=stageTransTimer-T;

@@ -175,15 +175,36 @@ function playZkyun(){
 }
 
 function playHenshinVoice(){
+  // ── 低音ドーン（声に迫力を添える）──
+  try{
+    const ac=_ac(),t=ac.currentTime;
+    // 低音パンチ
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g);g.connect(ac.destination);
+    o.type='sine';
+    o.frequency.setValueAtTime(90,t);
+    o.frequency.exponentialRampToValueAtTime(35,t+0.35);
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(1.2,t+0.03);
+    g.gain.exponentialRampToValueAtTime(0.001,t+0.55);
+    o.start(t);o.stop(t+0.56);
+    // ノイズ打撃音
+    const buf=ac.createBuffer(1,ac.sampleRate*0.06,ac.sampleRate);
+    const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);
+    const ns=ac.createBufferSource(),ng=ac.createGain();
+    ns.buffer=buf;ns.connect(ng);ng.connect(ac.destination);
+    ng.gain.setValueAtTime(0.5,t);ng.gain.exponentialRampToValueAtTime(0.001,t+0.06);
+    ns.start(t);
+  }catch(e){}
+  // ── 音声合成 ──
   if(!window.speechSynthesis)return;
   window.speechSynthesis.cancel();
   const fire=()=>{
     const vs=window.speechSynthesis.getVoices();
     const pick=vs.find(v=>v.lang.startsWith('ja')&&/male|男|takumi|hattori|otoya/i.test(v.name))
               ||vs.find(v=>v.lang.startsWith('ja'));
-    // 1音ずつ切り離してスタッカート発声
     const u=new SpeechSynthesisUtterance('へんしん！');
-    u.lang='ja-JP';u.pitch=0.4;u.rate=0.95;u.volume=1.0;
+    u.lang='ja-JP';u.pitch=0.55;u.rate=0.88;u.volume=1.0;
     if(pick)u.voice=pick;
     window.speechSynthesis.speak(u);
   };

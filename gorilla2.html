@@ -96,7 +96,7 @@ function buildCtrl(){
     const chgT=H-BOT-smSz-Math.round(BOT*0.4);
 
     mk('L','◀',         {left:p(lL),  top:p(vt),  width:p(bsz),  height:p(bsz),  background:'rgba(255,255,255,.22)',fontSize:p(bsz*.35)});
-    mk('R','▶',         {left:p(lR),  top:p(vt),  width:p(bsz),  height:p(bsz),  background:'rgba(255,255,255,.22)',fontSize:p(bsz*.35)});
+    mk('R','▶',         {left:p(lR+8),top:p(vt),  width:p(bsz),  height:p(bsz),  background:'rgba(255,255,255,.22)',fontSize:p(bsz*.35)});
     mk('atk','こう<br>げき',{left:p(aL),top:p(vt),  width:p(bsz),  height:p(bsz),  background:'rgba(220,40,40,.28)', fontSize:p(bsz*.18)});
     mk('jump','ジャンプ',   {left:p(jL),top:p(vt),  width:p(bsz),  height:p(bsz),  background:'rgba(40,200,60,.28)', fontSize:p(bsz*.18)});
     mk('chg','へん<br>しん',{left:p(chgL),top:p(chgT),width:p(smSz),height:p(smSz),background:'rgba(60,60,220,.28)', fontSize:p(smSz*.17)});
@@ -109,7 +109,7 @@ function buildCtrl(){
     const lGap=Math.round(lBsz*.22);
     // 左エリア：◀（上）▶（下）
     mk('L','◀',{left:p(lMg),top:p(lBot-lBsz-lGap),width:p(lBsz),height:p(lBsz),background:'rgba(255,255,255,.22)',fontSize:p(lBsz*.35)});
-    mk('R','▶',{left:p(lMg),top:p(lBot),           width:p(lBsz),height:p(lBsz),background:'rgba(255,255,255,.22)',fontSize:p(lBsz*.35)});
+    mk('R','▶',{left:p(lMg+8),top:p(lBot),         width:p(lBsz),height:p(lBsz),background:'rgba(255,255,255,.22)',fontSize:p(lBsz*.35)});
     // 右エリア：こうげき（上）ジャンプ（下）を右寄せ、へんしんを左・中間
     const rBsz=62;
     const chSz=52;

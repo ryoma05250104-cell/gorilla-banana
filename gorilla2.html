@@ -43,7 +43,7 @@ function resize(){
   const W=window.innerWidth,H=window.innerHeight;
   const portrait=H>W;
   const SIDE=(!isTouch)?0:portrait?0:160;  // 横向き：左右160px、縦向き：0
-  const BOT =(!isTouch)?0:portrait?150:0;  // 縦向き：下150px、横向き：0
+  const BOT =(!isTouch)?0:portrait?185:0;  // 縦向き：下185px、横向き：0
   scale=Math.min((W-SIDE*2)/CW,(H-BOT)/CH);
   const cw=CW*scale|0,ch=CH*scale|0;
   const lx=SIDE||((W-cw)/2|0);
@@ -76,8 +76,8 @@ function buildCtrl(){
   const p=v=>Math.round(v)+'px';
 
   if(portrait){
-    // 縦向き：ボタンサイズを画面幅に合わせて小さく
-    const bsz=Math.min(Math.round(W*0.17),72);
+    // 縦向き：ボタンサイズを画面幅に合わせて調整
+    const bsz=Math.min(Math.round(W*0.22),92);
     const smSz=Math.round(bsz*0.78);
     const gap=Math.round(W*0.04);
     const vt=H-BOT+Math.round((BOT-bsz)/2); // 帯内垂直中央
@@ -102,7 +102,7 @@ function buildCtrl(){
     mk('chg','へん<br>しん',{left:p(chgL),top:p(chgT),width:p(smSz),height:p(smSz),background:'rgba(60,60,220,.28)', fontSize:p(smSz*.17)});
   } else {
     // 横向き：左右160px帯
-    const lBsz=Math.min(SIDE-24,88);           // 左ボタンサイズ
+    const lBsz=Math.min(SIDE-14,104);          // 左ボタンサイズ
     const lMg=Math.round((SIDE-lBsz)/2);
     const cBot=ty+ch;
     const lBot=cBot-lBsz-14;
@@ -111,8 +111,8 @@ function buildCtrl(){
     mk('L','◀',{left:p(lMg),top:p(lBot-lBsz-lGap),width:p(lBsz),height:p(lBsz),background:'rgba(255,255,255,.22)',fontSize:p(lBsz*.35)});
     mk('R','▶',{left:p(lMg+8),top:p(lBot),         width:p(lBsz),height:p(lBsz),background:'rgba(255,255,255,.22)',fontSize:p(lBsz*.35)});
     // 右エリア：こうげき（上）ジャンプ（下）を右寄せ、へんしんを左・中間
-    const rBsz=62;
-    const chSz=52;
+    const rBsz=78;
+    const chSz=64;
     const rGap=Math.round(rBsz*.55);           // atk と jump の間隔を広めに
     const rBot=cBot-rBsz-14;
     const atkL=W-rBsz-10;                      // 右端から10px

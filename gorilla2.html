@@ -177,19 +177,22 @@ function playZkyun(){
 function playHenshinVoice(){
   if(!window.speechSynthesis)return;
   window.speechSynthesis.cancel();
-  const say=()=>{
-    const u=new SpeechSynthesisUtterance('へんしん！');
-    u.lang='ja-JP';u.pitch=0.3;u.rate=0.72;u.volume=1.0;
-    // 低い男性ボイスを優先探索
+  const fire=()=>{
     const vs=window.speechSynthesis.getVoices();
     const pick=vs.find(v=>v.lang.startsWith('ja')&&/male|男|takumi|hattori|otoya/i.test(v.name))
               ||vs.find(v=>v.lang.startsWith('ja'));
-    if(pick)u.voice=pick;
-    window.speechSynthesis.speak(u);
+    // 1音ずつ切り離してスタッカート発声
+    ['ヘ','ン','シ','ン'].forEach((mora,i)=>{
+      setTimeout(()=>{
+        const u=new SpeechSynthesisUtterance(mora);
+        u.lang='ja-JP';u.pitch=0.45;u.rate=1.6;u.volume=1.0;
+        if(pick)u.voice=pick;
+        window.speechSynthesis.speak(u);
+      },i*145);
+    });
   };
-  // voicesが未ロードなら待つ
-  if(window.speechSynthesis.getVoices().length>0)say();
-  else window.speechSynthesis.onvoiceschanged=()=>{say();window.speechSynthesis.onvoiceschanged=null;};
+  if(window.speechSynthesis.getVoices().length>0)fire();
+  else window.speechSynthesis.onvoiceschanged=()=>{fire();window.speechSynthesis.onvoiceschanged=null;};
 }
 
 /* ── 画像ロード（白背景透過） ── */

@@ -1020,7 +1020,7 @@ class Enemy{
     this.type=type;this.x=x;this.y=y;
     this.w=type==='boss'?320:40;this.h=type==='boss'?360:44;
     this.vx=0;this.vy=0;this.alive=true;this.onG=false;
-    this.hp={patrol:1,fly:1,spike:3,boss:20}[type]||1;
+    this.hp={patrol:1,fly:1,spike:3,boss:40}[type]||1;
     this.maxhp=this.hp;
     this.spawnX=x;this._baseY=y;
     this.timer=Math.random()*2;this.phase=0;this.phaseT=2.5;
@@ -1394,7 +1394,7 @@ class Explosion{
 /* ── ドロップバナナ（敵が落とす） ── */
 class DroppedBanana{
   constructor(x,y){
-    this.x=x;this.y=y;this.w=28;this.h=28;
+    this.x=x;this.y=y;this.w=56;this.h=56;
     this.vx=(Math.random()-.5)*4;this.vy=-6;
     this.alive=true;this.t=0;
   }
@@ -1412,8 +1412,8 @@ class DroppedBanana{
   draw(cx){
     if(!this.alive)return;
     const dx=this.x-cx,bob=Math.sin(this.t*5)*3;
-    ctx.font='28px sans-serif';ctx.textAlign='center';
-    ctx.fillText('🍌',dx+14,this.y+26+bob);
+    ctx.font='52px sans-serif';ctx.textAlign='center';
+    ctx.fillText('🍌',dx+28,this.y+50+bob);
     ctx.textAlign='left';
   }
 }
@@ -1893,8 +1893,24 @@ function drawBG(){
       }
     }
   } else {
-    // マリオ風: 青空 + 雲
+    // マリオ風: 青空 + 山 + 雲
     ctx.fillStyle='#5c94fc';ctx.fillRect(0,0,CW,CH);
+    // 山（視差スクロール: 雲より遅め）
+    const moff=((-camX*0.12)%CW+CW)%CW;
+    const drawMt=(bx,mh,c1,c2)=>{
+      const by=CH-80;
+      ctx.fillStyle=c1;
+      ctx.beginPath();ctx.moveTo(bx-mh*.65,by);ctx.lineTo(bx,by-mh);ctx.lineTo(bx+mh*.65,by);ctx.closePath();ctx.fill();
+      ctx.fillStyle=c2;
+      ctx.beginPath();ctx.moveTo(bx-mh*.18,by-mh*.62);ctx.lineTo(bx,by-mh);ctx.lineTo(bx+mh*.18,by-mh*.62);ctx.closePath();ctx.fill();
+    };
+    [-CW,0,CW,CW*2].forEach(ox=>{
+      drawMt(100+ox+moff,180,'#5a8a30','#7cbf45');
+      drawMt(370+ox+moff,140,'#4e7a28','#6eaf3a');
+      drawMt(590+ox+moff,200,'#5a8a30','#7cbf45');
+      drawMt(830+ox+moff,158,'#4e7a28','#6eaf3a');
+    });
+    // 雲
     const mc=(x,y,s)=>{
       ctx.fillStyle='#fff';
       [[0,0,35,22],[20,-12,45,28],[55,-8,35,22],[80,0,30,20]].forEach(([dx,dy,cw,ch])=>{

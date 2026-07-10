@@ -71,6 +71,10 @@ function buildCtrl(){
     d.className='btn';d.innerHTML=label;
     d.dataset.prop=prop;
     Object.assign(d.style,style);
+    // 即時反応：ボタン個別のtouchstart
+    d.addEventListener('touchstart',e=>{e.preventDefault();BTN[prop]=1;},{passive:false});
+    d.addEventListener('touchend',  e=>{e.preventDefault();_updateBTN(e.touches);},{passive:false});
+    d.addEventListener('touchcancel',()=>{BTN[prop]=0;});
     ctrl.appendChild(d);
   }
   const p=v=>Math.round(v)+'px';
@@ -124,7 +128,7 @@ function buildCtrl(){
   }
 }
 
-/* ── タッチボタン：グローバルトラッキング（スライド対応） ── */
+/* ── タッチボタン：スライド対応（touchmoveのみグローバル） ── */
 function _updateBTN(touches){
   Object.keys(BTN).forEach(k=>BTN[k]=0);
   for(let i=0;i<touches.length;i++){
@@ -133,10 +137,8 @@ function _updateBTN(touches){
     if(el&&el.dataset&&el.dataset.prop)BTN[el.dataset.prop]=1;
   }
 }
-document.addEventListener('touchstart', e=>{_updateBTN(e.touches);},{passive:true});
-document.addEventListener('touchmove',  e=>{_updateBTN(e.touches);},{passive:true});
-document.addEventListener('touchend',   e=>{_updateBTN(e.touches);},{passive:true});
-document.addEventListener('touchcancel',e=>{_updateBTN(e.touches);});
+// touchmoveのみドキュメントレベルで監視（指スライド対応）
+document.addEventListener('touchmove',e=>{e.preventDefault();_updateBTN(e.touches);},{passive:false});
 
 /* ── キーボード ── */
 const KEY={};

@@ -1007,7 +1007,7 @@ class Arrow{
 class Enemy{
   constructor(type,x,y){
     this.type=type;this.x=x;this.y=y;
-    this.w=type==='boss'?80:40;this.h=type==='boss'?90:44;
+    this.w=type==='boss'?160:40;this.h=type==='boss'?180:44;
     this.vx=0;this.vy=0;this.alive=true;this.onG=false;
     this.hp={patrol:1,fly:1,spike:3,boss:20}[type]||1;
     this.maxhp=this.hp;
@@ -1264,7 +1264,7 @@ class Enemy{
   _drawBoss(dx,cx){
     const {y,w,h}=this;
     const sheet=IMGS['bk_sheet'];
-    const sw=216,sh=216;
+    const sw=320,sh=320;
     const sdx=dx+w/2-sw/2,sdy=y+h-sh;
     if(sheet&&BOSS_ANIM[this.bossAnim]){
       const [col,row]=BOSS_ANIM[this.bossAnim][this.bossFrame]||[0,0];

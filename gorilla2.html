@@ -1370,46 +1370,46 @@ class Stage{
   }
   _build(){if(stageNum===1)this._build1();else this._build2();}
   _build1(){
-    const bl=(x,y,w=80)=>({x,y,w,h:16,col:'#c87030',solid:true,cracked:false,broken:false,isBlock:true});
+    const bl=(x,y,w=220)=>({x,y,w,h:16,col:'#c87030',solid:true,cracked:false,broken:false,isBlock:true});
     const pp=v=>{this.plats.push(v);};
     const bb=(x,y)=>{this.bananas.push(new Banana(x,y));};
     const ee=(t,x,y)=>{this.enemies.push(new Enemy(t,x,y));};
     pp({x:0,y:480,w:this.worldW,h:80,col:'#5a3010',solid:true,cracked:false,broken:false,isGround:true});
     // S0
-    pp(bl(350,360));pp(bl(720,335));
-    bb(390,330);bb(760,305);
-    ee('patrol',500,436);ee('patrol',840,436);
+    pp(bl(300,360));pp(bl(680,330));
+    bb(390,330);bb(780,300);
+    ee('patrol',500,436);ee('patrol',860,436);
     // S1：ベンツ登場
-    pp(bl(1600,350));
-    bb(1640,320);bb(1100,450);bb(1400,450);
+    pp(bl(1520,350,260));
+    bb(1620,320);bb(1100,450);bb(1400,450);
     ee('patrol',1250,436);ee('fly',1700,270);
     // S1b
-    pp(bl(2050,360));pp(bl(2300,330));pp(bl(2620,355));
-    bb(2090,330);bb(2340,300);bb(2660,325);
-    ee('patrol',1970,436);ee('fly',2250,260);ee('spike',2500,436);
+    pp(bl(1980,355));pp(bl(2280,325));pp(bl(2580,350));
+    bb(2070,325);bb(2380,295);bb(2680,320);
+    ee('patrol',1950,436);ee('fly',2230,255);ee('spike',2490,436);
     // S1c
-    pp(bl(3000,345));pp(bl(3300,320));pp(bl(3620,345));
-    bb(3040,315);bb(3340,290);bb(3660,315);
-    ee('patrol',3100,436);ee('patrol',3420,436);ee('fly',3650,255);
+    pp(bl(2950,340));pp(bl(3250,315));pp(bl(3560,340));
+    bb(3050,310);bb(3350,285);bb(3660,310);
+    ee('patrol',3060,436);ee('patrol',3400,436);ee('fly',3650,255);
     // S2：亀裂壁→動物病院
-    pp(bl(4020,360));pp(bl(4370,335));
-    bb(4060,330);bb(4410,305);
-    ee('patrol',4140,436);ee('spike',4300,436);
+    pp(bl(3960,355,240));pp(bl(4290,330,240));
+    bb(4060,325);bb(4390,300);
+    ee('patrol',4100,436);ee('spike',4260,436);
     const cw=mkP(4560,290,32,192,'#a04020',true,true);
     this.crackWall=cw;pp(cw);
     for(let i=0;i<3;i++)bb(4620+i*70,450);
     // S3：病院後
-    pp(bl(5020,355));pp(bl(5380,330));
-    bb(5060,325);bb(5420,300);
-    ee('patrol',5120,436);ee('fly',5420,270);ee('spike',5570,436);
+    pp(bl(4970,350,240));pp(bl(5310,325,240));
+    bb(5070,320);bb(5410,295);
+    ee('patrol',5080,436);ee('fly',5380,265);ee('spike',5540,436);
     // S4
-    pp(bl(5980,360));pp(bl(6320,335));
-    bb(6020,330);bb(6360,305);
-    ee('patrol',6100,436);ee('patrol',6440,436);ee('fly',6670,270);
+    pp(bl(5900,355,240));pp(bl(6240,330,240));
+    bb(6000,325);bb(6340,300);
+    ee('patrol',6060,436);ee('patrol',6400,436);ee('fly',6630,265);
     // S5
-    pp(bl(6800,360));pp(bl(7100,335));pp(bl(7400,355));
-    bb(6840,330);bb(7140,305);bb(7440,325);
-    ee('patrol',6900,436);ee('spike',7200,436);ee('fly',7500,260);
+    pp(bl(6750,355));pp(bl(7060,330));pp(bl(7370,350));
+    bb(6850,325);bb(7160,300);bb(7470,320);
+    ee('patrol',6860,436);ee('spike',7170,436);ee('fly',7460,255);
   }
   _build2(){
     const bl=(x,y,w)=>({x,y,w,h:16,col:'#7030c0',solid:true,cracked:false,broken:false,isBlock:true});

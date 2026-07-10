@@ -69,10 +69,8 @@ function buildCtrl(){
   function mk(prop,label,style){
     const d=document.createElement('div');
     d.className='btn';d.innerHTML=label;
+    d.dataset.prop=prop;
     Object.assign(d.style,style);
-    d.addEventListener('touchstart',e=>{e.preventDefault();BTN[prop]=1;},{passive:false});
-    d.addEventListener('touchend',  e=>{e.preventDefault();BTN[prop]=0;},{passive:false});
-    d.addEventListener('touchcancel',()=>{BTN[prop]=0;});
     ctrl.appendChild(d);
   }
   const p=v=>Math.round(v)+'px';
@@ -125,6 +123,20 @@ function buildCtrl(){
     mk('chg','へん<br>しん',{left:p(chgL),top:p(chgT),           width:p(chSz),height:p(chSz),background:'rgba(60,60,220,.32)', fontSize:p(chSz*.17)});
   }
 }
+
+/* ── タッチボタン：グローバルトラッキング（スライド対応） ── */
+function _updateBTN(touches){
+  Object.keys(BTN).forEach(k=>BTN[k]=0);
+  for(let i=0;i<touches.length;i++){
+    const t=touches[i];
+    const el=document.elementFromPoint(t.clientX,t.clientY);
+    if(el&&el.dataset&&el.dataset.prop)BTN[el.dataset.prop]=1;
+  }
+}
+document.addEventListener('touchstart', e=>{_updateBTN(e.touches);},{passive:true});
+document.addEventListener('touchmove',  e=>{_updateBTN(e.touches);},{passive:true});
+document.addEventListener('touchend',   e=>{_updateBTN(e.touches);},{passive:true});
+document.addEventListener('touchcancel',e=>{_updateBTN(e.touches);});
 
 /* ── キーボード ── */
 const KEY={};
@@ -328,6 +340,75 @@ function _bgmLoop(){
     }
     _bgmTid=setTimeout(()=>{if(_bgmOn)_bgmLoop();},(LD-.18)*1000);
   }catch(e){_bgmTid=setTimeout(()=>{if(_bgmOn)_bgmLoop();},2500);}
+}
+
+/* ── ボス戦BGM（Dマイナー・BPM180） ── */
+let _bossBGMOn=false,_bossBGMTid=null;
+function startBossBGM(){if(_bossBGMOn)return;_bossBGMOn=true;stopBGM();_bossBGMLoop();}
+function stopBossBGM(){_bossBGMOn=false;if(_bossBGMTid)clearTimeout(_bossBGMTid);_bossBGMTid=null;}
+function _bossBGMLoop(){
+  if(!_bossBGMOn)return;
+  try{
+    const ac=_ac(),t=ac.currentTime+0.05;
+    const bpm=180,bt=60/bpm,bar=bt*4;
+    const tone=(f,s,d,tp,v)=>{try{
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.type=tp||'square';o.frequency.value=f;
+      g.gain.setValueAtTime(v||.07,t+s);
+      g.gain.setValueAtTime((v||.07)*.45,t+s+d*.55);
+      g.gain.exponentialRampToValueAtTime(.001,t+s+d);
+      o.connect(g);g.connect(ac.destination);o.start(t+s);o.stop(t+s+d+.02);
+    }catch(e){}};
+    const kick=(s,v)=>{try{
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.frequency.setValueAtTime(220,t+s);o.frequency.exponentialRampToValueAtTime(35,t+s+.12);
+      g.gain.setValueAtTime(v||.85,t+s);g.gain.exponentialRampToValueAtTime(.001,t+s+.18);
+      o.connect(g);g.connect(ac.destination);o.start(t+s);o.stop(t+s+.22);
+    }catch(e){}};
+    const snr=(s,v)=>{try{
+      const len=Math.ceil(ac.sampleRate*.09),b=ac.createBuffer(1,len,ac.sampleRate),d=b.getChannelData(0);
+      for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+      const src=ac.createBufferSource(),g=ac.createGain(),f=ac.createBiquadFilter();
+      src.buffer=b;f.type='bandpass';f.frequency.value=2800;f.Q.value=.6;
+      g.gain.setValueAtTime(v||.3,t+s);g.gain.exponentialRampToValueAtTime(.001,t+s+.09);
+      src.connect(f);f.connect(g);g.connect(ac.destination);src.start(t+s);src.stop(t+s+.12);
+    }catch(e){}};
+    const hat=(s,v)=>{try{
+      const len=Math.ceil(ac.sampleRate*.016),b=ac.createBuffer(1,len,ac.sampleRate),d=b.getChannelData(0);
+      for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+      const src=ac.createBufferSource(),g=ac.createGain(),f=ac.createBiquadFilter();
+      src.buffer=b;f.type='highpass';f.frequency.value=10000;
+      g.gain.setValueAtTime(v||.06,t+s);g.gain.exponentialRampToValueAtTime(.001,t+s+.016);
+      src.connect(f);f.connect(g);g.connect(ac.destination);src.start(t+s);src.stop(t+s+.022);
+    }catch(e){}};
+    const D3=146.83,F3=174.61,G3=196,A3=220,C4=261.63;
+    const D4=293.66,F4=349.23,G4=392,A4=440,Bb4=466.16,C5=523.25,D5=587.33;
+    const BARS=2,LD=bar*BARS;
+    // メロディ：Dマイナー降下→反復（緊張感）
+    [[D5,0,bt*.42],[C5,bt*.5,bt*.42],[Bb4,bt,bt*.42],[A4,bt*1.5,bt*.42],
+     [G4,bt*2,bt*.42],[A4,bt*2.5,bt*.42],[C5,bt*3,bt*.42],[D5,bt*3.5,bt*.42],
+     [D5,bar,bt*.88],[A4,bar+bt*1,bt*.42],[C5,bar+bt*1.5,bt*.42],
+     [A4,bar+bt*2,bt*.42],[G4,bar+bt*2.5,bt*.42],[F4,bar+bt*3,bt*.42],[A4,bar+bt*3.5,bt*.88],
+    ].forEach(([f,s,d])=>tone(f,s,d,'square',.09));
+    // ベース：力強いDマイナー
+    [[D3,0,bt*.4],[A3,bt*.5,bt*.35],[D3,bt,bt*.4],[C4,bt*1.5,bt*.35],
+     [A3,bt*2,bt*.4],[G3,bt*2.5,bt*.35],[F3,bt*3,bt*.4],[A3,bt*3.5,bt*.35],
+     [D3,bar,bt*.8],[A3,bar+bt,bt*.4],[G3,bar+bt*1.5,bt*.35],
+     [F3,bar+bt*2,bt*.4],[A3,bar+bt*2.5,bt*.35],[C4,bar+bt*3,bt*.4],[A3,bar+bt*3.5,bt*.35],
+    ].forEach(([f,s,d])=>tone(f,s,d,'sawtooth',.15));
+    // コードスタブ（dm和音・緊迫）
+    [[D4,F4,A4],[G3,Bb4,D4]].forEach((fqs,bi)=>{
+      [0,bt*2].forEach(os=>fqs.forEach(f=>tone(f,bar*bi+os+bt*.1,bt*.2,'sawtooth',.04)));
+    });
+    // ドラム：シンコペーション
+    for(let b=0;b<BARS;b++){
+      const o=bar*b;
+      kick(o,.9);kick(o+bt*.75,.55);kick(o+bt*2,.9);kick(o+bt*2.5,.6);
+      snr(o+bt,.32);snr(o+bt*3,.32);snr(o+bt*3.5,.18);
+      for(let h=0;h<16;h++)hat(o+h*bt*.25,h%4===0?.08:.05);
+    }
+    _bossBGMTid=setTimeout(()=>{if(_bossBGMOn)_bossBGMLoop();},(LD-.18)*1000);
+  }catch(e){_bossBGMTid=setTimeout(()=>{if(_bossBGMOn)_bossBGMLoop();},2500);}
 }
 
 /* ── 画像ロード（白背景透過） ── */
@@ -1899,8 +1980,8 @@ function startGame(){
 
 function _tapStart(){
   if(gs===GS.TITLE){startGame();return;}
-  if(gs===GS.CLEAR&&clearTimer>=9){gs=GS.TITLE;showCtrl(false);return;}
-  if(gs===GS.OVER){gs=GS.TITLE;showCtrl(false);}
+  if(gs===GS.CLEAR&&clearTimer>=9){stopBossBGM();stopBGM();gs=GS.TITLE;showCtrl(false);return;}
+  if(gs===GS.OVER){stopBossBGM();stopBGM();gs=GS.TITLE;showCtrl(false);}
 }
 // PC・スマホ両対応：キャプチャフェーズで全タップ・クリックを最優先検知
 window.addEventListener('pointerdown',()=>{
@@ -1913,7 +1994,7 @@ window.addEventListener('touchstart',e=>{
 },{capture:true,passive:false});
 document.addEventListener('keydown',e=>{
   if((e.code==='Enter'||e.code==='Space')&&(gs===GS.TITLE))startGame();
-  if((e.code==='Enter')&&(gs===GS.CLEAR||gs===GS.OVER))gs=GS.TITLE;
+  if((e.code==='Enter')&&(gs===GS.CLEAR||gs===GS.OVER)){stopBossBGM();stopBGM();gs=GS.TITLE;}
 });
 
 function loop(ts){
@@ -2157,11 +2238,11 @@ function updatePlay(dt){
     camX=Math.max(0,player.x-CW*.4);
   }
   // プレイヤー攻撃でボスを倒した場合（player.update内でhit→alive=falseになる）
-  if(stage.boss&&!stage.boss.alive){gs=GS.CLEAR;clearTimer=0;return;}
+  if(stage.boss&&!stage.boss.alive){gs=GS.CLEAR;clearTimer=0;stopBossBGM();return;}
   // 矢
   for(let i=player.arrows.length-1;i>=0;i--){player.arrows[i].update(stage.enemies,stage.plats);if(!player.arrows[i].alive)player.arrows.splice(i,1);}
   // 矢でボスを倒した場合
-  if(stage.boss&&!stage.boss.alive){gs=GS.CLEAR;clearTimer=0;return;}
+  if(stage.boss&&!stage.boss.alive){gs=GS.CLEAR;clearTimer=0;stopBossBGM();return;}
   // 敵
   for(const e of stage.enemies){
     if(!e.alive)continue;
@@ -2177,7 +2258,7 @@ function updatePlay(dt){
       for(const s of e.slamHitboxes||[]){
         if(overlapR(player.x,player.y,player.w,player.h,s.x,s.y,s.w,s.h))player.damage(1);
       }
-      if(!e.alive){gs=GS.CLEAR;clearTimer=0;return;}
+      if(!e.alive){gs=GS.CLEAR;clearTimer=0;stopBossBGM();return;}
     }
     if(e.type!=='boss'&&e.alive&&player.inv<=0&&!player.inCar&&player.state!=='car_enter'){
       if(overlap(player,e))player.damage(1);
@@ -2191,7 +2272,7 @@ function updatePlay(dt){
   // カメラ更新
   updateCamera(dt);
 
-  if(player.gp<=0&&player.state==='fall'&&player.stT<=0){gs=GS.OVER;return;}
+  if(player.gp<=0&&player.state==='fall'&&player.stT<=0){gs=GS.OVER;stopBossBGM();return;}
   drawScene();
 }
 
@@ -2333,7 +2414,7 @@ function updateTrans(dt){
   }
   drawScene();
   _drawShutterStrips(transTimer);
-  if(transTimer>=TRANS_TOTAL)gs=GS.BOSS;
+  if(transTimer>=TRANS_TOTAL){gs=GS.BOSS;startBossBGM();}
 }
 
 /* ── うさぎ城 入場カットシーン ── */

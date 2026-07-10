@@ -1974,9 +1974,20 @@ function drawBG(){
       }
     }
   } else {
-    // マリオ風: 青空 + 山 + 雲
+    // マリオ風: 青空 + 太陽 + 山 + 雲
     ctx.fillStyle='#5c94fc';ctx.fillRect(0,0,CW,CH);
-    // 山（視差スクロール: 雲より遅め）
+    // 太陽（固定位置）
+    ctx.save();
+    ctx.fillStyle='#ffe040';
+    ctx.beginPath();ctx.arc(CW-90,62,38,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#ffcc00';ctx.lineWidth=4;
+    for(let i=0;i<8;i++){
+      const a=i/8*Math.PI*2,r1=44,r2=58;
+      ctx.beginPath();ctx.moveTo(CW-90+Math.cos(a)*r1,62+Math.sin(a)*r1);
+      ctx.lineTo(CW-90+Math.cos(a)*r2,62+Math.sin(a)*r2);ctx.strokeStyle='#ffcc00';ctx.stroke();
+    }
+    ctx.restore();
+    // 山（視差スクロール: 雲より遅め）- 2個に減らす
     const moff=((-camX*0.12)%CW+CW)%CW;
     const drawMt=(bx,mh,c1,c2)=>{
       const by=CH-80;
@@ -1986,10 +1997,8 @@ function drawBG(){
       ctx.beginPath();ctx.moveTo(bx-mh*.18,by-mh*.62);ctx.lineTo(bx,by-mh);ctx.lineTo(bx+mh*.18,by-mh*.62);ctx.closePath();ctx.fill();
     };
     [-CW,0,CW,CW*2].forEach(ox=>{
-      drawMt(100+ox+moff,180,'#5a8a30','#7cbf45');
-      drawMt(370+ox+moff,140,'#4e7a28','#6eaf3a');
-      drawMt(590+ox+moff,200,'#5a8a30','#7cbf45');
-      drawMt(830+ox+moff,158,'#4e7a28','#6eaf3a');
+      drawMt(160+ox+moff,175,'#5a8a30','#7cbf45');
+      drawMt(680+ox+moff,145,'#4e7a28','#6eaf3a');
     });
     // 雲
     const mc=(x,y,s)=>{

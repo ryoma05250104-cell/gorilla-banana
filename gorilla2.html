@@ -204,7 +204,7 @@ function playHenshinVoice(){
     const pick=vs.find(v=>v.lang.startsWith('ja')&&/male|男|takumi|hattori|otoya/i.test(v.name))
               ||vs.find(v=>v.lang.startsWith('ja'));
     const u=new SpeechSynthesisUtterance('へんしん！');
-    u.lang='ja-JP';u.pitch=0.55;u.rate=0.88;u.volume=1.0;
+    u.lang='ja-JP';u.pitch=0.15;u.rate=0.7;u.volume=1.0;
     if(pick)u.voice=pick;
     window.speechSynthesis.speak(u);
   };

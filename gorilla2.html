@@ -1899,14 +1899,17 @@ function startGame(){
 
 function _tapStart(){
   if(gs===GS.TITLE){startGame();return;}
-  if(gs===GS.CLEAR||gs===GS.OVER){gs=GS.TITLE;showCtrl(false);}
+  if(gs===GS.CLEAR&&clearTimer>=9){gs=GS.TITLE;showCtrl(false);return;}
+  if(gs===GS.OVER){gs=GS.TITLE;showCtrl(false);}
 }
 // PC・スマホ両対応：キャプチャフェーズで全タップ・クリックを最優先検知
 window.addEventListener('pointerdown',()=>{
-  if(gs===GS.TITLE||gs===GS.CLEAR||gs===GS.OVER)_tapStart();
+  if(gs===GS.TITLE||gs===GS.OVER)_tapStart();
+  else if(gs===GS.CLEAR&&clearTimer>=9)_tapStart();
 },{capture:true});
 window.addEventListener('touchstart',e=>{
-  if(gs===GS.TITLE||gs===GS.CLEAR||gs===GS.OVER){e.preventDefault();_tapStart();}
+  if(gs===GS.TITLE||gs===GS.OVER){e.preventDefault();_tapStart();}
+  else if(gs===GS.CLEAR&&clearTimer>=9){e.preventDefault();_tapStart();}
 },{capture:true,passive:false});
 document.addEventListener('keydown',e=>{
   if((e.code==='Enter'||e.code==='Space')&&(gs===GS.TITLE))startGame();

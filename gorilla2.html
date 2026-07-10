@@ -1007,9 +1007,9 @@ class Arrow{
 class Enemy{
   constructor(type,x,y){
     this.type=type;this.x=x;this.y=y;
-    this.w=type==='boss'?160:40;this.h=type==='boss'?180:44;
+    this.w=type==='boss'?320:40;this.h=type==='boss'?360:44;
     this.vx=0;this.vy=0;this.alive=true;this.onG=false;
-    this.hp={patrol:1,fly:1,spike:3,boss:20}[type]||1;
+    this.hp={patrol:1,fly:1,spike:3,boss:10}[type]||1;
     this.maxhp=this.hp;
     this.spawnX=x;this._baseY=y;
     this.timer=Math.random()*2;this.phase=0;this.phaseT=2.5;
@@ -1026,10 +1026,7 @@ class Enemy{
     this.hp-=dmg;this.hitFlash=.15;
     if(this.hp<=0){
       this.hp=0;
-      if(this.type==='boss'&&stageNum===2&&this.bossAnim!=='down'){
-        this.bossAnim='down';this.bossFrame=0;this.bossAnimT=0;
-        this.bossAttacking=false;this.proj=[];this.slamHitboxes=[];
-      } else if(!(this.type==='boss'&&stageNum===2)){this.alive=false;}
+      this.alive=false;
     } else if(this.type==='boss'&&stageNum===2&&this.bossAnim!=='down'&&this.bossAnim!=='hit'){
       this.bossAnim='hit';this.bossFrame=0;this.bossAnimT=0;this.bossAttacking=false;
     }
@@ -1264,8 +1261,9 @@ class Enemy{
   _drawBoss(dx,cx){
     const {y,w,h}=this;
     const sheet=IMGS['bk_sheet'];
-    const sw=320,sh=320;
-    const sdx=dx+w/2-sw/2,sdy=y+h-sh;
+    const sw=500,sh=500;
+    // 足元をボスの底（地面）に合わせるため、スプライト内の足位置(約85%)でオフセット
+    const sdx=dx+w/2-sw/2,sdy=y+h-sh*0.88;
     if(sheet&&BOSS_ANIM[this.bossAnim]){
       const [col,row]=BOSS_ANIM[this.bossAnim][this.bossFrame]||[0,0];
       ctx.save();
@@ -1448,8 +1446,8 @@ class Stage{
     pp(bl(cx-520,380,110));pp(bl(cx+410,380,110));
     pp(bl(cx-430,300,90)); pp(bl(cx+340,300,90));
     pp(mkP(this.worldW-30,0,30,CH+80,'#1a0840'));
-    // ボスは玉座なし → 地面に落下してプレイヤーと同じ高さに
-    const boss=new Enemy('boss',cx-40,80);this.boss=boss;this.enemies.push(boss);
+    // ボスはセンタリングして地面に落下（h=360なのでy=80から落下→y=120に着地）
+    const boss=new Enemy('boss',cx-160,60);this.boss=boss;this.enemies.push(boss);
     bb(cx-520,350);bb(cx+410,350);bb(cx-430,270);bb(cx+340,270);
   }
   tryBreak(px,py,pw,ph){

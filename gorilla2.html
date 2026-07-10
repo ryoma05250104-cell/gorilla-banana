@@ -1038,7 +1038,7 @@ class Enemy{
       this.hp=0;
       this.alive=false;
       // 5回に1回（20%）補聴器をドロップ（ボス除く）
-      if(this.type!=='boss'&&Math.random()<0.2)
+      if(this.type!=='boss'&&Math.random()<0.3)
         hearingAidItems.push(new HearingAid(this.x+this.w/2-14,this.y));
     } else if(this.type==='boss'&&stageNum===2&&this.bossAnim!=='down'&&this.bossAnim!=='hit'){
       this.bossAnim='hit';this.bossFrame=0;this.bossAnimT=0;this.bossAttacking=false;
@@ -1365,27 +1365,37 @@ class HearingAid{
   draw(cx){
     if(!this.alive)return;
     const dx=this.x-cx;
-    const bob=Math.sin(this.t*6)*4;
-    const glow=0.5+0.5*Math.sin(this.t*8);
-    // 光るリング
+    const bob=Math.sin(this.t*6)*3;
+    const glow=0.6+0.4*Math.sin(this.t*7);
     ctx.save();
-    ctx.globalAlpha=0.5+glow*0.4;
-    ctx.strokeStyle=`hsl(${200+glow*60},100%,70%)`;
-    ctx.lineWidth=3;
-    ctx.beginPath();ctx.arc(dx+14,this.y+14+bob,18,0,Math.PI*2);ctx.stroke();
-    ctx.restore();
-    // 本体（水色の丸）
-    ctx.save();
-    ctx.fillStyle='#00cfff';
-    ctx.beginPath();ctx.arc(dx+14,this.y+14+bob,11,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#fff';
-    ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('耳',dx+14,this.y+14+bob);
-    ctx.textBaseline='alphabetic';ctx.textAlign='left';
+    ctx.translate(dx+14,this.y+14+bob);
+    // 光るオーラ
+    ctx.globalAlpha=0.35*glow;
+    ctx.fillStyle='#ffe066';
+    ctx.beginPath();ctx.arc(0,0,17,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
+    // 耳かけ部分（C字カーブ）
+    ctx.strokeStyle='#c8860a';ctx.lineWidth=4;ctx.lineCap='round';
+    ctx.beginPath();ctx.arc(0,-2,9,Math.PI*0.15,Math.PI*1.85);ctx.stroke();
+    // 本体ケース（角丸四角）
+    ctx.fillStyle='#f0c060';
+    ctx.beginPath();
+    ctx.moveTo(-3,3);ctx.lineTo(3,3);ctx.lineTo(5,5);ctx.lineTo(5,11);
+    ctx.lineTo(3,11);ctx.lineTo(-3,11);ctx.lineTo(-5,11);ctx.lineTo(-5,5);ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle='#a06010';ctx.lineWidth=1;ctx.stroke();
+    // マイク穴（小さい点）
+    ctx.fillStyle='#7a4800';
+    ctx.beginPath();ctx.arc(-2,6,1.2,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(2,6,1.2,0,Math.PI*2);ctx.fill();
+    // イヤチップ（下の丸）
+    ctx.fillStyle='#e8a840';
+    ctx.beginPath();ctx.arc(0,12,4,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#a06010';ctx.lineWidth=1;ctx.stroke();
     ctx.restore();
     // ラベル
-    ctx.fillStyle='#ffe066';ctx.font='bold 10px sans-serif';ctx.textAlign='center';
-    ctx.fillText('補聴器',dx+14,this.y-4+bob);
+    ctx.fillStyle='#ffe066';ctx.font='bold 9px sans-serif';ctx.textAlign='center';
+    ctx.fillText('補聴器',dx+14,this.y-6+bob);
     ctx.textAlign='left';
   }
 }

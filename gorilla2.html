@@ -224,8 +224,12 @@ function playHenshinVoice(){
     const pick=vs.find(v=>v.lang.startsWith('ja')&&/male|男|takumi|hattori|otoya/i.test(v.name))
               ||vs.find(v=>v.lang.startsWith('ja'));
     const u=new SpeechSynthesisUtterance('へんしん！');
-    u.lang='ja-JP';u.pitch=0;u.rate=0.8;u.volume=1.0;
-    if(pick)u.voice=pick;
+    u.lang='ja-JP';u.pitch=0;u.rate=0.6;u.volume=1.0;
+    // 男性ボイス優先（Otoya=男, Keita=男, Daniel等）
+    const mPick=vs.find(v=>v.lang.startsWith('ja')&&/otoya|keita|男|male/i.test(v.name))
+               ||vs.find(v=>v.lang.startsWith('ja')&&!/(kyoko|haruka|女|female)/i.test(v.name))
+               ||vs.find(v=>v.lang.startsWith('ja'));
+    if(mPick)u.voice=mPick;
     window.speechSynthesis.speak(u);
   };
   if(window.speechSynthesis.getVoices().length>0)fire();

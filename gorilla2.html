@@ -1038,9 +1038,8 @@ class Enemy{
       this.hp=0;
       this.alive=false;
       // 5回に1回（20%）補聴器をドロップ（ボス除く）
-      if(this.type!=='boss'&&Math.random()<0.2){
-        hearingAidItems.push(new HearingAid(this.x+this.w/2-12,this.y));
-      }
+      if(this.type!=='boss')
+        hearingAidItems.push(new HearingAid(this.x+this.w/2-14,this.y));
     } else if(this.type==='boss'&&stageNum===2&&this.bossAnim!=='down'&&this.bossAnim!=='hit'){
       this.bossAnim='hit';this.bossFrame=0;this.bossAnimT=0;this.bossAttacking=false;
     }
@@ -1348,8 +1347,8 @@ class Peel{
 /* ── 補聴器アイテム ── */
 class HearingAid{
   constructor(x,y){
-    this.x=x;this.y=y;this.w=24;this.h=20;
-    this.vx=(Math.random()-.5)*3;this.vy=-5;
+    this.x=x;this.y=y;this.w=28;this.h=28;
+    this.vx=(Math.random()-.5)*3;this.vy=-6;
     this.alive=true;this.t=0;
   }
   update(plats){
@@ -1358,7 +1357,7 @@ class HearingAid{
     this.x+=this.vx;this.y+=this.vy;
     for(const p of plats){
       if(p.solid&&overlapR(this.x,this.y,this.w,this.h,p.x,p.y,p.w,p.h)&&this.vy>=0){
-        this.y=p.y-this.h;this.vy=0;this.vx*=0.6;
+        this.y=p.y-this.h;this.vy=0;this.vx*=0.5;
       }
     }
     if(this.y>CH+200)this.alive=false;
@@ -1366,12 +1365,28 @@ class HearingAid{
   draw(cx){
     if(!this.alive)return;
     const dx=this.x-cx;
+    const bob=Math.sin(this.t*6)*4;
+    const glow=0.5+0.5*Math.sin(this.t*8);
+    // 光るリング
     ctx.save();
-    ctx.translate(dx+this.w/2,this.y+this.h/2+Math.sin(this.t*5)*3);
-    ctx.font='22px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('🦻',0,0);
+    ctx.globalAlpha=0.5+glow*0.4;
+    ctx.strokeStyle=`hsl(${200+glow*60},100%,70%)`;
+    ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(dx+14,this.y+14+bob,18,0,Math.PI*2);ctx.stroke();
+    ctx.restore();
+    // 本体（水色の丸）
+    ctx.save();
+    ctx.fillStyle='#00cfff';
+    ctx.beginPath();ctx.arc(dx+14,this.y+14+bob,11,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('耳',dx+14,this.y+14+bob);
     ctx.textBaseline='alphabetic';ctx.textAlign='left';
     ctx.restore();
+    // ラベル
+    ctx.fillStyle='#ffe066';ctx.font='bold 10px sans-serif';ctx.textAlign='center';
+    ctx.fillText('補聴器',dx+14,this.y-4+bob);
+    ctx.textAlign='left';
   }
 }
 
@@ -1897,7 +1912,8 @@ function updatePlay(dt){
   for(let i=hearingAidItems.length-1;i>=0;i--){
     const ha=hearingAidItems[i];
     ha.update(stage.plats);
-    if(ha.alive&&overlapR(player.x,player.y,player.w,player.h,ha.x,ha.y,ha.w,ha.h)){
+    // 拾う判定: プレイヤー周囲40pxまで広げる
+    if(ha.alive&&overlapR(player.x-40,player.y-20,player.w+80,player.h+40,ha.x,ha.y,ha.w,ha.h)){
       ha.alive=false;
       if(player.powerLevel<3){
         player.powerLevel++;

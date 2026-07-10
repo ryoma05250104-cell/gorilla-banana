@@ -237,6 +237,78 @@ function playHenshinVoice(){
   }catch(e){}
 }
 
+/* ── BGM ── */
+let _bgmOn=false,_bgmTid=null;
+function startBGM(){if(_bgmOn)return;_bgmOn=true;_bgmLoop();}
+function stopBGM(){_bgmOn=false;if(_bgmTid)clearTimeout(_bgmTid);_bgmTid=null;}
+function _bgmLoop(){
+  if(!_bgmOn)return;
+  try{
+    const ac=_ac(),t=ac.currentTime+0.05;
+    const bpm=158,bt=60/bpm,bar=bt*4;
+    const tone=(f,s,d,tp,v)=>{try{
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.type=tp||'square';o.frequency.value=f;
+      g.gain.setValueAtTime(v||.07,t+s);
+      g.gain.setValueAtTime((v||.07)*.6,t+s+d*.65);
+      g.gain.exponentialRampToValueAtTime(.001,t+s+d);
+      o.connect(g);g.connect(ac.destination);
+      o.start(t+s);o.stop(t+s+d+.02);
+    }catch(e){}};
+    const kick=(s)=>{try{
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.frequency.setValueAtTime(200,t+s);o.frequency.exponentialRampToValueAtTime(38,t+s+.15);
+      g.gain.setValueAtTime(.65,t+s);g.gain.exponentialRampToValueAtTime(.001,t+s+.22);
+      o.connect(g);g.connect(ac.destination);o.start(t+s);o.stop(t+s+.25);
+    }catch(e){}};
+    const snr=(s)=>{try{
+      const len=Math.ceil(ac.sampleRate*.07),b=ac.createBuffer(1,len,ac.sampleRate),d=b.getChannelData(0);
+      for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+      const src=ac.createBufferSource(),g=ac.createGain(),f=ac.createBiquadFilter();
+      src.buffer=b;f.type='bandpass';f.frequency.value=2500;f.Q.value=.7;
+      g.gain.setValueAtTime(.22,t+s);g.gain.exponentialRampToValueAtTime(.001,t+s+.07);
+      src.connect(f);f.connect(g);g.connect(ac.destination);src.start(t+s);src.stop(t+s+.1);
+    }catch(e){}};
+    const hat=(s,v)=>{try{
+      const len=Math.ceil(ac.sampleRate*.022),b=ac.createBuffer(1,len,ac.sampleRate),d=b.getChannelData(0);
+      for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+      const src=ac.createBufferSource(),g=ac.createGain(),f=ac.createBiquadFilter();
+      src.buffer=b;f.type='highpass';f.frequency.value=9000;
+      g.gain.setValueAtTime(v||.05,t+s);g.gain.exponentialRampToValueAtTime(.001,t+s+.022);
+      src.connect(f);f.connect(g);g.connect(ac.destination);src.start(t+s);src.stop(t+s+.03);
+    }catch(e){}};
+    const C3=130.81,F3=174.61,G3=196,A3=220,B3=246.94;
+    const C4=261.63,D4=293.66,E4=329.63,F4=349.23,G4=392,A4=440,B4=493.88;
+    const C5=523.25,D5=587.33,E5=659.25,G5=783.99;
+    const BARS=4,LD=bar*BARS;
+    // メロディ
+    [[E5,0,bt*.42],[G5,bt*.5,bt*.42],[E5,bt,bt*.42],[C5,bt*1.5,bt*.42],
+     [D5,bt*2,bt*.42],[E5,bt*2.5,bt*.42],[G5,bt*3,bt*.88],
+     [A4,bar,bt*.42],[C5,bar+bt*.5,bt*.42],[E5,bar+bt,bt*.42],[C5,bar+bt*1.5,bt*.42],
+     [A4,bar+bt*2,bt*.42],[G4,bar+bt*2.5,bt*.42],[A4,bar+bt*3,bt*.42],[C5,bar+bt*3.5,bt*.42],
+     [F4,bar*2,bt*.42],[A4,bar*2+bt*.5,bt*.42],[C5,bar*2+bt,bt*.42],[A4,bar*2+bt*1.5,bt*.42],
+     [C5,bar*2+bt*2,bt*.42],[D5,bar*2+bt*2.5,bt*.42],[C5,bar*2+bt*3,bt*.42],[A4,bar*2+bt*3.5,bt*.42],
+     [G4,bar*3,bt*.42],[B4,bar*3+bt*.5,bt*.42],[D5,bar*3+bt,bt*.42],[G5,bar*3+bt*1.5,bt*.42],
+     [E5,bar*3+bt*2,bt*.88],[D5,bar*3+bt*3,bt*.42],[C5,bar*3+bt*3.5,bt*.42],
+    ].forEach(([f,s,d])=>tone(f,s,d,'square',.07));
+    // ベース
+    [[C3,0],[A3,bar],[F3,bar*2],[G3,bar*3]].forEach(([f,s])=>{
+      for(let i=0;i<4;i++)tone(f,s+i*bt,bt*.5,'sawtooth',.11);
+    });
+    // コードパッド
+    [[C4,E4,G4],[A3,C4,E4],[F3,A3,C4],[G3,B3,D4]].forEach((fqs,bi)=>
+      fqs.forEach(f=>tone(f,bar*bi,bar*.92,'triangle',.028)));
+    // ドラム
+    for(let b=0;b<BARS;b++){
+      const o=bar*b;
+      kick(o);kick(o+bt*2);
+      snr(o+bt);snr(o+bt*3);
+      for(let h=0;h<8;h++)hat(o+h*bt*.5,h%2?0.04:0.065);
+    }
+    _bgmTid=setTimeout(()=>{if(_bgmOn)_bgmLoop();},(LD-.18)*1000);
+  }catch(e){_bgmTid=setTimeout(()=>{if(_bgmOn)_bgmLoop();},2500);}
+}
+
 /* ── 画像ロード（白背景透過） ── */
 const IMGS={};
 function loadImg(name,src){
@@ -1098,8 +1170,10 @@ class Enemy{
     // ──── ステージ2: うさぎ大王（スプライト・フェーズ制） ────
     if(stageNum===2){
       const ba=this.bossAnim;
-      this.vx=0;
-      this._phys(plats);
+      this.vx=0;this._phys(plats);
+      // ボスステージ外ではAI停止（ボスが外に出ない）
+      if(gs!==GS.BOSS)return;
+
       this.bossDir=px>bx?1:-1;
       // フェーズ判定
       const hpR=this.hp/this.maxhp;
@@ -1566,7 +1640,7 @@ class Stage{
       this.hospX=5150;this.hospW=260;
       this.benz=new Benz(1100,394);
     } else {
-      this.worldW=5760;this.shutterX=3200;
+      this.worldW=6400;this.shutterX=3840;
       this.hospX=-9999;this.hospW=0;
       this.benz=null;
     }
@@ -1612,26 +1686,32 @@ class Stage{
     const cr=(x,y,w=110)=>({x,y,w,h:16,col:'#e890d8',solid:true,cracked:false,broken:false,isCrystal:true});
     const pp=v=>{this.plats.push(v);};
     const ee=(t,x,y)=>{this.enemies.push(new Enemy(t,x,y));};
-    // 地面（通常エリア: x=0〜3200）
-    pp({x:0,y:480,w:3200,h:80,col:'#3a1860',solid:true,cracked:false,broken:false,isGround:true});
-    // ── B0（0〜960）: 壁1 ──
-    pp(wl(580,255,225));
-    pp(bl(340,340,90));pp(bl(460,240,140));pp(bl(630,310,90));
-    ee('patrol',160,436);ee('fly',800,270);
-    // ── B1（960〜1920）: 壁2（高め） ──
-    pp(wl(1450,240,240));
-    pp(bl(1200,340,90));pp(bl(1310,265,80));pp(bl(1410,220,150));pp(bl(1510,290,90));
-    ee('patrol',1050,436);ee('spike',1650,436);ee('fly',1800,240);
-    // ── B2（1920〜2560）: クリスタル踏み台エリア ──
-    pp(cr(1980,400));pp(cr(2110,355));pp(cr(2250,390));pp(cr(2390,320));pp(cr(2500,370));
-    ee('patrol',1940,436);ee('fly',2130,270);ee('spike',2320,436);ee('patrol',2480,436);
-    // ── B3（2560〜3200）: 壁3（最高・難関） ──
-    pp(wl(2880,225,255));
-    pp(bl(2620,365,90));pp(bl(2730,290,90));pp(bl(2840,225,120));pp(bl(2960,295,90));
-    ee('patrol',2580,436);ee('fly',2760,235);ee('spike',3060,436);
-    // ── ボスエリア（shutterX=3200）ウサギ大王 ──
-    pp({x:3200,y:480,w:2560,h:80,col:'#3a0860',solid:true,cracked:false,broken:false,isGround:true,isBossGround:true});
-    const cx=4480;
+    // 地面: 落とし穴(x=2580〜2800)で分断 + shutterX=3840まで
+    pp({x:0,   y:480,w:2580,h:80,col:'#3a1860',solid:true,cracked:false,broken:false,isGround:true});
+    pp({x:2800,y:480,w:1040,h:80,col:'#3a1860',solid:true,cracked:false,broken:false,isGround:true});
+    this.pitRespawnX=2520; // 落とし穴リスポーン地点
+    // ── B0（0〜960）: 壁1（入門） ──
+    pp(wl(570,265,215));
+    pp(bl(320,375,90));pp(bl(440,280,120));pp(bl(610,255,100));pp(bl(700,330,90));
+    ee('patrol',160,436);ee('fly',790,275);
+    // ── B1（960〜1920）: クリスタル足場で越える壁（異なるパターン） ──
+    pp(wl(1460,235,245));
+    pp(cr(1200,345,100));pp(cr(1315,265,100));pp(cr(1400,230,140));pp(cr(1525,300,90));
+    ee('patrol',1060,436);ee('fly',1260,260);ee('spike',1680,436);ee('fly',1860,250);
+    // ── B2（1920〜2580）: 足場のみエリア（地面なし感覚） ──
+    pp(cr(1960,415));pp(cr(2095,368));pp(cr(2240,340));pp(cr(2390,395));pp(cr(2530,350));
+    ee('fly',1990,290);ee('patrol',2120,436);ee('fly',2290,265);ee('spike',2460,436);
+    // ── 落とし穴（x=2580〜2800, 220px）── 地面なし、落ちるとGP-1リスポーン
+    // ── B3（2800〜3200）: ピット後の壁 ──
+    pp(wl(3060,240,240));
+    pp(bl(2850,370,90));pp(bl(2960,295,90));pp(bl(3045,235,130));pp(bl(3175,308,90));
+    ee('patrol',2830,436);ee('fly',2975,250);ee('spike',3150,436);
+    // ── C0（3200〜3840）: ボス直前エリア ──
+    pp(bl(3310,355,130));pp(bl(3540,320,130));pp(bl(3730,358,130));
+    ee('patrol',3270,436);ee('fly',3420,255);ee('patrol',3620,436);ee('spike',3800,436);
+    // ── ボスエリア（shutterX=3840）ウサギ大王 ──
+    pp({x:3840,y:480,w:2560,h:80,col:'#3a0860',solid:true,cracked:false,broken:false,isGround:true,isBossGround:true});
+    const cx=5120;
     pp(bl(cx-520,380,110));pp(bl(cx+410,380,110));
     pp(bl(cx-430,300,90));pp(bl(cx+340,300,90));
     pp(mkP(this.worldW-30,0,30,CH+80,'#1a0840'));
@@ -1792,6 +1872,7 @@ function startGame(){
   screenAnchor=0;scrSliding=false;scrSlideT=0;scrSlideDir=0;
   gs=GS.PLAY;
   showCtrl(true);
+  startBGM();
 }
 
 function _tapStart(){
@@ -2047,6 +2128,13 @@ function updatePlay(dt){
   }
   // プレイヤー
   player.update(dt,stage.plats,stage.bananas,stage.enemies,stage);
+  // 落とし穴（ステージ2）: 画面外に落ちたらGP-1でリスポーン
+  if(stageNum===2&&gs===GS.PLAY&&player.y>CH+80&&player.state!=='fall'){
+    player.gp=Math.max(1,player.gp-1);
+    player.x=stage.pitRespawnX||80;player.y=400;
+    player.vx=0;player.vy=0;player.state='idle';player.stT=0;player.inv=1.8;
+    camX=Math.max(0,player.x-CW*.4);
+  }
   // プレイヤー攻撃でボスを倒した場合（player.update内でhit→alive=falseになる）
   if(stage.boss&&!stage.boss.alive){gs=GS.CLEAR;clearTimer=0;return;}
   // 矢

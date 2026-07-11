@@ -2179,15 +2179,13 @@ function drawScene(){
   const _sw=36,_sh=20,_sg=4,_sx=_ggx+28;
   for(let i=0;i<3;i++){
     const filled=i<player.powerLevel;
-    // マス背景
     ctx.fillStyle=filled?'#FFD700':'rgba(255,255,255,.12)';
-    ctx.beginPath();ctx.roundRect(_sx+i*(_sw+_sg),_ggy+8,_sw,_sh,4);ctx.fill();
+    ctx.fillRect(_sx+i*(_sw+_sg),_ggy+8,_sw,_sh);
     ctx.strokeStyle=filled?'#B8860B':'#444';ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.roundRect(_sx+i*(_sw+_sg),_ggy+8,_sw,_sh,4);ctx.stroke();
+    ctx.strokeRect(_sx+i*(_sw+_sg),_ggy+8,_sw,_sh);
     if(filled){
-      // 艶
       ctx.fillStyle='rgba(255,255,200,.45)';
-      ctx.beginPath();ctx.roundRect(_sx+i*(_sw+_sg)+3,_ggy+10,_sw-6,7,3);ctx.fill();
+      ctx.fillRect(_sx+i*(_sw+_sg)+3,_ggy+10,_sw-6,7);
     }
   }
   ctx.textAlign='left';

@@ -2154,6 +2154,8 @@ function showCtrl(v){
 function startGame(){
   stageNum=1;
   player=new Player();stage=new Stage();
+  player.inCar=true;player.carVx=2;
+  if(stage.benz)stage.benz.taken=true;
   camX=0;peels=[];goldenBananaItems=[];auras=[];explosions=[];droppedBananas=[];hospCooldown=0;
   screenAnchor=0;scrSliding=false;scrSlideT=0;scrSlideDir=0;
   gs=GS.PLAY;
@@ -2481,8 +2483,12 @@ function updatePlay(dt){
       }
       if(!e.alive){gs=GS.CLEAR;clearTimer=0;stopBossBGM();return;}
     }
-    if(e.type!=='boss'&&e.alive&&player.inv<=0&&!player.inCar&&player.state!=='car_enter'){
-      if(overlap(player,e))player.damage(1);
+    if(e.type!=='boss'&&e.alive){
+      if(stageNum===3){
+        if(overlap(player,e))e.hit(e.hp,'touch');
+      } else if(player.inv<=0&&!player.inCar&&player.state!=='car_enter'){
+        if(overlap(player,e))player.damage(1);
+      }
     }
   }
 

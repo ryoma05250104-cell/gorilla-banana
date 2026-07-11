@@ -2166,17 +2166,31 @@ function drawScene(){
   const mc=player.mode===1?'rgba(30,120,50,.7)':'rgba(30,80,160,.7)';
   ctx.fillStyle=mc;ctx.fillRect(4,54,178,28);ctx.fillStyle='#fff';ctx.font='bold 14px sans-serif';
   ctx.fillText(player.mode===1?'🦍 ゴリラ':'🧑 人間',10,71);
-  // 補聴器パワーレベル表示
-  if(player.powerLevel>0){
-    ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(4,86,130,26);
-    ctx.fillStyle='#ffe066';ctx.font='bold 12px sans-serif';
-    const lvLabels=['','リーチUP','リーチUP+オーラ','リーチUP+特大オーラ'];
-    ctx.fillText('🦻 Lv'+player.powerLevel+' '+lvLabels[player.powerLevel],8,103);
-  }
   ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='bold 13px sans-serif';ctx.textAlign='right';
   ctx.fillText('👁 '+playCount+'回',CW-6,18);
   ctx.fillStyle=stageNum===2?'#cc88ff':'#ffffaa';
   ctx.fillText('STAGE '+stageNum,CW-6,36);ctx.textAlign='left';
+  // ── ゴリラゲージ（右上） ──
+  const _ggx=CW-158,_ggy=42;
+  ctx.fillStyle='rgba(0,0,0,.65)';ctx.fillRect(_ggx-4,_ggy,155,36);
+  ctx.strokeStyle='#555';ctx.lineWidth=1;ctx.strokeRect(_ggx-4,_ggy,155,36);
+  ctx.font='24px sans-serif';ctx.textAlign='left';
+  ctx.fillText('🦍',_ggx-2,_ggy+28);
+  const _sw=36,_sh=20,_sg=4,_sx=_ggx+28;
+  for(let i=0;i<3;i++){
+    const filled=i<player.powerLevel;
+    // マス背景
+    ctx.fillStyle=filled?'#FFD700':'rgba(255,255,255,.12)';
+    ctx.beginPath();ctx.roundRect(_sx+i*(_sw+_sg),_ggy+8,_sw,_sh,4);ctx.fill();
+    ctx.strokeStyle=filled?'#B8860B':'#444';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.roundRect(_sx+i*(_sw+_sg),_ggy+8,_sw,_sh,4);ctx.stroke();
+    if(filled){
+      // 艶
+      ctx.fillStyle='rgba(255,255,200,.45)';
+      ctx.beginPath();ctx.roundRect(_sx+i*(_sw+_sg)+3,_ggy+10,_sw-6,7,3);ctx.fill();
+    }
+  }
+  ctx.textAlign='left';
   if(!('ontouchstart' in window)){
     ctx.fillStyle='rgba(255,255,255,.38)';ctx.font='11px sans-serif';ctx.textAlign='right';
     ctx.fillText('↑/Z:ジャンプ X:攻撃 C:変身',CW-6,32);ctx.textAlign='left';

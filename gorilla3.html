@@ -1974,19 +1974,21 @@ class Stage{
   _build3(){
     const pp=v=>{this.plats.push(v);};
     const ee=(t,x,y)=>{this.enemies.push(new Enemy(t,x,y));};
-    const fl=(x,y,w=200)=>mkP(x,y,w,20,'#228B22');
-    const st=(x,y,w=100)=>mkP(x,y,w,20,'#2d6e2d');
+    const bl=(x,y,w=220)=>mkP(x,y,w,16,'#228B22',true,false);
     // 地面（ジャングル）
     pp(mkP(0,480,5760,80,'#1a4a00',true));
-    // エリア1
-    pp(fl(180,390));pp(fl(380,320));pp(st(620,360,80));pp(fl(750,290));pp(fl(980,350));
-    ee('patrol',150,436);ee('fly',400,270);ee('patrol',780,436);
-    // エリア2
-    pp(fl(1200,400));pp(fl(1420,320));pp(st(1650,360,80));pp(fl(1800,280));pp(fl(2050,360));pp(fl(2250,300));
-    ee('fly',1250,265);ee('patrol',1500,436);ee('fly',1850,230);ee('patrol',2100,436);ee('fly',2300,250);
-    // エリア3（シャッター手前）
-    pp(fl(2500,380));pp(fl(2700,310));pp(st(2880,355,80));pp(fl(3000,285));pp(fl(3200,360));pp(fl(3350,290));
-    ee('patrol',2480,436);ee('fly',2750,260);ee('patrol',3050,436);ee('fly',3250,240);ee('patrol',3380,436);
+    // エリア1（〜960px）: 足場1枚
+    pp(bl(450,345));
+    ee('patrol',200,436);ee('patrol',700,436);
+    // エリア2（960〜1920px）: 足場1枚
+    pp(bl(1500,350,260));
+    ee('patrol',1100,436);ee('fly',1650,270);
+    // エリア3（1920〜2880px）: 足場2枚（踏み台）
+    pp(bl(2200,340));pp(bl(2650,320));
+    ee('patrol',2000,436);ee('fly',2400,260);ee('patrol',2750,436);
+    // エリア4（2880〜3520px）: 足場1枚
+    pp(bl(3100,345,260));
+    ee('patrol',3050,436);ee('fly',3300,265);
     // ボスエリア
     pp(mkP(3520,480,2240,80,'#0e3300',true,false));
     const cx=4640;

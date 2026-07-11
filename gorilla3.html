@@ -2782,10 +2782,13 @@ function updateGoldenCutin(dt){
     if(_cutinGrid&&_cutinGrid.complete&&_cutinGrid.naturalWidth){
       const iw=_cutinGrid.naturalWidth,ih=_cutinGrid.naturalHeight;
       const cw=iw/COLS,ch=ih/ROWS;
-      const sx=col*cw,sy=row*ch;
-      const scale=Math.max(CW/cw,CH/ch);
-      const dw=cw*scale,dh=ch*scale;
-      ctx.drawImage(_cutinGrid,sx,sy,cw,ch,(CW-dw)/2,(CH-dh)/2,dw,dh);
+      // 左右18%・下部20%をトリミングして人物にズームイン
+      const mx=cw*0.18,my=ch*0.08;
+      const sx=col*cw+mx,sy=row*ch+my;
+      const sw=cw-mx*2,sh=ch*0.75;
+      const scale=Math.max(CW/sw,CH/sh);
+      const dw=sw*scale,dh=sh*scale;
+      ctx.drawImage(_cutinGrid,sx,sy,sw,sh,(CW-dw)/2,(CH-dh)/2,dw,dh);
     }
     ctx.fillStyle='rgba(0,0,0,0.45)';ctx.fillRect(0,CH-50,CW,50);
     ctx.fillStyle='#FFD700';ctx.font='bold 20px sans-serif';

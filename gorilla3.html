@@ -1291,7 +1291,7 @@ class Enemy{
       if(this.type!=='boss'){
         const r=Math.random();
         if(r<0.7) droppedBananas.push(new DroppedBanana(this.x+this.w/2-14,this.y));
-        else if(player) goldenBananaItems.push(new GoldenBanana(this.x+this.w/2-14,this.y));
+        else if(player&&player.goldenCount<4) goldenBananaItems.push(new GoldenBanana(this.x+this.w/2-14,this.y));
       }
     } else if(this.type==='boss'&&stageNum===2&&this.bossAnim!=='down'&&this.bossAnim!=='hit'){
       this.bossAnim='hit';this.bossFrame=0;this.bossAnimT=0;this.bossAttacking=false;

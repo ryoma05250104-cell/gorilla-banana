@@ -2769,7 +2769,7 @@ function _drawCutinImg(img){
   ctx.drawImage(img,(CW-dw)/2,(CH-dh)*yFrac,dw,dh);
 }
 function updateGoldenCutin(dt){
-  const T_FADE0=0.4,T_TEXT1=2.6,T_IMG=1.8,T_GORILLA=2.3,T_TEXT2=1.7,T_FADEOUT=0.5,T_FADEIN=0.5;
+  const T_FADE0=0.4,T_TEXT1=3.1,T_IMG=1.8,T_GORILLA=2.3,T_TEXT2=1.7,T_FADEOUT=0.5,T_FADEIN=0.5;
   const tA=T_FADE0;
   const tB=tA+T_TEXT1;
   const tC=tB+T_IMG;
@@ -2787,7 +2787,7 @@ function updateGoldenCutin(dt){
   } else if(t<tB){
     ctx.fillStyle='#000';ctx.fillRect(0,0,CW,CH);
     const fade=Math.min(1,(t-tA)/0.3);
-    const lines=['や、やばい、ゴリラパワーが暴走している','ゴゴ、ゴリウ、ウホホホホ','（このままでは本物のゴリラに','なってしまう）'];
+    const lines=['や、やばい！ゴリラパワーが暴走している','ゴゴ、ゴリ、ウ、ウホホホ','（このままでは本物のゴリラになってしまう）'];
     ctx.fillStyle='rgba(255,255,80,'+fade+')';ctx.font='bold 30px sans-serif';
     lines.forEach(function(ln,i){ctx.fillText(ln,CW/2,CH/2-56+i*40);});
   } else if(t<tC){

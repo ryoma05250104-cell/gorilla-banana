@@ -108,7 +108,7 @@ function buildCtrl(){
     mk('R','▶',         {left:p(lR+8),top:p(vt),  width:p(bsz),  height:p(bsz),  background:'rgba(255,255,255,.22)',fontSize:p(bsz*.35)});
     mk('atk','こう<br>げき',{left:p(aL),top:p(vt),  width:p(bsz),  height:p(bsz),  background:'rgba(220,40,40,.28)', fontSize:p(bsz*.18)});
     mk('jump','ジャンプ',   {left:p(jL),top:p(vt),  width:p(bsz),  height:p(bsz),  background:'rgba(40,200,60,.28)', fontSize:p(bsz*.18)});
-    mk('chg','へん<br>しん',{left:p(chgL),top:p(chgT),width:p(smSz),height:p(smSz),background:'rgba(60,60,220,.28)', fontSize:p(smSz*.17)});
+    if(stageNum!==3)mk('chg','へん<br>しん',{left:p(chgL),top:p(chgT),width:p(smSz),height:p(smSz),background:'rgba(60,60,220,.28)', fontSize:p(smSz*.17)});
   } else {
     // 横向き：左右160px帯
     const lBsz=Math.min(SIDE-24,88);           // 左ボタンサイズ
@@ -129,7 +129,7 @@ function buildCtrl(){
     const chgT=Math.round(rBot-rGap/2-chSz/2); // atk と jump の中間に縦配置
     mk('atk','こう<br>げき',{left:p(atkL),top:p(rBot-rBsz-rGap),width:p(rBsz),height:p(rBsz),background:'rgba(220,40,40,.28)',fontSize:p(rBsz*.18)});
     mk('jump','ジャンプ',   {left:p(atkL),top:p(rBot),           width:p(rBsz),height:p(rBsz),background:'rgba(40,200,60,.28)', fontSize:p(rBsz*.18)});
-    mk('chg','へん<br>しん',{left:p(chgL),top:p(chgT),           width:p(chSz),height:p(chSz),background:'rgba(60,60,220,.32)', fontSize:p(chSz*.17)});
+    if(stageNum!==3)mk('chg','へん<br>しん',{left:p(chgL),top:p(chgT),           width:p(chSz),height:p(chSz),background:'rgba(60,60,220,.32)', fontSize:p(chSz*.17)});
   }
 }
 
@@ -2830,7 +2830,7 @@ function updateGoldenCutin(dt){
   } else if(t<tH){
     ctx.fillStyle='#000';ctx.fillRect(0,0,CW,CH);
     if(!_goldenBuilt){
-      stageNum=3;stage=new Stage();
+      stageNum=3;stage=new Stage();buildCtrl();
       player.x=80;player.y=350;player.vx=0;player.vy=0;
       player.state='idle';player.stT=0;player.inv=0;player.arrows=[];player.powerLevel=0;
       camX=0;screenAnchor=0;scrSliding=false;scrSlideT=0;scrSlideDir=0;

@@ -882,7 +882,7 @@ class Player{
     this.dir=this.carVx>=0?1:-1;
     if(pollJump()&&this.onG){this.vy=-16;this.onG=false;}
     if(pollChg()){this.inCar=false;this.mode=1;this.chgTFirst=!window._transformedOnce;window._transformedOnce=true;this.chgT=this.chgTFirst?1.6:0.22;playZkyun();if(this.chgTFirst)playHenshinVoice();return;}
-    this.vx=this.carVx;this._phys(dt,plats);
+    this.vx=this.carVx;this._phys(dt,plats);this.carVx=this.vx;
     this.aH.carD.tick(dt);
     // 敵を轢く（車の視覚サイズに合わせた当たり判定、速度2以上）
     if(this._carHitCd>0){this._carHitCd-=dt;return;}
@@ -2150,8 +2150,6 @@ function showCtrl(v){
 function startGame(){
   stageNum=1;
   player=new Player();stage=new Stage();
-  player.inCar=true;player.carVx=2;
-  if(stage.benz)stage.benz.taken=true;
   camX=0;peels=[];goldenBananaItems=[];auras=[];explosions=[];droppedBananas=[];hospCooldown=0;
   screenAnchor=0;scrSliding=false;scrSlideT=0;scrSlideDir=0;
   gs=GS.PLAY;

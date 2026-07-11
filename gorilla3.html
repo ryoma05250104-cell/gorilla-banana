@@ -2765,7 +2765,8 @@ function _drawCutinImg(img){
   const iw=img.naturalWidth,ih=img.naturalHeight;
   const scale=Math.max(CW/iw,CH/ih);
   const dw=iw*scale,dh=ih*scale;
-  ctx.drawImage(img,(CW-dw)/2,(CH-dh)/2,dw,dh);
+  const yFrac=ih>iw?0.08:0.5;
+  ctx.drawImage(img,(CW-dw)/2,(CH-dh)*yFrac,dw,dh);
 }
 function updateGoldenCutin(dt){
   const T_FADE0=0.4,T_TEXT1=1.8,T_IMG=1.8,T_GORILLA=2.3,T_TEXT2=1.7,T_FADEOUT=0.5,T_FADEIN=0.5;

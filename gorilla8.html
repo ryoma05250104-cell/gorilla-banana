@@ -1613,7 +1613,7 @@ class Enemy{
     const DH=h,DW=Math.round(DH*sw/sh);
     const ix=dx+w/2-DW/2,iy=y+h-DH;
     ctx.save();
-    if(this.gkDir>0){ctx.translate(ix+DW,iy);ctx.scale(-1,1);ctx.drawImage(_gkSpriteImg,sx,sy,sw,sh,0,0,DW,DH);}else{ctx.drawImage(_gkSpriteImg,sx,sy,sw,sh,ix,iy,DW,DH);}
+    if(this.gkDir<0){ctx.translate(ix+DW,iy);ctx.scale(-1,1);ctx.drawImage(_gkSpriteImg,sx,sy,sw,sh,0,0,DW,DH);}else{ctx.drawImage(_gkSpriteImg,sx,sy,sw,sh,ix,iy,DW,DH);}
     ctx.restore();
     for(const p of this.proj){const ppx=p.x-cx;ctx.fillStyle='rgba(255,180,0,.9)';ctx.beginPath();ctx.ellipse(ppx+p.w/2,p.y+p.h/2,p.w/2,p.h/2,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#ff6600';ctx.lineWidth=2;ctx.stroke();}
   }

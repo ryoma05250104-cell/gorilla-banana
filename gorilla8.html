@@ -1474,54 +1474,46 @@ class Enemy{
     }
   }
   _bossGK(dt,player,plats){
-    const PATROL_SPD=2;
-    // phase timer
-    this.phaseT-=dt;
-    // animation timer
     this.gkAnimT+=dt;
     const animFPS={shuffle:6,chest_drum:8,jump_atk:10};
     const fps=animFPS[this.gkAnim]||6;
     if(this.gkAnimT>1/fps){this.gkAnimT=0;this.gkFrame=(this.gkFrame+1)%GK_FRAMES[this.gkAnim].length;}
+    const px=player.x+player.w/2,bx=this.x+this.w/2;
+    const dist=Math.abs(px-bx);
+    if(this.x<5760)this.x=5760;
+    if(this.x+this.w>7660)this.x=7660-this.w;
     if(!this.gkAttacking){
-      // patrol
-      this.vx=this.gkDir*PATROL_SPD;
-      if(this.x<=this.gkPatrolL){this.gkDir=1;this.x=this.gkPatrolL;}
-      if(this.x+this.w>=this.gkPatrolR){this.gkDir=-1;this.x=this.gkPatrolR-this.w;}
+      this.phaseT-=dt;
+      if(dist>40){const spd=2;this.vx=px>bx?spd:-spd;this.gkDir=px>bx?1:-1;}
+      else this.vx=0;
       this.gkAnim='shuffle';
-      // trigger attack
-      if(this.phaseT<=0){
-        this.gkAttacking=true;
-        this.gkAttackT=0;
-        this.gkAttackStep=0;
+      if(dist<280||this.phaseT<=0){
+        this.gkAttacking=true;this.gkAttackT=0;this.gkAttackStep=0;
         const phase2=this.hp<=this.maxhp*0.5;
         this.gkCurrentAtk=(phase2&&Math.random()<0.5)?'jump_atk':'chest_drum';
-        this.gkAnim=this.gkCurrentAtk;
-        this.gkFrame=0;
-        this.vx=0;
-        this.phaseT=phase2?2.5:3.5;
+        this.gkAnim=this.gkCurrentAtk;this.gkFrame=0;this.vx=0;
+        this.phaseT=phase2?2.0:3.0;
       }
     }else{
       this.vx=0;
       this._gkAtk(dt,player);
     }
     this._phys(plats);
-    // shockwave/proj collision with player
     for(let i=this.proj.length-1;i>=0;i--){
       const p=this.proj[i];p.x+=p.vx*dt;p.life-=dt;
       if(p.life<=0){this.proj.splice(i,1);continue;}
       if(player.x<p.x+p.w&&player.x+player.w>p.x&&player.y<p.y+p.h&&player.y+player.h>p.y){
-        if(player.inv<=0){player.hp--;player.inv=1.2;if(player.hp<=0)gs=GS.OVER;}
+        if(player.inv<=0){player.damage(1);player.inv=1.2;}
         this.proj.splice(i,1);
       }
     }
-    // melee hitbox
     if(!this.gkAttacking){
-      if(player.x<this.x+this.w+20&&player.x+player.w>this.x-20&&player.y<this.y+this.h&&player.y+player.h>this.y){
-        if(player.inv<=0){player.hp--;player.inv=1.2;if(player.hp<=0)gs=GS.OVER;}
+      if(player.x<this.x+this.w+16&&player.x+player.w>this.x-16&&player.y<this.y+this.h&&player.y+player.h>this.y){
+        if(player.inv<=0){player.damage(1);player.inv=1.2;}
       }
     }
   }
-  _gkAtk(dt,player){
+    _gkAtk(dt,player){
     this.gkAttackT+=dt;
     if(this.gkCurrentAtk==='chest_drum'){
       if(this.gkAttackT>=2.0){

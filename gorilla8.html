@@ -1474,7 +1474,7 @@ class Enemy{
     }
   }
   _bossGK(dt,player,plats){
-    const PATROL_SPD=120;
+    const PATROL_SPD=2;
     // phase timer
     this.phaseT-=dt;
     // animation timer
@@ -1535,7 +1535,7 @@ class Enemy{
       const stepDur=0.18;
       const step=Math.min(Math.floor(this.gkAttackT/stepDur),steps-1);
       this.gkFrame=step;
-      if(step===2&&this.gkAttackStep<3){this.gkAttackStep=3;this.vy=-600;}
+      if(step===2&&this.gkAttackStep<3){this.gkAttackStep=3;this.vy=-11;}
       if(step===steps-1&&this.gkAttackT>=stepDur*steps){
         // landing
         _screenShakeT=0.4;
